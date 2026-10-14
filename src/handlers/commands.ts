@@ -28,7 +28,7 @@ function buildMenu(): string {
     "/x — Download from X (Twitter)",
     "/fb — Download from Facebook",
     "",
-    "<b>Pinterest</b>",
+    "<b>Image Search</b>",
     "/pin — Find the top Pinterest image (query or link)",
     "/pixiv — Find the top Pixiv illustration (query only)",
     "",
