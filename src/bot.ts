@@ -1,11 +1,15 @@
 import { Bot, GrammyError, HttpError } from "grammy";
 import { registerCommands } from "./handlers/commands.js";
 import { registerDownloader } from "./handlers/download.js";
-import { registerEcho } from "./handlers/echo.js";
+import { registerFallback } from "./handlers/fallback.js";
 import { registerPinterest } from "./handlers/pinterest.js";
 import { registerPixiv } from "./handlers/pixiv.js";
+import { registerPlay } from "./handlers/play.js";
 import { registerSticker } from "./handlers/sticker.js";
 import { registerSys } from "./handlers/sys.js";
+import { registerToimg } from "./handlers/toimg.js";
+import { registerTracking } from "./handlers/tracking.js";
+import { registerUserinfo } from "./handlers/userinfo.js";
 import { getOwnerId, isEveryoneAllowed } from "./lib/config.js";
 
 export function createBot(token: string): Bot {
@@ -37,13 +41,17 @@ export function createBot(token: string): Bot {
     }
   });
 
+  registerTracking(bot);
   registerCommands(bot);
   registerSticker(bot);
   registerPinterest(bot);
   registerPixiv(bot);
   registerDownloader(bot);
+  registerPlay(bot);
+  registerToimg(bot);
+  registerUserinfo(bot);
   registerSys(bot);
-  registerEcho(bot);
+  registerFallback(bot);
 
   return bot;
 }

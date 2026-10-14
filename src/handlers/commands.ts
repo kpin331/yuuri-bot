@@ -3,7 +3,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { InputFile, type Api, type Bot, type Context } from "grammy";
 import { registerCommand } from "../lib/command.js";
-import { getOwnerId, isOwner } from "../lib/config.js";
 
 const TITLE = "Yuuri Bot V1.0✨";
 const SUBTITLE = "List command to use";
@@ -16,11 +15,14 @@ function buildMenu(): string {
     "<b>General</b>",
     "/start — Show this menu",
     "/menu — Show this menu",
-    "/help — Show this menu",
-    "/id — Show your Telegram ID",
+    "/userinfo — Show usage stats for a user",
     "",
     "<b>Stickers</b>",
     "/s — Reply to an image or video to turn it into a sticker",
+    "/toimg — Reply to a sticker to turn it into a PNG image",
+    "",
+    "<b>Media</b>",
+    "/play — Search YouTube and download audio or video",
     "",
     "<b>Downloaders</b>",
     "/dl — Download media from any supported link",
@@ -88,20 +90,4 @@ export function registerCommands(bot: Bot): void {
 
   registerCommand(bot, "start", showMenu);
   registerCommand(bot, "menu", showMenu);
-  registerCommand(bot, "help", showMenu);
-
-  registerCommand(bot, "id", async (ctx) => {
-    const userId = ctx.from?.id;
-    const ownerId = getOwnerId();
-    const lines = [`Your Telegram ID: <code>${userId ?? "unknown"}</code>`];
-
-    if (ownerId === null) {
-      lines.push("Owner ID is not configured (set OWNER_ID in .env).");
-    } else {
-      lines.push(`Owner ID: <code>${ownerId}</code>`);
-      lines.push(isOwner(userId) ? "You are the owner. ✅" : "You are not the owner.");
-    }
-
-    await ctx.reply(lines.join("\n"), { parse_mode: "HTML" });
-  });
 }
