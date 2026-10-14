@@ -1,11 +1,19 @@
 import { exec } from "./exec.js";
 
 export const TOOLS = {
-  ffmpeg: process.env.FFMPEG_PATH ?? "ffmpeg",
-  ffprobe: process.env.FFPROBE_PATH ?? "ffprobe",
-  ytDlp: process.env.YTDLP_PATH ?? "yt-dlp",
-  galleryDl: process.env.GALLERYDL_PATH ?? "gallery-dl",
-} as const;
+  get ffmpeg(): string {
+    return process.env.FFMPEG_PATH ?? "ffmpeg";
+  },
+  get ffprobe(): string {
+    return process.env.FFPROBE_PATH ?? "ffprobe";
+  },
+  get ytDlp(): string {
+    return process.env.YTDLP_PATH ?? "yt-dlp";
+  },
+  get galleryDl(): string {
+    return process.env.GALLERYDL_PATH ?? "gallery-dl";
+  },
+};
 
 export type ToolName = keyof typeof TOOLS;
 
