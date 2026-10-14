@@ -1,0 +1,22 @@
+import type { Bot } from "grammy";
+
+export function registerCommands(bot: Bot): void {
+  bot.command("start", async (ctx) => {
+    const name = ctx.from?.first_name ?? "there";
+    await ctx.reply(
+      `Hi ${name}! I'm a starter bot. Send me any text and I'll echo it back.\n\nUse /help to see what I can do.`,
+    );
+  });
+
+  bot.command("help", async (ctx) => {
+    await ctx.reply(
+      [
+        "Available commands:",
+        "/start - Greet me",
+        "/help - Show this message",
+        "",
+        "Or just send text and I'll echo it back.",
+      ].join("\n"),
+    );
+  });
+}
