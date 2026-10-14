@@ -1,5 +1,6 @@
 import { config } from "dotenv";
 import { createBot } from "./bot.js";
+import { checkRequiredTools } from "./lib/tools.js";
 
 config();
 
@@ -10,6 +11,14 @@ if (!token) {
     "Missing BOT_TOKEN. Copy .env.example to .env and set your token from @BotFather.",
   );
   process.exit(1);
+}
+
+const missingTools = await checkRequiredTools();
+if (missingTools.length > 0) {
+  console.warn(
+    `Warning: missing required tools: ${missingTools.join(", ")}. ` +
+      "Sticker and download commands will not work until they are installed.",
+  );
 }
 
 const bot = createBot(token);

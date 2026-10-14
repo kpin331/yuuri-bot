@@ -1,6 +1,8 @@
 import { Bot, GrammyError, HttpError } from "grammy";
 import { registerCommands } from "./handlers/commands.js";
+import { registerDownloader } from "./handlers/download.js";
 import { registerEcho } from "./handlers/echo.js";
+import { registerSticker } from "./handlers/sticker.js";
 
 export function createBot(token: string): Bot {
   const bot = new Bot(token);
@@ -19,6 +21,8 @@ export function createBot(token: string): Bot {
   });
 
   registerCommands(bot);
+  registerSticker(bot);
+  registerDownloader(bot);
   registerEcho(bot);
 
   return bot;
