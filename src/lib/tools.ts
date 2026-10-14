@@ -17,9 +17,17 @@ export const TOOLS = {
 
 export type ToolName = keyof typeof TOOLS;
 
+// ffmpeg/ffprobe use a single dash, yt-dlp/gallery-dl use two.
+const VERSION_ARGS: Record<ToolName, string[]> = {
+  ffmpeg: ["-version"],
+  ffprobe: ["-version"],
+  ytDlp: ["--version"],
+  galleryDl: ["--version"],
+};
+
 export async function isToolAvailable(name: ToolName): Promise<boolean> {
   try {
-    const { code } = await exec(TOOLS[name], ["--version"], { timeoutMs: 15_000 });
+    const { code } = await exec(TOOLS[name], VERSION_ARGS[name], { timeoutMs: 15_000 });
     return code === 0;
   } catch {
     return false;
