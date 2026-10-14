@@ -19,3 +19,8 @@ export function isEveryoneAllowed(): boolean {
   const value = (process.env.EVERYONE ?? "").trim().toLowerCase();
   return value === "true" || value === "1" || value === "yes" || value === "y" || value === "on";
 }
+
+export function getPixivRefreshToken(): string | null {
+  const value = process.env.PIXIV_REFRESH_TOKEN?.trim();
+  return value && value.length > 0 ? value : null;
+}

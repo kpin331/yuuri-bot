@@ -30,6 +30,10 @@ function buildMenu(): string {
     "",
     "<b>Pinterest</b>",
     "/pin — Find the top Pinterest image (query or link)",
+    "/pixiv — Find the top Pixiv illustration (query only)",
+    "",
+    "<b>System</b>",
+    "$sys — Show system info (owner only)",
   ].join("\n");
 }
 

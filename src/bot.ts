@@ -3,7 +3,9 @@ import { registerCommands } from "./handlers/commands.js";
 import { registerDownloader } from "./handlers/download.js";
 import { registerEcho } from "./handlers/echo.js";
 import { registerPinterest } from "./handlers/pinterest.js";
+import { registerPixiv } from "./handlers/pixiv.js";
 import { registerSticker } from "./handlers/sticker.js";
+import { registerSys } from "./handlers/sys.js";
 import { getOwnerId, isEveryoneAllowed } from "./lib/config.js";
 
 export function createBot(token: string): Bot {
@@ -38,7 +40,9 @@ export function createBot(token: string): Bot {
   registerCommands(bot);
   registerSticker(bot);
   registerPinterest(bot);
+  registerPixiv(bot);
   registerDownloader(bot);
+  registerSys(bot);
   registerEcho(bot);
 
   return bot;
