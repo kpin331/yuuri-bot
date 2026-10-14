@@ -2,6 +2,7 @@ import { writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { InputFile, type Api, type Bot, type Context } from "grammy";
+import { registerCommand } from "../lib/command.js";
 import { getOwnerId, isOwner } from "../lib/config.js";
 
 const TITLE = "Yuuri Bot V1.0✨";
@@ -26,6 +27,9 @@ function buildMenu(): string {
     "/ig — Download from Instagram",
     "/x — Download from X (Twitter)",
     "/fb — Download from Facebook",
+    "",
+    "<b>Pinterest</b>",
+    "/pin — Find the top Pinterest image (query or link)",
   ].join("\n");
 }
 
@@ -78,11 +82,11 @@ export function registerCommands(bot: Bot): void {
     await ctx.reply(caption, { parse_mode: "HTML" });
   };
 
-  bot.command("start", showMenu);
-  bot.command("menu", showMenu);
-  bot.command("help", showMenu);
+  registerCommand(bot, "start", showMenu);
+  registerCommand(bot, "menu", showMenu);
+  registerCommand(bot, "help", showMenu);
 
-  bot.command("id", async (ctx) => {
+  registerCommand(bot, "id", async (ctx) => {
     const userId = ctx.from?.id;
     const ownerId = getOwnerId();
     const lines = [`Your Telegram ID: <code>${userId ?? "unknown"}</code>`];

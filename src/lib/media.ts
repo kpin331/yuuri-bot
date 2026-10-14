@@ -1,6 +1,7 @@
-import { readdir, stat, writeFile } from "node:fs/promises";
+import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import type { Bot } from "grammy";
+import type { MediaInfo } from "./info.js";
 
 export type MediaKind = "photo" | "video";
 
@@ -9,6 +10,7 @@ export interface MediaFile {
   name: string;
   kind: MediaKind;
   size: number;
+  info?: MediaInfo;
 }
 
 const PHOTO_EXT = new Set([
@@ -75,6 +77,47 @@ export async function collectMedia(dir: string): Promise<MediaFile[]> {
 
   await walk(dir);
   return found;
+}
+
+export function mediaKey(path: string): string {
+  const ext = extname(path);
+  return ext !== "" && kindFromExtension(path) !== null ? path.slice(0, -ext.length) : path;
+}
+
+export async function collectInfos(dir: string): Promise<Map<string, unknown>> {
+  const map = new Map<string, unknown>();
+
+  async function walk(current: string): Promise<void> {
+    const entries = await readdir(current, { withFileTypes: true });
+    for (const entry of entries) {
+      const full = join(current, entry.name);
+      if (entry.isDirectory()) {
+        await walk(full);
+        continue;
+      }
+
+      let base: string | null = null;
+      const isInfoJson = entry.name.endsWith(".info.json");
+      if (isInfoJson) {
+        base = full.slice(0, -".info.json".length);
+      } else if (entry.name.endsWith(".json")) {
+        base = full.slice(0, -".json".length);
+      }
+      if (base === null) continue;
+
+      const key = mediaKey(base);
+      if (!isInfoJson && map.has(key)) continue;
+
+      try {
+        map.set(key, JSON.parse(await readFile(full, "utf8")));
+      } catch {
+        // ignore unreadable/invalid metadata files
+      }
+    }
+  }
+
+  await walk(dir);
+  return map;
 }
 
 export async function downloadTelegramFile(

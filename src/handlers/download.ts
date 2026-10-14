@@ -2,10 +2,14 @@ import { extname, join } from "node:path";
 import { InputFile, type Bot, type Context } from "grammy";
 import { InputMediaBuilder } from "grammy";
 import { exec } from "../lib/exec.js";
+import { registerCommand } from "../lib/command.js";
+import { formatInfo, parseInfo } from "../lib/info.js";
 import {
+  collectInfos,
   collectMedia,
   formatBytes,
   MAX_UPLOAD_BYTES,
+  mediaKey,
   type MediaFile,
 } from "../lib/media.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
@@ -63,6 +67,7 @@ async function runYtDlp(url: string, dir: string): Promise<void> {
     "bv*+ba/b",
     "--merge-output-format",
     "mp4",
+    "--write-info-json",
     "-o",
     join(dir, "%(title).60s_%(id)s_%(autonumber)s.%(ext)s"),
   ];
@@ -72,7 +77,7 @@ async function runYtDlp(url: string, dir: string): Promise<void> {
 }
 
 async function runGalleryDl(url: string, dir: string): Promise<void> {
-  const args = ["--dest", dir, "--no-mtime", "--range", "1-50"];
+  const args = ["--dest", dir, "--no-mtime", "--range", "1-50", "--write-metadata"];
   if (process.env.GALLERYDL_COOKIES) {
     args.push("--cookies", process.env.GALLERYDL_COOKIES);
   }
@@ -105,34 +110,53 @@ function chunk<T>(items: T[], size: number): T[][] {
   return groups;
 }
 
+function captionOf(file: MediaFile): string | undefined {
+  return file.info ? formatInfo(file.info) : undefined;
+}
+
 async function sendPhotos(ctx: Context, photos: MediaFile[]): Promise<void> {
   for (const group of chunk(photos, 10)) {
+    const firstCaption = captionOf(group[0]!);
     try {
       if (group.length === 1) {
-        await ctx.replyWithPhoto(new InputFile(group[0]!.path));
+        await ctx.replyWithPhoto(
+          new InputFile(group[0]!.path),
+          firstCaption ? { caption: firstCaption, parse_mode: "HTML" } : {},
+        );
       } else {
-        const media = group.map((file) => InputMediaBuilder.photo(new InputFile(file.path)));
+        const media = group.map((file, index) =>
+          InputMediaBuilder.photo(
+            new InputFile(file.path),
+            index === 0 && firstCaption ? { caption: firstCaption, parse_mode: "HTML" } : {},
+          ),
+        );
         await ctx.replyWithMediaGroup(media);
       }
     } catch {
       for (const file of group) {
-        await ctx.replyWithDocument(new InputFile(file.path));
+        const caption = captionOf(file);
+        await ctx.replyWithDocument(
+          new InputFile(file.path),
+          caption ? { caption, parse_mode: "HTML" } : {},
+        );
       }
     }
   }
 }
 
 async function sendVideo(ctx: Context, file: MediaFile): Promise<void> {
+  const caption = captionOf(file);
+  const options = caption ? { caption, parse_mode: "HTML" as const } : {};
   const sendable = VIDEO_EXTENSIONS.has(extname(file.path).toLowerCase());
   if (sendable) {
     try {
-      await ctx.replyWithVideo(new InputFile(file.path));
+      await ctx.replyWithVideo(new InputFile(file.path), options);
       return;
     } catch {
       // fall through to document
     }
   }
-  await ctx.replyWithDocument(new InputFile(file.path));
+  await ctx.replyWithDocument(new InputFile(file.path), options);
 }
 
 async function handleDownload(ctx: Context, platform: Platform | null): Promise<void> {
@@ -156,7 +180,12 @@ async function handleDownload(ctx: Context, platform: Platform | null): Promise<
   const dir = await makeTempDir("dl");
   try {
     await ctx.replyWithChatAction("upload_photo");
-    const files = await download(url, resolved, dir);
+    const downloaded = await download(url, resolved, dir);
+    const infos = await collectInfos(dir);
+    const files = downloaded.map((file) => ({
+      ...file,
+      info: parseInfo(infos.get(mediaKey(file.path))),
+    }));
 
     if (files.length === 0) {
       await ctx.api.editMessageText(
@@ -207,6 +236,6 @@ export function registerDownloader(bot: Bot): void {
   };
 
   for (const [command, platform] of Object.entries(platforms)) {
-    bot.command(command, (ctx) => handleDownload(ctx, platform));
+    registerCommand(bot, command, (ctx) => handleDownload(ctx, platform));
   }
 }

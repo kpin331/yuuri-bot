@@ -3,6 +3,7 @@ import { extname, join } from "node:path";
 import { InputFile, type Bot, type Context } from "grammy";
 import type { Message } from "grammy/types";
 import { exec } from "../lib/exec.js";
+import { registerCommand } from "../lib/command.js";
 import { downloadTelegramFile } from "../lib/media.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
 import { TOOLS } from "../lib/tools.js";
@@ -135,7 +136,7 @@ async function makeVideoSticker(input: string, output: string): Promise<void> {
 }
 
 export function registerSticker(bot: Bot): void {
-  bot.command("s", async (ctx: Context) => {
+  registerCommand(bot, "s", async (ctx: Context) => {
     const message = ctx.message;
     if (!message) return;
 

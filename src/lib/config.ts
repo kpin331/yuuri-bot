@@ -14,3 +14,8 @@ export function isOwner(userId: number | undefined): boolean {
   const ownerId = getOwnerId();
   return ownerId !== null && userId === ownerId;
 }
+
+export function isEveryoneAllowed(): boolean {
+  const value = (process.env.EVERYONE ?? "").trim().toLowerCase();
+  return value === "true" || value === "1" || value === "yes" || value === "y" || value === "on";
+}
