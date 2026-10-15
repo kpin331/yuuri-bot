@@ -2,6 +2,7 @@ import { config } from "dotenv";
 import { createBot } from "./bot.js";
 import { closeDatabase, initDatabase } from "./lib/db.js";
 import { checkRequiredTools } from "./lib/tools.js";
+import { startWhatsApp } from "./whatsapp.js";
 
 config();
 
@@ -34,8 +35,11 @@ const bot = createBot(token);
 await bot.init();
 console.log(`Bot started as @${bot.botInfo.username}`);
 
+const whatsapp = startWhatsApp();
+
 const shutdown = (): void => {
   closeDatabase();
+  void whatsapp?.close();
   void bot.stop();
 };
 

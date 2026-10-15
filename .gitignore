@@ -9,3 +9,5 @@ data/
 *.db-wal
 *.db-shm
 AGENTS.md
+auth/
+*.creds.json

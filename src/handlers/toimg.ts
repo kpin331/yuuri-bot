@@ -2,10 +2,9 @@ import { join } from "node:path";
 import { InputFile, type Bot, type Context } from "grammy";
 import type { Message } from "grammy/types";
 import { registerCommand } from "../lib/command.js";
-import { exec } from "../lib/exec.js";
 import { downloadTelegramFile } from "../lib/media.js";
+import { stickerToPng } from "../lib/stickers.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
-import { TOOLS } from "../lib/tools.js";
 
 type StickerKind = "static" | "video" | "animated";
 
@@ -20,23 +19,6 @@ function resolveSticker(message: Message): StickerSource | null {
   if (sticker.is_animated) return { kind: "animated" };
   if (sticker.is_video) return { kind: "video", fileId: sticker.file_id };
   return { kind: "static", fileId: sticker.file_id };
-}
-
-async function toPng(input: string, output: string): Promise<void> {
-  const { code, stderr } = await exec(TOOLS.ffmpeg, [
-    "-hide_banner",
-    "-loglevel",
-    "error",
-    "-y",
-    "-i",
-    input,
-    "-frames:v",
-    "1",
-    output,
-  ]);
-  if (code !== 0) {
-    throw new Error(`ffmpeg failed to convert the sticker: ${stderr.trim()}`);
-  }
 }
 
 export function registerToimg(bot: Bot): void {
@@ -68,7 +50,7 @@ export function registerToimg(bot: Bot): void {
       const output = join(dir, "sticker.png");
 
       await downloadTelegramFile(bot, source.fileId, input);
-      await toPng(input, output);
+      await stickerToPng(input, output);
 
       await ctx.replyWithDocument(new InputFile(output, "sticker.png"));
     } catch (error) {

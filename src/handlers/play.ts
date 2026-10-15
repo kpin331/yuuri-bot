@@ -1,9 +1,7 @@
-import { readdir, rm, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { stat } from "node:fs/promises";
 import { InlineKeyboard, InputFile, type Bot, type Context } from "grammy";
 import { registerCommand } from "../lib/command.js";
 import { isCommandEnabled } from "../lib/db.js";
-import { exec } from "../lib/exec.js";
 import { escapeHtml } from "../lib/info.js";
 import {
   exceedsUploadLimit,
@@ -13,23 +11,16 @@ import {
 } from "../lib/media.js";
 import {
   buildPlayCaption,
-  extractPlayMeta,
   formatSearchList,
   formatTime,
   isPlayUrl,
-  parseSearchEntries,
   PlaySessionStore,
-  PROBE_TIMEOUT_MS,
-  SEARCH_COUNT,
-  SEARCH_TIMEOUT_MS,
-  DOWNLOAD_TIMEOUT_MS,
   type PlayKind,
   type PlayMeta,
   type PlaySession,
-  type SearchResult,
 } from "../lib/play.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
-import { TOOLS } from "../lib/tools.js";
+import { downloadAudio, downloadVideo, probeMeta, searchYouTube } from "../lib/youtube.js";
 
 const sessions = new PlaySessionStore();
 
@@ -58,90 +49,6 @@ function formatPrompt(meta: PlayMeta): string {
   if (meta.isLive) lines.push("🔴 Live stream");
   lines.push("", "Choose a format:");
   return lines.join("\n");
-}
-
-async function searchYouTube(query: string): Promise<SearchResult[]> {
-  try {
-    const { code, stdout } = await exec(
-      TOOLS.ytDlp,
-      [
-        "--no-warnings",
-        "--no-progress",
-        "--dump-single-json",
-        "--flat-playlist",
-        `ytsearch${SEARCH_COUNT}:${query}`,
-      ],
-      { timeoutMs: SEARCH_TIMEOUT_MS },
-    );
-    if (code !== 0) return [];
-    return parseSearchEntries(JSON.parse(stdout), SEARCH_COUNT);
-  } catch {
-    return [];
-  }
-}
-
-async function probeMeta(url: string): Promise<PlayMeta | null> {
-  try {
-    const { code, stdout } = await exec(
-      TOOLS.ytDlp,
-      ["--no-warnings", "--no-progress", "--dump-single-json", "--no-playlist", url],
-      { timeoutMs: PROBE_TIMEOUT_MS },
-    );
-    if (code !== 0) return null;
-    return extractPlayMeta(JSON.parse(stdout));
-  } catch {
-    return null;
-  }
-}
-
-async function findOutput(dir: string): Promise<string | null> {
-  const entries = await readdir(dir);
-  for (const name of entries) {
-    if (name.endsWith(".part") || name.endsWith(".json") || name.endsWith(".ytdl")) continue;
-    const full = join(dir, name);
-    const info = await stat(full);
-    if (info.isFile() && info.size > 0) return full;
-  }
-  return null;
-}
-
-interface Download {
-  path: string;
-}
-
-async function runYtDlp(dir: string, url: string, extra: string[]): Promise<Download | null> {
-  const args = ["--no-warnings", "--no-progress", "--no-mtime", ...extra, "-o", join(dir, "media.%(ext)s")];
-  if (process.env.YTDLP_COOKIES) args.push("--cookies", process.env.YTDLP_COOKIES);
-  args.push(url);
-
-  try {
-    const { code } = await exec(TOOLS.ytDlp, args, { timeoutMs: DOWNLOAD_TIMEOUT_MS });
-    if (code !== 0) return null;
-  } catch {
-    return null;
-  }
-
-  const path = await findOutput(dir);
-  return path ? { path } : null;
-}
-
-function downloadAudio(dir: string, url: string): Promise<Download | null> {
-  return runYtDlp(dir, url, ["-f", "ba", "-x", "--audio-format", "m4a", "--audio-quality", "0"]);
-}
-
-async function downloadVideo(dir: string, url: string): Promise<Download | null> {
-  const first = await runYtDlp(dir, url, ["-f", "bv*+ba/b", "--merge-output-format", "mp4"]);
-  if (first) {
-    const size = (await stat(first.path)).size;
-    if (!exceedsUploadLimit(size)) return first;
-    await rm(first.path, { force: true });
-  }
-  return runYtDlp(dir, url, [
-    "-f",
-    "b[height<=480]/bv*[height<=480]+ba/b[height<=480]",
-    "--merge-output-format",
-    "mp4",
-  ]);
 }
 
 async function sendMedia(

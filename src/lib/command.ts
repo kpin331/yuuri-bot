@@ -13,6 +13,12 @@ export function isKnownCommand(name: string): boolean {
   return knownCommands.has(name.trim().toLowerCase());
 }
 
+// Lets the WhatsApp side contribute its command names to the same set, so the
+// shared enable/disable state applies to commands that only exist on WhatsApp.
+export function registerKnownCommand(name: string): void {
+  knownCommands.add(name.trim().replace(/^\//, "").toLowerCase());
+}
+
 export function getKnownCommands(): string[] {
   return [...knownCommands].sort();
 }

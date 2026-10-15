@@ -1,15 +1,10 @@
-import { stat } from "node:fs/promises";
 import { extname, join } from "node:path";
 import { InputFile, type Bot, type Context } from "grammy";
 import type { Message } from "grammy/types";
-import { exec } from "../lib/exec.js";
 import { registerCommand } from "../lib/command.js";
 import { downloadTelegramFile } from "../lib/media.js";
+import { makeStaticSticker, makeVideoSticker } from "../lib/stickers.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
-import { TOOLS } from "../lib/tools.js";
-
-const STATIC_LIMIT = 512 * 1024;
-const VIDEO_LIMIT = 256 * 1024;
 
 interface Source {
   fileId: string;
@@ -48,91 +43,6 @@ function extractSource(message: Message): Source | null {
     }
   }
   return null;
-}
-
-async function sizeOf(path: string): Promise<number> {
-  return (await stat(path)).size;
-}
-
-async function makeStaticSticker(input: string, output: string): Promise<void> {
-  const qualities = ["85", "65", "45", "25"];
-  for (const quality of qualities) {
-    const { code, stderr } = await exec(TOOLS.ffmpeg, [
-      "-hide_banner",
-      "-loglevel",
-      "error",
-      "-y",
-      "-i",
-      input,
-      "-vf",
-      "scale=512:512,format=rgba",
-      "-frames:v",
-      "1",
-      "-c:v",
-      "libwebp",
-      "-q:v",
-      quality,
-      "-compression_level",
-      "6",
-      "-loop",
-      "0",
-      "-an",
-      "-pix_fmt",
-      "yuva420p",
-      output,
-    ]);
-    if (code !== 0) {
-      throw new Error(`ffmpeg failed to build sticker: ${stderr.trim()}`);
-    }
-    if ((await sizeOf(output)) <= STATIC_LIMIT) return;
-  }
-}
-
-async function makeVideoSticker(input: string, output: string): Promise<void> {
-  const presets = [
-    { bitrate: "700k", crf: "30" },
-    { bitrate: "450k", crf: "33" },
-    { bitrate: "320k", crf: "36" },
-    { bitrate: "220k", crf: "40" },
-  ];
-  for (const preset of presets) {
-    const { code, stderr } = await exec(TOOLS.ffmpeg, [
-      "-hide_banner",
-      "-loglevel",
-      "error",
-      "-y",
-      "-i",
-      input,
-      "-t",
-      "3",
-      "-an",
-      "-vf",
-      "scale=512:512:force_original_aspect_ratio=decrease,format=yuva420p,pad=512:512:(ow-iw)/2:(oh-ih)/2:color=0x00000000,fps=30",
-      "-c:v",
-      "libvpx-vp9",
-      "-b:v",
-      preset.bitrate,
-      "-crf",
-      preset.crf,
-      "-deadline",
-      "good",
-      "-cpu-used",
-      "2",
-      "-auto-alt-ref",
-      "0",
-      "-row-mt",
-      "1",
-      "-pix_fmt",
-      "yuva420p",
-      "-f",
-      "webm",
-      output,
-    ]);
-    if (code !== 0) {
-      throw new Error(`ffmpeg failed to build sticker: ${stderr.trim()}`);
-    }
-    if ((await sizeOf(output)) <= VIDEO_LIMIT) return;
-  }
 }
 
 export function registerSticker(bot: Bot): void {
