@@ -7,9 +7,12 @@ import { formatInfo, parseInfo } from "../lib/info.js";
 import {
   collectInfos,
   collectMedia,
+  exceedsUploadLimit,
   formatBytes,
+  hasFreeSpace,
   MAX_UPLOAD_BYTES,
   mediaKey,
+  uploadLimitError,
   type MediaFile,
 } from "../lib/media.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
@@ -62,7 +65,7 @@ async function runYtDlp(url: string, dir: string): Promise<void> {
     "--playlist-end",
     "30",
     "--max-filesize",
-    "500M",
+    `${Math.floor(MAX_UPLOAD_BYTES / (1024 * 1024))}M`,
     "-f",
     "bv*+ba/b",
     "--merge-output-format",
@@ -179,6 +182,15 @@ async function handleDownload(ctx: Context, platform: Platform | null): Promise<
 
   const dir = await makeTempDir("dl");
   try {
+    if (!(await hasFreeSpace(dir, MAX_UPLOAD_BYTES))) {
+      await ctx.api.editMessageText(
+        status.chat.id,
+        status.message_id,
+        "Not enough free disk space to download safely.",
+      );
+      return;
+    }
+
     await ctx.replyWithChatAction("upload_photo");
     const downloaded = await download(url, resolved, dir);
     const infos = await collectInfos(dir);
@@ -198,7 +210,7 @@ async function handleDownload(ctx: Context, platform: Platform | null): Promise<
 
     const photos = files.filter((file) => file.kind === "photo");
     const videos = files.filter((file) => file.kind === "video");
-    const oversized = files.filter((file) => file.size > MAX_UPLOAD_BYTES);
+    const oversized = files.filter((file) => exceedsUploadLimit(file.size));
 
     await ctx.api.editMessageText(
       status.chat.id,
@@ -209,13 +221,15 @@ async function handleDownload(ctx: Context, platform: Platform | null): Promise<
     await sendPhotos(ctx, photos);
 
     for (const file of videos) {
-      if (file.size > MAX_UPLOAD_BYTES) continue;
+      if (exceedsUploadLimit(file.size)) continue;
       await sendVideo(ctx, file);
     }
 
     if (oversized.length > 0) {
-      const list = oversized.map((file) => `• ${file.name} (${formatBytes(file.size)})`).join("\n");
-      await ctx.reply(`Skipped ${oversized.length} file(s) larger than 50 MB:\n${list}`);
+      const list = oversized
+        .map((file) => `• ${file.name} (${formatBytes(file.size)}) — ${uploadLimitError(file.size)}`)
+        .join("\n");
+      await ctx.reply(`Skipped ${oversized.length} file(s) over the limit:\n${list}`);
     }
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);

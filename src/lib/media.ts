@@ -1,4 +1,4 @@
-import { readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { readdir, readFile, stat, statfs, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import type { Bot } from "grammy";
 import type { MediaInfo } from "./info.js";
@@ -138,7 +138,43 @@ export async function downloadTelegramFile(
   await writeFile(destPath, buffer);
 }
 
-export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+const DEFAULT_MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
+
+// The official Telegram cloud Bot API rejects uploads larger than 50 MB.
+// Uploading larger files (as the 200 MB application default allows) requires a
+// self-hosted local Bot API server, which the transport also must support.
+export const TELEGRAM_CLOUD_UPLOAD_LIMIT_BYTES = 50 * 1024 * 1024;
+
+function resolveMaxUploadBytes(): number {
+  const raw = process.env.MAX_UPLOAD_MB?.trim();
+  if (!raw) return DEFAULT_MAX_UPLOAD_BYTES;
+  const mb = Number(raw);
+  if (!Number.isFinite(mb) || mb <= 0) return DEFAULT_MAX_UPLOAD_BYTES;
+  return Math.floor(mb * 1024 * 1024);
+}
+
+// Shared application-level upload limit (default 200 MB, override with
+// MAX_UPLOAD_MB). Used to validate files before sending and to cap downloads.
+export const MAX_UPLOAD_BYTES = resolveMaxUploadBytes();
+
+export function exceedsUploadLimit(size: number): boolean {
+  return size > MAX_UPLOAD_BYTES;
+}
+
+export function uploadLimitError(size: number): string {
+  return `The file is too large (${formatBytes(size)}). The configured limit is ${formatBytes(MAX_UPLOAD_BYTES)}.`;
+}
+
+// Best-effort free-space probe so a large download doesn't fill the disk. When
+// the filesystem cannot be inspected, callers are not blocked.
+export async function hasFreeSpace(dir: string, neededBytes: number): Promise<boolean> {
+  try {
+    const stats = await statfs(dir);
+    return stats.bavail * stats.bsize >= neededBytes;
+  } catch {
+    return true;
+  }
+}
 
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;

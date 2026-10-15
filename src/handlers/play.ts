@@ -2,9 +2,15 @@ import { readdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { InlineKeyboard, InputFile, type Bot, type Context } from "grammy";
 import { registerCommand } from "../lib/command.js";
+import { isCommandEnabled } from "../lib/db.js";
 import { exec } from "../lib/exec.js";
 import { escapeHtml } from "../lib/info.js";
-import { formatBytes, MAX_UPLOAD_BYTES } from "../lib/media.js";
+import {
+  exceedsUploadLimit,
+  hasFreeSpace,
+  MAX_UPLOAD_BYTES,
+  uploadLimitError,
+} from "../lib/media.js";
 import {
   buildPlayCaption,
   extractPlayMeta,
@@ -127,7 +133,7 @@ async function downloadVideo(dir: string, url: string): Promise<Download | null>
   const first = await runYtDlp(dir, url, ["-f", "bv*+ba/b", "--merge-output-format", "mp4"]);
   if (first) {
     const size = (await stat(first.path)).size;
-    if (size <= MAX_UPLOAD_BYTES) return first;
+    if (!exceedsUploadLimit(size)) return first;
     await rm(first.path, { force: true });
   }
   return runYtDlp(dir, url, [
@@ -288,6 +294,11 @@ async function handleFormat(ctx: Context, session: PlaySession, kind: PlayKind):
 
   const dir = await makeTempDir("play");
   try {
+    if (!(await hasFreeSpace(dir, MAX_UPLOAD_BYTES))) {
+      await ctx.editMessageText("Not enough free disk space to download safely.").catch(() => undefined);
+      return;
+    }
+
     const download = kind === "audio" ? await downloadAudio(dir, url) : await downloadVideo(dir, url);
     if (!download) {
       await ctx.editMessageText(`Could not download the ${label}.`).catch(() => undefined);
@@ -295,12 +306,8 @@ async function handleFormat(ctx: Context, session: PlaySession, kind: PlayKind):
     }
 
     const size = (await stat(download.path)).size;
-    if (size > MAX_UPLOAD_BYTES) {
-      await ctx
-        .editMessageText(
-          `The ${label} is too large (${formatBytes(size)}). Telegram bots can upload up to 50 MB.`,
-        )
-        .catch(() => undefined);
+    if (exceedsUploadLimit(size)) {
+      await ctx.editMessageText(uploadLimitError(size)).catch(() => undefined);
       return;
     }
 
@@ -323,6 +330,14 @@ async function handleCallback(ctx: Context): Promise<void> {
 
   if (chatId === undefined || userId === undefined) {
     await ctx.answerCallbackQuery().catch(() => undefined);
+    return;
+  }
+
+  // A disabled command must not be runnable through its inline buttons either.
+  if (!isCommandEnabled("play")) {
+    await ctx
+      .answerCallbackQuery({ text: "This command is currently disabled.", show_alert: true })
+      .catch(() => undefined);
     return;
   }
 

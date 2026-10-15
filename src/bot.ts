@@ -1,4 +1,6 @@
 import { Bot, GrammyError, HttpError } from "grammy";
+import { registerBan, registerBanGuard } from "./handlers/ban.js";
+import { registerCommandControl } from "./handlers/commandcontrol.js";
 import { registerCommands } from "./handlers/commands.js";
 import { registerDownloader } from "./handlers/download.js";
 import { registerFallback } from "./handlers/fallback.js";
@@ -10,7 +12,7 @@ import { registerSys } from "./handlers/sys.js";
 import { registerToimg } from "./handlers/toimg.js";
 import { registerTracking } from "./handlers/tracking.js";
 import { registerUserinfo } from "./handlers/userinfo.js";
-import { getOwnerId, isEveryoneAllowed } from "./lib/config.js";
+import { getOwnerId, isAuthorized, isEveryoneAllowed } from "./lib/config.js";
 
 export function createBot(token: string): Bot {
   const bot = new Bot(token);
@@ -22,9 +24,11 @@ export function createBot(token: string): Bot {
     if (e instanceof GrammyError) {
       console.error("Error in request:", e.description);
     } else if (e instanceof HttpError) {
-      console.error("Could not contact Telegram:", e);
+      // Log the message only: the underlying error can contain the request URL,
+      // which embeds the bot token.
+      console.error("Could not contact Telegram:", e.message);
     } else {
-      console.error("Unknown error:", e);
+      console.error("Unknown error:", e instanceof Error ? e.message : e);
     }
   });
 
@@ -32,7 +36,8 @@ export function createBot(token: string): Bot {
     if (isEveryoneAllowed()) return next();
 
     const ownerId = getOwnerId();
-    if (ownerId === null || ctx.from?.id === ownerId) return next();
+    if (ownerId === null) return next();
+    if (isAuthorized(ctx.from?.id)) return next();
 
     if (ctx.chat) {
       await ctx
@@ -41,6 +46,7 @@ export function createBot(token: string): Bot {
     }
   });
 
+  registerBanGuard(bot);
   registerTracking(bot);
   registerCommands(bot);
   registerSticker(bot);
@@ -50,6 +56,8 @@ export function createBot(token: string): Bot {
   registerPlay(bot);
   registerToimg(bot);
   registerUserinfo(bot);
+  registerBan(bot);
+  registerCommandControl(bot);
   registerSys(bot);
   registerFallback(bot);
 

@@ -1,9 +1,21 @@
 import type { Bot, Context } from "grammy";
+import { isCommandEnabled } from "./db.js";
 import { isOwner } from "./config.js";
 
 type CommandHandler = (ctx: Context) => Promise<void> | void;
 
+const DISABLED_MESSAGE = "⚠️ This command is currently disabled.";
+
 const patternCache = new Map<string, RegExp>();
+const knownCommands = new Set<string>();
+
+export function isKnownCommand(name: string): boolean {
+  return knownCommands.has(name.trim().toLowerCase());
+}
+
+export function getKnownCommands(): string[] {
+  return [...knownCommands].sort();
+}
 
 function commandPattern(name: string): RegExp {
   const cached = patternCache.get(name);
@@ -13,10 +25,19 @@ function commandPattern(name: string): RegExp {
   return pattern;
 }
 
+// Returns true when the command is disabled and a warning has been sent, in
+// which case the caller must not run the handler or continue the chain.
+async function blockedByState(ctx: Context, name: string): Promise<boolean> {
+  if (isCommandEnabled(name)) return false;
+  await ctx.reply(DISABLED_MESSAGE).catch(() => undefined);
+  return true;
+}
+
 // grammY's built-in `command` only matches `entities`, so commands sent as a
 // media caption (which Telegram reports in `caption_entities`) never fire.
 // This registers a message handler that accepts both.
 export function registerCommand(bot: Bot, name: string, handler: CommandHandler): void {
+  knownCommands.add(name.toLowerCase());
   const pattern = commandPattern(name);
 
   bot.on("message", async (ctx, next) => {
@@ -34,6 +55,8 @@ export function registerCommand(bot: Bot, name: string, handler: CommandHandler)
     const target = match[1];
     if (target && target.toLowerCase() !== (ctx.me.username ?? "").toLowerCase()) return next();
 
+    if (await blockedByState(ctx, name)) return;
+
     ctx.match = (match[2] ?? "").trimStart();
     await handler(ctx);
   });
@@ -43,6 +66,7 @@ export function registerCommand(bot: Bot, name: string, handler: CommandHandler)
 // entity), so they are matched against plain text/caption and are
 // owner-exclusive regardless of the EVERYONE switch.
 export function registerOwnerCommand(bot: Bot, name: string, handler: CommandHandler): void {
+  knownCommands.add(name.toLowerCase());
   const pattern = new RegExp(`^\\$${name}(?:\\s+([\\s\\S]*))?$`, "i");
 
   bot.on("message", async (ctx, next) => {
@@ -57,6 +81,8 @@ export function registerOwnerCommand(bot: Bot, name: string, handler: CommandHan
       await ctx.reply("🚫 This command is owner-only.").catch(() => undefined);
       return;
     }
+
+    if (await blockedByState(ctx, name)) return;
 
     ctx.match = (match[1] ?? "").trimStart();
     await handler(ctx);

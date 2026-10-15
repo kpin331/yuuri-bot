@@ -3,40 +3,84 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { InputFile, type Api, type Bot, type Context } from "grammy";
 import { registerCommand } from "../lib/command.js";
+import { isCommandEnabled } from "../lib/db.js";
 
 const TITLE = "Yuuri Bot V1.0✨";
 const SUBTITLE = "List command to use";
 
-function buildMenu(): string {
-  return [
-    `<b>${TITLE}</b>`,
-    `<i>${SUBTITLE}</i>`,
-    "",
-    "<b>General</b>",
-    "/start — Show this menu",
-    "/menu — Show this menu",
-    "/userinfo — Show usage stats for a user",
-    "",
-    "<b>Stickers</b>",
-    "/s — Reply to an image or video to turn it into a sticker",
-    "/toimg — Reply to a sticker to turn it into a PNG image",
-    "",
-    "<b>Media</b>",
-    "/play — Search YouTube and download audio or video",
-    "",
-    "<b>Downloaders</b>",
-    "/dl — Download media from any supported link",
-    "/ig — Download from Instagram",
-    "/x — Download from X (Twitter)",
-    "/fb — Download from Facebook",
-    "",
-    "<b>Image Search</b>",
-    "/pin — Find the top Pinterest image (query or link)",
-    "/pixiv — Find the top Pixiv illustration (query only)",
-    "",
-    "<b>System</b>",
-    "$sys — Show system info (owner only)",
-  ].join("\n");
+interface MenuItem {
+  command: string;
+  label: string;
+}
+
+interface MenuSection {
+  title: string;
+  items: MenuItem[];
+}
+
+const SECTIONS: MenuSection[] = [
+  {
+    title: "General",
+    items: [
+      { command: "start", label: "/start — Show this menu" },
+      { command: "menu", label: "/menu — Show this menu" },
+      { command: "userinfo", label: "/userinfo — Show usage stats for a user" },
+    ],
+  },
+  {
+    title: "Stickers",
+    items: [
+      { command: "s", label: "/s — Reply to an image or video to turn it into a sticker" },
+      { command: "toimg", label: "/toimg — Reply to a sticker to turn it into a PNG image" },
+    ],
+  },
+  {
+    title: "Media",
+    items: [{ command: "play", label: "/play — Search YouTube and download audio or video" }],
+  },
+  {
+    title: "Downloaders",
+    items: [
+      { command: "dl", label: "/dl — Download media from any supported link" },
+      { command: "ig", label: "/ig — Download from Instagram" },
+      { command: "x", label: "/x — Download from X (Twitter)" },
+      { command: "fb", label: "/fb — Download from Facebook" },
+    ],
+  },
+  {
+    title: "Image Search",
+    items: [
+      { command: "pin", label: "/pin — Find the top Pinterest image (query or link)" },
+      { command: "pixiv", label: "/pixiv — Find the top Pixiv illustration (query only)" },
+    ],
+  },
+  {
+    title: "Moderation",
+    items: [
+      { command: "ban", label: "/ban — Ban a user (admins)" },
+      { command: "unban", label: "/unban — Unban a user (admins)" },
+    ],
+  },
+];
+
+const FOOTER: string[] = [
+  "<b>System</b>",
+  "$sys — Show system info (owner only)",
+  "!&lt;command&gt; on|off — Enable or disable a command (admins)",
+];
+
+function renderItem(item: MenuItem): string {
+  // Informational only. The real enforcement happens in the command dispatch.
+  return isCommandEnabled(item.command) ? item.label : `${item.label} (OFF)`;
+}
+
+export function buildMenu(): string {
+  const lines = [`<b>${TITLE}</b>`, `<i>${SUBTITLE}</i>`];
+  for (const section of SECTIONS) {
+    lines.push("", `<b>${section.title}</b>`, ...section.items.map(renderItem));
+  }
+  lines.push("", ...FOOTER);
+  return lines.join("\n");
 }
 
 async function getProfilePhotoFileId(api: Api, botId: number): Promise<string | null> {

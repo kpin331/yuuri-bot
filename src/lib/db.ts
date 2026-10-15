@@ -31,6 +31,14 @@ export interface UserStats extends UserRecord {
   topCommand: string | null;
 }
 
+export interface BanRecord {
+  userId: number;
+  bannedBy: number | null;
+  createdAt: number;
+  expiresAt: number;
+  reason: string | null;
+}
+
 let db: DatabaseSync | null = null;
 
 export function getDbPath(): string {
@@ -78,6 +86,21 @@ export function initDatabase(path: string = getDbPath()): void {
     );
 
     CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
+
+    CREATE TABLE IF NOT EXISTS command_states (
+      command     TEXT PRIMARY KEY,
+      enabled     INTEGER NOT NULL DEFAULT 1,
+      updated_at  INTEGER NOT NULL,
+      updated_by  INTEGER
+    );
+
+    CREATE TABLE IF NOT EXISTS bans (
+      user_id     INTEGER PRIMARY KEY,
+      banned_by   INTEGER,
+      created_at  INTEGER NOT NULL,
+      expires_at  INTEGER NOT NULL,
+      reason      TEXT
+    );
   `);
 
   db = database;
@@ -193,4 +216,83 @@ export function findUserByUsername(username: string): UserRecord | null {
   if (normalized.length === 0) return null;
   const row = db.prepare("SELECT * FROM users WHERE username = ?").get(normalized);
   return row ? toRecord(row as Record<string, unknown>) : null;
+}
+
+// === Command enable/disable state ===
+
+export function isCommandEnabled(command: string): boolean {
+  if (!db) return true;
+  const row = db
+    .prepare("SELECT enabled FROM command_states WHERE command = ?")
+    .get(command.trim().toLowerCase());
+  if (!row) return true;
+  return Number(row.enabled) !== 0;
+}
+
+export function setCommandState(
+  command: string,
+  enabled: boolean,
+  updatedBy: number | null,
+  at: number = Date.now(),
+): void {
+  if (!db) throw new Error("Storage is not available.");
+  db.prepare(
+    `INSERT INTO command_states (command, enabled, updated_at, updated_by)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(command) DO UPDATE SET
+       enabled = excluded.enabled,
+       updated_at = excluded.updated_at,
+       updated_by = excluded.updated_by`,
+  ).run(command.trim().toLowerCase(), enabled ? 1 : 0, at, updatedBy);
+}
+
+// === Bans ===
+
+function toBan(row: Record<string, unknown>): BanRecord {
+  return {
+    userId: Number(row.user_id),
+    bannedBy: row.banned_by === null || row.banned_by === undefined ? null : Number(row.banned_by),
+    createdAt: Number(row.created_at),
+    expiresAt: Number(row.expires_at),
+    reason: (row.reason as string | null) ?? null,
+  };
+}
+
+// Returns the active ban for a user, or null. Expired bans are deleted lazily
+// so that they stop blocking users even after a restart.
+export function getBan(userId: number, at: number = Date.now()): BanRecord | null {
+  if (!db) return null;
+  const row = db.prepare("SELECT * FROM bans WHERE user_id = ?").get(userId);
+  if (!row) return null;
+
+  const ban = toBan(row as Record<string, unknown>);
+  if (ban.expiresAt <= at) {
+    db.prepare("DELETE FROM bans WHERE user_id = ?").run(userId);
+    return null;
+  }
+  return ban;
+}
+
+export function isBanned(userId: number, at: number = Date.now()): boolean {
+  return getBan(userId, at) !== null;
+}
+
+export function addBan(record: Omit<BanRecord, "reason"> & { reason?: string | null }): void {
+  if (!db) throw new Error("Storage is not available.");
+  const reason = record.reason ?? null;
+  db.prepare(
+    `INSERT INTO bans (user_id, banned_by, created_at, expires_at, reason)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(user_id) DO UPDATE SET
+       banned_by = excluded.banned_by,
+       created_at = excluded.created_at,
+       expires_at = excluded.expires_at,
+       reason = excluded.reason`,
+  ).run(record.userId, record.bannedBy, record.createdAt, record.expiresAt, reason);
+}
+
+export function removeBan(userId: number): boolean {
+  if (!db) return false;
+  const result = db.prepare("DELETE FROM bans WHERE user_id = ?").run(userId);
+  return Number(result.changes) > 0;
 }
