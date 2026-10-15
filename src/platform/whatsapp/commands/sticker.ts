@@ -1,10 +1,15 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { makeAnimatedSticker, makeStaticSticker } from "../../../lib/stickers.js";
+import { addStickerExif, makeAnimatedSticker, makeStaticSticker } from "../../../lib/stickers.js";
 import { makeTempDir, removeDir } from "../../../lib/temp.js";
 import { downloadMedia, mediaSourceOf } from "../message.js";
 import { replyTo, sendSticker, sendText } from "../reply.js";
 import type { WaCommand } from "../types.js";
+
+// Pack name and author WhatsApp shows on every sticker this bot creates.
+const PACK_NAME = "build with love❤";
+const PACK_AUTHOR = "Yuuri Bot";
+const PACK_ID = "com.yuuri.bot.sticker";
 
 export const stickerCommand: WaCommand = {
   name: "s",
@@ -34,7 +39,15 @@ export const stickerCommand: WaCommand = {
         await makeAnimatedSticker(input, output);
       }
 
-      await sendSticker(reply, await readFile(output));
+      const sticker = await readFile(output);
+      await sendSticker(
+        reply,
+        addStickerExif(sticker, {
+          packId: PACK_ID,
+          packName: PACK_NAME,
+          publisher: PACK_AUTHOR,
+        }),
+      );
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       await sendText(reply, `Could not create a sticker: ${reason}`);

@@ -1,6 +1,6 @@
 import { getCommandPrefix } from "../../../lib/config.js";
 import { isCommandEnabled } from "../../../lib/db.js";
-import { replyTo, sendText } from "../reply.js";
+import { replyTo, sendImage, sendText } from "../reply.js";
 import type { WaCommand } from "../types.js";
 
 const TITLE = "Yuuri Bot V1.0✨";
@@ -87,6 +87,25 @@ export const menuCommand: WaCommand = {
   aliases: ["start"],
   free: true,
   run: async ({ message }) => {
-    await sendText(replyTo(message), buildMenu());
+    const reply = replyTo(message);
+    const caption = buildMenu();
+
+    // Show the bot's own profile picture as the menu header, like Telegram does,
+    // falling back to a plain text menu when no picture is available.
+    try {
+      const self = message.sock.user?.id;
+      const url = self ? await message.sock.profilePictureUrl(self, "image") : undefined;
+      if (url) {
+        const response = await fetch(url);
+        if (response.ok) {
+          await sendImage(reply, Buffer.from(await response.arrayBuffer()), caption);
+          return;
+        }
+      }
+    } catch (error) {
+      console.error("WhatsApp menu profile picture failed:", error);
+    }
+
+    await sendText(reply, caption);
   },
 };
