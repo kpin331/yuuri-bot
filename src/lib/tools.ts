@@ -1,3 +1,4 @@
+import { getImpersonateTarget } from "./config.js";
 import { exec } from "./exec.js";
 
 export const TOOLS = {
@@ -16,6 +17,13 @@ export const TOOLS = {
 };
 
 export type ToolName = keyof typeof TOOLS;
+
+// Shared yt-dlp flag that makes it impersonate a browser fingerprint, which
+// gets past some bot/403 checks. Empty when impersonation is disabled.
+export function impersonateArgs(): string[] {
+  const target = getImpersonateTarget();
+  return target ? ["--impersonate", target] : [];
+}
 
 // ffmpeg/ffprobe use a single dash, yt-dlp/gallery-dl use two.
 const VERSION_ARGS: Record<ToolName, string[]> = {

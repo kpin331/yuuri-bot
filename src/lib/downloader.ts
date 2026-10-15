@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { exec } from "./exec.js";
 import { collectMedia, MAX_UPLOAD_BYTES, type MediaFile } from "./media.js";
-import { TOOLS } from "./tools.js";
+import { impersonateArgs, TOOLS } from "./tools.js";
 
 export type Platform = "ig" | "x" | "fb" | "auto";
 type DownloadTool = "gallery" | "ytdlp";
@@ -48,6 +48,7 @@ async function runYtDlp(url: string, dir: string): Promise<void> {
     "--no-warnings",
     "--no-progress",
     "--no-mtime",
+    ...impersonateArgs(),
     "--playlist-end",
     "30",
     "--max-filesize",

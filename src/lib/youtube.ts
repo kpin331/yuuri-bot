@@ -12,7 +12,7 @@ import {
   type PlayMeta,
   type SearchResult,
 } from "./play.js";
-import { TOOLS } from "./tools.js";
+import { impersonateArgs, TOOLS } from "./tools.js";
 
 export interface Download {
   path: string;
@@ -35,6 +35,7 @@ async function runYtDlp(dir: string, url: string, extra: string[]): Promise<Down
     "--no-warnings",
     "--no-progress",
     "--no-mtime",
+    ...impersonateArgs(),
     ...extra,
     "-o",
     join(dir, "media.%(ext)s"),
@@ -61,6 +62,7 @@ export async function searchYouTube(query: string): Promise<SearchResult[]> {
       [
         "--no-warnings",
         "--no-progress",
+        ...impersonateArgs(),
         "--dump-single-json",
         "--flat-playlist",
         `ytsearch${SEARCH_COUNT}:${query}`,
@@ -79,7 +81,14 @@ export async function probeMeta(url: string): Promise<PlayMeta | null> {
   try {
     const { code, stdout } = await exec(
       TOOLS.ytDlp,
-      ["--no-warnings", "--no-progress", "--dump-single-json", "--no-playlist", url],
+      [
+        "--no-warnings",
+        "--no-progress",
+        ...impersonateArgs(),
+        "--dump-single-json",
+        "--no-playlist",
+        url,
+      ],
       { timeoutMs: PROBE_TIMEOUT_MS },
     );
     if (code !== 0) return null;

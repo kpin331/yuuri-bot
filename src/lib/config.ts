@@ -162,3 +162,19 @@ export function getSpotifyClientSecret(): string | null {
 export function getMaxDurationMinutes(): number {
   return positiveInt(process.env.MAX_DURATION_MINUTES, 10);
 }
+
+// === Downloader configuration ===
+
+// Browser to impersonate for yt-dlp (a TLS/HTTP fingerprint that bypasses some
+// bot and 403 checks). Accepts any yt-dlp target: "chrome", "firefox",
+// "safari", "chrome:windows-10", ... Defaults to "chrome"; set to "none" or
+// "off" to disable. (gallery-dl does not support impersonation.)
+export function getImpersonateTarget(): string | null {
+  const value = (process.env.YTDLP_IMPERSONATE ?? "").trim();
+  if (value.length === 0) return "chrome";
+  const lower = value.toLowerCase();
+  if (["none", "off", "false", "no", "0", "disable", "disabled"].includes(lower)) {
+    return null;
+  }
+  return value;
+}

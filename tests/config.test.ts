@@ -5,6 +5,7 @@ import {
   getAdminQuota,
   getCommandPrefix,
   getDefaultQuota,
+  getImpersonateTarget,
   getMaxDurationMinutes,
   getOwnerNumbers,
   getPairingNumber,
@@ -144,5 +145,39 @@ describe("play link config", () => {
     assert.equal(getMaxDurationMinutes(), 10);
     process.env.MAX_DURATION_MINUTES = "-3";
     assert.equal(getMaxDurationMinutes(), 10);
+  });
+});
+
+describe("downloader config", () => {
+  let previous: string | undefined;
+
+  beforeEach(() => {
+    previous = process.env.YTDLP_IMPERSONATE;
+    delete process.env.YTDLP_IMPERSONATE;
+  });
+
+  afterEach(() => {
+    if (previous === undefined) delete process.env.YTDLP_IMPERSONATE;
+    else process.env.YTDLP_IMPERSONATE = previous;
+  });
+
+  it("defaults to chrome when unset or blank", () => {
+    assert.equal(getImpersonateTarget(), "chrome");
+    process.env.YTDLP_IMPERSONATE = "   ";
+    assert.equal(getImpersonateTarget(), "chrome");
+  });
+
+  it("reads a custom target, keeping the os suffix", () => {
+    process.env.YTDLP_IMPERSONATE = "chrome:windows-10";
+    assert.equal(getImpersonateTarget(), "chrome:windows-10");
+    process.env.YTDLP_IMPERSONATE = "Safari-26.0";
+    assert.equal(getImpersonateTarget(), "Safari-26.0");
+  });
+
+  it("disables impersonation with none/off style values", () => {
+    for (const value of ["none", "off", "false", "no", "0", "DISABLED"]) {
+      process.env.YTDLP_IMPERSONATE = value;
+      assert.equal(getImpersonateTarget(), null, value);
+    }
   });
 });
