@@ -83,9 +83,11 @@ export function buildMenu(): string {
   return lines.join("\n");
 }
 
-async function getProfilePhotoFileId(api: Api, botId: number): Promise<string | null> {
+// Shared helper: returns the largest available profile-photo file_id for a user
+// (the last entry in the first photo set), or null when none is available.
+export async function getProfilePhotoFileId(api: Api, userId: number): Promise<string | null> {
   try {
-    const photos = await api.getUserProfilePhotos(botId, { limit: 1 });
+    const photos = await api.getUserProfilePhotos(userId, { limit: 1 });
     const first = photos.photos[0];
     return first?.[first.length - 1]?.file_id ?? null;
   } catch (error) {

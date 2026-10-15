@@ -2,6 +2,7 @@ import type { Bot, Context } from "grammy";
 import { registerCommand } from "../lib/command.js";
 import { findUserByUsername, getStats, isDatabaseReady } from "../lib/db.js";
 import { escapeHtml } from "../lib/info.js";
+import { getProfilePhotoFileId } from "./commands.js";
 
 interface Target {
   userId: number;
@@ -120,6 +121,21 @@ export function registerUserinfo(bot: Bot): void {
       return;
     }
 
-    await ctx.reply(buildReport(ctx, target), { parse_mode: "HTML" });
+    const report = buildReport(ctx, target);
+
+    // Header: the target's profile picture when one is available. Falls back to
+    // a plain text report if the user has no photo or the send fails (e.g. the
+    // report exceeds the 1024-character caption limit).
+    const fileId = await getProfilePhotoFileId(ctx.api, target.userId);
+    if (fileId) {
+      try {
+        await ctx.replyWithPhoto(fileId, { caption: report, parse_mode: "HTML" });
+        return;
+      } catch (error) {
+        console.error("userinfo profile photo failed:", error);
+      }
+    }
+
+    await ctx.reply(report, { parse_mode: "HTML" });
   });
 }

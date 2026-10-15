@@ -17,7 +17,7 @@ export interface TextUpdateOptions {
   hasCommand?: boolean;
 }
 
-export function createTestBot() {
+export function createTestBot(results?: Record<string, unknown>) {
   // Keep the access middleware open so non-owner test updates reach handlers.
   process.env.EVERYONE = "true";
 
@@ -54,7 +54,9 @@ export function createTestBot() {
     }
     calls.push({ method, body });
 
-    return new Response(JSON.stringify({ ok: true, result: {} }), {
+    const result = results && method in results ? results[method] : {};
+
+    return new Response(JSON.stringify({ ok: true, result }), {
       status: 200,
       headers: { "content-type": "application/json" },
     });
