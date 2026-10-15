@@ -16,6 +16,8 @@ export const userinfoCommand: WaCommand = {
     const lines = ["*Profile*", `Name: ${escapeWhatsApp(message.name ?? "unknown")}`];
     lines.push(`Number: ${message.phone ? `+${message.phone}` : "hidden (LID)"}`);
     lines.push(`Role: ${role}`);
+    // The group id is what goes into ALLOWED_GROUPS when GROUP_ONLY is on.
+    if (message.isGroup) lines.push(`Group ID: ${message.chatId}`);
 
     const quota = getQuota("whatsapp", message.userId, role, message.name);
     lines.push("", "*Quota*");

@@ -5,6 +5,7 @@ import {
   getCommandPrefix,
   getOwnerPrefix,
   isEveryoneAllowed,
+  isGroupAllowed,
 } from "../../lib/config.js";
 import { isCommandEnabled, isDatabaseReady, isWaBanned, recordWaIncoming } from "../../lib/db.js";
 import { findCommand } from "./commands/index.js";
@@ -75,12 +76,19 @@ async function isGroupAdmin(message: IncomingMessage): Promise<boolean> {
 export async function handleIncoming(message: IncomingMessage): Promise<void> {
   if (!message.text) return;
 
+  // We use the number-based role for these cheap, offline gates (the group-admin
+  // role needs a metadata lookup and cannot be banned anyway).
+  const baseRole = resolveRole(message.phone, false);
+
+  // Group allowlist: with GROUP_ONLY on, members may only use the bot in listed
+  // groups. Owner and admins (by number) are never restricted, which also lets
+  // them run ".userinfo" in a group to read its id and add it later. Ignored
+  // groups are dropped silently so the bot never replies where it is not wanted.
+  if (message.isGroup && baseRole === "member" && !isGroupAllowed(message.chatId)) return;
+
   const reply = replyTo(message);
 
   // Banned members are ignored silently; admins and the owner are never blocked.
-  // We use the number-based role here so this stays a cheap, offline check (the
-  // group-admin role needs a metadata lookup and cannot be banned anyway).
-  const baseRole = resolveRole(message.phone, false);
   if (baseRole === "member" && isWaBanned(message.userId)) return;
 
   // Let an in-progress ".play" consume a plain number/format reply first.

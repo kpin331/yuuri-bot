@@ -12,7 +12,7 @@ import {
   type PlayMeta,
   type SearchResult,
 } from "./play.js";
-import { impersonateArgs, TOOLS } from "./tools.js";
+import { impersonateArgs, TOOLS, ytDlpCookieArgs } from "./tools.js";
 
 export interface Download {
   path: string;
@@ -36,12 +36,12 @@ async function runYtDlp(dir: string, url: string, extra: string[]): Promise<Down
     "--no-progress",
     "--no-mtime",
     ...impersonateArgs(),
+    ...ytDlpCookieArgs(),
     ...extra,
     "-o",
     join(dir, "media.%(ext)s"),
+    url,
   ];
-  if (process.env.YTDLP_COOKIES) args.push("--cookies", process.env.YTDLP_COOKIES);
-  args.push(url);
 
   try {
     const { code } = await exec(TOOLS.ytDlp, args, { timeoutMs: DOWNLOAD_TIMEOUT_MS });
@@ -63,6 +63,7 @@ export async function searchYouTube(query: string): Promise<SearchResult[]> {
         "--no-warnings",
         "--no-progress",
         ...impersonateArgs(),
+        ...ytDlpCookieArgs(),
         "--dump-single-json",
         "--flat-playlist",
         `ytsearch${SEARCH_COUNT}:${query}`,
@@ -85,6 +86,7 @@ export async function probeMeta(url: string): Promise<PlayMeta | null> {
         "--no-warnings",
         "--no-progress",
         ...impersonateArgs(),
+        ...ytDlpCookieArgs(),
         "--dump-single-json",
         "--no-playlist",
         url,

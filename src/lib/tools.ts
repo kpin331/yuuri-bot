@@ -25,6 +25,19 @@ export function impersonateArgs(): string[] {
   return target ? ["--impersonate", target] : [];
 }
 
+// Netscape-format cookies file for yt-dlp, used for age-restricted/private
+// content. Empty when YTDLP_COOKIES is not set.
+export function ytDlpCookieArgs(): string[] {
+  const file = process.env.YTDLP_COOKIES?.trim();
+  return file ? ["--cookies", file] : [];
+}
+
+// Same for gallery-dl.
+export function galleryDlCookieArgs(): string[] {
+  const file = process.env.GALLERYDL_COOKIES?.trim();
+  return file ? ["--cookies", file] : [];
+}
+
 // ffmpeg/ffprobe use a single dash, yt-dlp/gallery-dl use two.
 const VERSION_ARGS: Record<ToolName, string[]> = {
   ffmpeg: ["-version"],

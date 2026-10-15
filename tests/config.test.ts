@@ -13,7 +13,10 @@ import {
   getSpotifyClientId,
   getSpotifyClientSecret,
   getTimezone,
+  getAllowedGroups,
   isEveryoneAllowed,
+  isGroupAllowed,
+  isGroupOnly,
   normalizeNumber,
 } from "../src/lib/config.js";
 
@@ -145,6 +148,59 @@ describe("play link config", () => {
     assert.equal(getMaxDurationMinutes(), 10);
     process.env.MAX_DURATION_MINUTES = "-3";
     assert.equal(getMaxDurationMinutes(), 10);
+  });
+});
+
+describe("group access config", () => {
+  const GROUP_KEYS = ["GROUP_ONLY", "ALLOWED_GROUPS"] as const;
+
+  beforeEach(() => {
+    saved = {};
+    for (const key of GROUP_KEYS) {
+      saved[key] = process.env[key];
+      delete process.env[key];
+    }
+  });
+
+  afterEach(() => {
+    for (const key of GROUP_KEYS) {
+      if (saved[key] === undefined) delete process.env[key];
+      else process.env[key] = saved[key]!;
+    }
+  });
+
+  it("defaults to allowing every group", () => {
+    assert.equal(isGroupOnly(), false);
+    assert.equal(isGroupAllowed("1203630@g.us"), true);
+  });
+
+  it("reads the GROUP_ONLY switch", () => {
+    for (const on of ["true", "1", "YES", "on"]) {
+      process.env.GROUP_ONLY = on;
+      assert.equal(isGroupOnly(), true, on);
+    }
+    process.env.GROUP_ONLY = "false";
+    assert.equal(isGroupOnly(), false);
+  });
+
+  it("normalizes allowed groups and drops duplicates", () => {
+    process.env.ALLOWED_GROUPS = "1203630@g.us, 98765 ,1203630@g.us";
+    assert.deepEqual(getAllowedGroups(), ["1203630@g.us", "98765@g.us"]);
+  });
+
+  it("only allows listed groups when restricted (bare id matches JID)", () => {
+    process.env.GROUP_ONLY = "true";
+    process.env.ALLOWED_GROUPS = "1203630@g.us";
+    assert.equal(isGroupAllowed("1203630@g.us"), true);
+    assert.equal(isGroupAllowed("1203630"), true);
+    assert.equal(isGroupAllowed("9999999@g.us"), false);
+  });
+
+  it("allows no group when restricted with an empty list", () => {
+    process.env.GROUP_ONLY = "true";
+    assert.deepEqual(getAllowedGroups(), []);
+    assert.equal(isGroupAllowed("1203630@g.us"), false);
+    assert.equal(isGroupAllowed(null), false);
   });
 });
 

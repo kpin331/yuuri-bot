@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { exec } from "./exec.js";
 import { collectMedia, MAX_UPLOAD_BYTES, type MediaFile } from "./media.js";
-import { impersonateArgs, TOOLS } from "./tools.js";
+import { galleryDlCookieArgs, impersonateArgs, TOOLS, ytDlpCookieArgs } from "./tools.js";
 
 export type Platform = "ig" | "x" | "fb" | "auto";
 type DownloadTool = "gallery" | "ytdlp";
@@ -49,6 +49,7 @@ async function runYtDlp(url: string, dir: string): Promise<void> {
     "--no-progress",
     "--no-mtime",
     ...impersonateArgs(),
+    ...ytDlpCookieArgs(),
     "--playlist-end",
     "30",
     "--max-filesize",
@@ -60,18 +61,22 @@ async function runYtDlp(url: string, dir: string): Promise<void> {
     "--write-info-json",
     "-o",
     join(dir, "%(title).60s_%(id)s_%(autonumber)s.%(ext)s"),
+    url,
   ];
-  if (process.env.YTDLP_COOKIES) args.push("--cookies", process.env.YTDLP_COOKIES);
-  args.push(url);
   await exec(TOOLS.ytDlp, args, { timeoutMs: DOWNLOAD_TIMEOUT_MS });
 }
 
 async function runGalleryDl(url: string, dir: string): Promise<void> {
-  const args = ["--dest", dir, "--no-mtime", "--range", "1-50", "--write-metadata"];
-  if (process.env.GALLERYDL_COOKIES) {
-    args.push("--cookies", process.env.GALLERYDL_COOKIES);
-  }
-  args.push(url);
+  const args = [
+    "--dest",
+    dir,
+    "--no-mtime",
+    "--range",
+    "1-50",
+    "--write-metadata",
+    ...galleryDlCookieArgs(),
+    url,
+  ];
   await exec(TOOLS.galleryDl, args, { timeoutMs: DOWNLOAD_TIMEOUT_MS });
 }
 

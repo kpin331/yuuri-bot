@@ -143,6 +143,43 @@ export function getTimezone(): string {
   return value && value.length > 0 ? value : "Asia/Jakarta";
 }
 
+// === Group access ===
+
+// When true, members may only use the bot inside groups listed in
+// ALLOWED_GROUPS. When false (default), any group is allowed.
+export function isGroupOnly(): boolean {
+  const value = (process.env.GROUP_ONLY ?? "").trim().toLowerCase();
+  return value === "true" || value === "1" || value === "yes" || value === "y" || value === "on";
+}
+
+// Normalizes a WhatsApp group id: accepts a full JID ("...@g.us") or a bare id
+// and always yields the "...@g.us" form.
+function normalizeGroupId(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return "";
+  return trimmed.endsWith("@g.us") ? trimmed : `${trimmed}@g.us`;
+}
+
+// Group JIDs allowed to use the bot when GROUP_ONLY is on. Accepts comma-,
+// semicolon- or newline-separated ids, with or without the "@g.us" suffix.
+export function getAllowedGroups(): string[] {
+  const raw = process.env.ALLOWED_GROUPS;
+  if (!raw) return [];
+  const groups = raw
+    .split(/[,;\n]+/)
+    .map((part) => normalizeGroupId(part))
+    .filter((part) => part.length > 0);
+  return [...new Set(groups)];
+}
+
+// Whether the given group chat id may use the bot. Always true when GROUP_ONLY
+// is off; with it on, only listed groups pass and an empty list allows none.
+export function isGroupAllowed(chatId: string | null | undefined): boolean {
+  if (!isGroupOnly()) return true;
+  if (!chatId) return false;
+  return getAllowedGroups().includes(normalizeGroupId(chatId));
+}
+
 // === Play link configuration ===
 
 // Optional Spotify app credentials. When both are set the bot uses the Web API
