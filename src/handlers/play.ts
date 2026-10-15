@@ -13,12 +13,12 @@ import {
   buildPlayCaption,
   formatSearchList,
   formatTime,
-  isPlayUrl,
   PlaySessionStore,
   type PlayKind,
   type PlayMeta,
   type PlaySession,
 } from "../lib/play.js";
+import { parsePlayLink, resolvePlayInput } from "../lib/playlink.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
 import { downloadAudio, downloadVideo, probeMeta, searchYouTube } from "../lib/youtube.js";
 
@@ -41,12 +41,13 @@ function formatKeyboard(): InlineKeyboard {
   return new InlineKeyboard().text("🎵 Audio", "play:audio").text("🎬 Video", "play:video");
 }
 
-function formatPrompt(meta: PlayMeta): string {
+function formatPrompt(meta: PlayMeta, note?: string): string {
   const lines = [`<b>${escapeHtml(meta.title)}</b>`];
   if (meta.uploader) lines.push(`👤 ${escapeHtml(meta.uploader)}`);
   const time = formatTime(meta.duration);
   if (time) lines.push(`⏱ ${time}`);
   if (meta.isLive) lines.push("🔴 Live stream");
+  if (note) lines.push("", `ℹ️ ${escapeHtml(note)}`);
   lines.push("", "Choose a format:");
   return lines.join("\n");
 }
@@ -92,68 +93,78 @@ async function handlePlay(ctx: Context): Promise<void> {
 
   sessions.delete(chatId, user.id);
 
-  if (isPlayUrl(input)) {
-    const status = await ctx.reply("Fetching media info…");
+  const parsed = parsePlayLink(input);
+
+  // Plain text (or anything that is not a link) keeps the original search flow.
+  if (parsed.type === "search") {
+    const status = await ctx.reply("Searching…");
     await ctx.replyWithChatAction("typing");
-    const meta = await probeMeta(input);
-    if (!meta) {
+    const results = await searchYouTube(input);
+    if (results.length === 0) {
       await ctx.api.editMessageText(
         status.chat.id,
         status.message_id,
-        "Could not read media from that link.",
+        "No results found for that query.",
       );
       return;
     }
 
-    sessions.create({
+    const session = sessions.create({
       chatId,
       userId: user.id,
       messageId: status.message_id,
       query: input,
-      stage: "format",
-      results: [],
-      selected: {
-        index: 1,
-        id: meta.id ?? "",
-        title: meta.title,
-        url: input,
-        duration: meta.duration,
-        uploader: meta.uploader,
-      },
-      meta,
+      stage: "choose",
+      results,
     });
 
-    await ctx.api.editMessageText(status.chat.id, status.message_id, formatPrompt(meta), {
+    await ctx.api.editMessageText(status.chat.id, status.message_id, formatSearchList(results), {
       parse_mode: "HTML",
-      reply_markup: formatKeyboard(),
+      reply_markup: chooseKeyboard(session),
     });
     return;
   }
 
-  const status = await ctx.reply("Searching…");
-  await ctx.replyWithChatAction("typing");
-  const results = await searchYouTube(input);
-  if (results.length === 0) {
-    await ctx.api.editMessageText(
-      status.chat.id,
-      status.message_id,
-      "No results found for that query.",
-    );
+  // Unsupported domain or a playlist/album link: reject without any network call.
+  if (parsed.type === "error") {
+    await ctx.reply(parsed.message);
     return;
   }
 
-  const session = sessions.create({
+  const status = await ctx.reply("Fetching media info…");
+  await ctx.replyWithChatAction("typing");
+  const resolved = await resolvePlayInput(input);
+  if (resolved.type === "error") {
+    await ctx.api.editMessageText(status.chat.id, status.message_id, resolved.message);
+    return;
+  }
+  if (resolved.type !== "media") return;
+
+  const { value } = resolved;
+  const note = value.matchedFromYouTube ? `Matched from YouTube: ${value.matchedQuery}` : undefined;
+
+  sessions.create({
     chatId,
     userId: user.id,
     messageId: status.message_id,
     query: input,
-    stage: "choose",
-    results,
+    stage: "format",
+    results: [],
+    selected: {
+      index: 1,
+      id: value.meta.id ?? "",
+      title: value.meta.title,
+      url: value.url,
+      duration: value.meta.duration,
+      uploader: value.meta.uploader,
+    },
+    meta: value.meta,
+    note,
   });
 
-  await ctx.api.editMessageText(status.chat.id, status.message_id, formatSearchList(results), {
+  await ctx.api.editMessageText(status.chat.id, status.message_id, formatPrompt(value.meta, note), {
     parse_mode: "HTML",
-    reply_markup: chooseKeyboard(session),
+    reply_markup: formatKeyboard(),
   });
 }
 

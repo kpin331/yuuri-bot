@@ -4,10 +4,10 @@ import { exceedsUploadLimit, uploadLimitError } from "../../../lib/media.js";
 import {
   buildPlayCaption,
   formatSearchList,
-  isPlayUrl,
   type PlayKind,
   type PlayMeta,
 } from "../../../lib/play.js";
+import { parsePlayLink, resolvePlayInput } from "../../../lib/playlink.js";
 import { makeTempDir, removeDir } from "../../../lib/temp.js";
 import { htmlToWhatsApp } from "../../../lib/text.js";
 import { downloadAudio, downloadVideo, probeMeta, searchYouTube } from "../../../lib/youtube.js";
@@ -17,9 +17,10 @@ import type { IncomingMessage, WaCommand } from "../types.js";
 
 export const playStore = new WaPlaySessionStore();
 
-function formatPrompt(meta: PlayMeta): string {
+function formatPrompt(meta: PlayMeta, note?: string): string {
   const caption = htmlToWhatsApp(buildPlayCaption(meta, "video"));
-  return `${caption}\n\nReply *1* for audio or *2* for video.`;
+  const noteLine = note ? `\n\nℹ️ ${note}` : "";
+  return `${caption}${noteLine}\n\nReply *1* for audio or *2* for video.`;
 }
 
 async function deliver(message: IncomingMessage, session: WaPlaySession, kind: PlayKind): Promise<void> {
@@ -73,45 +74,60 @@ export const playCommand: WaCommand = {
       return;
     }
 
-    if (isPlayUrl(query)) {
-      const meta = await probeMeta(query);
-      if (!meta) {
-        await sendText(reply, "Could not read that link.");
-        return;
-      }
-      playStore.create({
-        chatId: message.chatId,
-        userId: message.userId,
-        stage: "format",
-        results: [],
-        selected: {
-          index: 1,
-          id: meta.id ?? "",
-          title: meta.title,
-          url: query,
-          duration: meta.duration,
-          uploader: meta.uploader,
-        },
-        meta,
-      });
-      await sendText(reply, formatPrompt(meta));
+    const parsed = parsePlayLink(query);
+
+    // Unsupported domain or a playlist/album link: reject without any network call.
+    if (parsed.type === "error") {
+      await sendText(reply, parsed.message);
       return;
     }
 
-    await sendText(reply, "Searching YouTube…");
-    const results = await searchYouTube(query);
-    if (results.length === 0) {
-      await sendText(reply, "No results found.");
+    if (parsed.type === "search") {
+      await sendText(reply, "Searching YouTube…");
+      const results = await searchYouTube(query);
+      if (results.length === 0) {
+        await sendText(reply, "No results found.");
+        return;
+      }
+
+      playStore.create({
+        chatId: message.chatId,
+        userId: message.userId,
+        stage: "choose",
+        results,
+      });
+      await sendText(reply, htmlToWhatsApp(formatSearchList(results)));
       return;
     }
+
+    await sendText(reply, "Fetching media info…");
+    const resolved = await resolvePlayInput(query);
+    if (resolved.type === "error") {
+      await sendText(reply, resolved.message);
+      return;
+    }
+    if (resolved.type !== "media") return;
+
+    const { value } = resolved;
+    const note = value.matchedFromYouTube ? `Matched from YouTube: ${value.matchedQuery}` : undefined;
 
     playStore.create({
       chatId: message.chatId,
       userId: message.userId,
-      stage: "choose",
-      results,
+      stage: "format",
+      results: [],
+      selected: {
+        index: 1,
+        id: value.meta.id ?? "",
+        title: value.meta.title,
+        url: value.url,
+        duration: value.meta.duration,
+        uploader: value.meta.uploader,
+      },
+      meta: value.meta,
+      note,
     });
-    await sendText(reply, htmlToWhatsApp(formatSearchList(results)));
+    await sendText(reply, formatPrompt(value.meta, note));
   },
 };
 

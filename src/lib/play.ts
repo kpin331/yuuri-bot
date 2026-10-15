@@ -35,6 +35,8 @@ export interface PlaySession {
   results: SearchResult[];
   selected?: SearchResult;
   meta?: PlayMeta;
+  /** Extra line shown in the format prompt (e.g. "matched from YouTube"). */
+  note?: string;
   createdAt: number;
 }
 

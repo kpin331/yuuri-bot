@@ -142,3 +142,23 @@ export function getTimezone(): string {
   const value = process.env.TIMEZONE?.trim();
   return value && value.length > 0 ? value : "Asia/Jakarta";
 }
+
+// === Play link configuration ===
+
+// Optional Spotify app credentials. When both are set the bot uses the Web API
+// to read a track's title and artist; otherwise it falls back to oEmbed.
+export function getSpotifyClientId(): string | null {
+  const value = process.env.SPOTIFY_CLIENT_ID?.trim();
+  return value && value.length > 0 ? value : null;
+}
+
+export function getSpotifyClientSecret(): string | null {
+  const value = process.env.SPOTIFY_CLIENT_SECRET?.trim();
+  return value && value.length > 0 ? value : null;
+}
+
+// Longest track the bot will download (default 10 minutes). Anything longer is
+// refused before downloading.
+export function getMaxDurationMinutes(): number {
+  return positiveInt(process.env.MAX_DURATION_MINUTES, 10);
+}

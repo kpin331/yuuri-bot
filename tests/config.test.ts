@@ -5,9 +5,12 @@ import {
   getAdminQuota,
   getCommandPrefix,
   getDefaultQuota,
+  getMaxDurationMinutes,
   getOwnerNumbers,
   getPairingNumber,
   getRateLimit,
+  getSpotifyClientId,
+  getSpotifyClientSecret,
   getTimezone,
   isEveryoneAllowed,
   normalizeNumber,
@@ -94,5 +97,52 @@ describe("whatsapp config", () => {
     assert.equal(isEveryoneAllowed(), false);
     process.env.EVERYONE = "on";
     assert.equal(isEveryoneAllowed(), true);
+  });
+});
+
+const PLAY_KEYS = [
+  "SPOTIFY_CLIENT_ID",
+  "SPOTIFY_CLIENT_SECRET",
+  "MAX_DURATION_MINUTES",
+] as const;
+
+describe("play link config", () => {
+  beforeEach(() => {
+    saved = {};
+    for (const key of PLAY_KEYS) {
+      saved[key] = process.env[key];
+      delete process.env[key];
+    }
+  });
+
+  afterEach(() => {
+    for (const key of PLAY_KEYS) {
+      if (saved[key] === undefined) delete process.env[key];
+      else process.env[key] = saved[key]!;
+    }
+  });
+
+  it("returns null for missing Spotify credentials", () => {
+    assert.equal(getSpotifyClientId(), null);
+    assert.equal(getSpotifyClientSecret(), null);
+    process.env.SPOTIFY_CLIENT_ID = "  ";
+    assert.equal(getSpotifyClientId(), null);
+  });
+
+  it("reads Spotify credentials when set", () => {
+    process.env.SPOTIFY_CLIENT_ID = "id123";
+    process.env.SPOTIFY_CLIENT_SECRET = "secret456";
+    assert.equal(getSpotifyClientId(), "id123");
+    assert.equal(getSpotifyClientSecret(), "secret456");
+  });
+
+  it("defaults the max duration and validates overrides", () => {
+    assert.equal(getMaxDurationMinutes(), 10);
+    process.env.MAX_DURATION_MINUTES = "5";
+    assert.equal(getMaxDurationMinutes(), 5);
+    process.env.MAX_DURATION_MINUTES = "abc";
+    assert.equal(getMaxDurationMinutes(), 10);
+    process.env.MAX_DURATION_MINUTES = "-3";
+    assert.equal(getMaxDurationMinutes(), 10);
   });
 });
