@@ -121,7 +121,7 @@ export function getAdminPrefix(): string {
 // Quota limits. Members get DEFAULT_QUOTA, admins get ADMIN_QUOTA, the owner is
 // unlimited (handled in the access layer).
 export function getDefaultQuota(): number {
-  return positiveInt(process.env.DEFAULT_QUOTA, 15);
+  return positiveInt(process.env.DEFAULT_QUOTA, 25);
 }
 
 export function getAdminQuota(): number {

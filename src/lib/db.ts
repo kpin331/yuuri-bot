@@ -370,6 +370,13 @@ export function getQuotaRow(platform: string, userId: string): QuotaRow | null {
   return row ? toQuota(row as Record<string, unknown>) : null;
 }
 
+// Returns every stored quota row across all platforms (used by /quota-reset).
+export function listQuotaRows(): QuotaRow[] {
+  if (!db) return [];
+  const rows = db.prepare("SELECT * FROM platform_quota").all();
+  return rows.map((row) => toQuota(row as Record<string, unknown>));
+}
+
 // Inserts or updates a user's quota. first_seen is preserved on updates, while
 // display_name/last_seen are refreshed whenever we see the user again.
 export function setQuotaRow(input: {

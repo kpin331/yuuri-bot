@@ -7,7 +7,7 @@ import {
   getRateWindowSeconds,
   getTimezone,
 } from "../lib/config.js";
-import { getQuotaRow, isDatabaseReady, setQuotaRow } from "../lib/db.js";
+import { getQuotaRow, isDatabaseReady, listQuotaRows, setQuotaRow } from "../lib/db.js";
 import { secondsUntilNextMidnight, tzDateKey } from "./time.js";
 
 export type Role = "owner" | "admin" | "member";
@@ -101,10 +101,17 @@ export function consumeQuota(platform: string, userId: string): void {
   });
 }
 
-// === Rate limit (in-memory sliding window) ===
-// Rate limiting is per user and does not need to survive restarts, so a simple
-// in-memory list of recent timestamps is enough.
-const rateHits = new Map<string, number[]>();
+// === Rate limit (in-memory fixed window) ===
+// One window per user, anchored at their first request and lasting
+// RATE_WINDOW_SECONDS. Unlike the previous sliding window, the window start does
+// not move with each request, so the counter reliably reaches RATE_LIMIT and the
+// next request is blocked until the window expires.
+interface RateBucket {
+  windowStart: number;
+  count: number;
+}
+
+const rateBuckets = new Map<string, RateBucket>();
 
 export interface RateResult {
   allowed: boolean;
@@ -120,22 +127,71 @@ export function checkRateLimit(
   const limit = getRateLimit();
   const key = `${platform}:${userId}`;
 
-  // Keep only the timestamps that are still inside the window.
-  const recent = (rateHits.get(key) ?? []).filter((time) => time > now - windowMs);
-
-  if (recent.length >= limit) {
-    const oldest = recent[0] ?? now;
-    rateHits.set(key, recent);
-    // Seconds until the oldest hit leaves the window.
-    return { allowed: false, retryAfterSeconds: Math.max(1, Math.ceil((oldest + windowMs - now) / 1000)) };
+  // Start a fresh window on the first request or once the previous one expired.
+  let bucket = rateBuckets.get(key);
+  if (!bucket || now - bucket.windowStart >= windowMs) {
+    bucket = { windowStart: now, count: 0 };
   }
 
-  recent.push(now);
-  rateHits.set(key, recent);
+  if (bucket.count >= limit) {
+    rateBuckets.set(key, bucket);
+    // Seconds until this window ends.
+    const remaining = Math.ceil((bucket.windowStart + windowMs - now) / 1000);
+    return { allowed: false, retryAfterSeconds: Math.max(1, remaining) };
+  }
+
+  bucket.count += 1;
+  rateBuckets.set(key, bucket);
   return { allowed: true, retryAfterSeconds: 0 };
 }
 
 // Test helper: forget all rate-limit history.
 export function resetRateLimits(): void {
-  rateHits.clear();
+  rateBuckets.clear();
+}
+
+export interface QuotaResetEntry {
+  platform: string;
+  userId: string;
+  displayName: string | null;
+  role: Role;
+  before: number;
+  after: number;
+  restored: number;
+}
+
+// Resets every stored quota back to the user's current role limit, regardless
+// of the daily reset date, and reports how much each user got back. Owner rows
+// are skipped because owners are unlimited and have no stored limit.
+export function resetAllQuotas(now: number = Date.now()): QuotaResetEntry[] {
+  if (!isDatabaseReady()) return [];
+  const today = tzDateKey(now, getTimezone());
+  const entries: QuotaResetEntry[] = [];
+
+  for (const row of listQuotaRows()) {
+    const role = resolveRole(row.userId, false);
+    if (role === "owner") continue;
+
+    const limit = roleLimit(role);
+    setQuotaRow({
+      platform: row.platform,
+      userId: row.userId,
+      quotaLeft: limit,
+      lastReset: today,
+      displayName: row.displayName,
+      at: now,
+    });
+
+    entries.push({
+      platform: row.platform,
+      userId: row.userId,
+      displayName: row.displayName,
+      role,
+      before: row.quotaLeft,
+      after: limit,
+      restored: limit - row.quotaLeft,
+    });
+  }
+
+  return entries;
 }

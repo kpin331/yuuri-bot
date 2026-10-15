@@ -81,7 +81,7 @@ describe("whatsapp config", () => {
   });
 
   it("falls back for invalid quota and rate values", () => {
-    assert.equal(getDefaultQuota(), 15);
+    assert.equal(getDefaultQuota(), 25);
     assert.equal(getAdminQuota(), 30);
     assert.equal(getRateLimit(), 3);
 

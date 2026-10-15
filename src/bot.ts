@@ -7,6 +7,7 @@ import { registerFallback } from "./handlers/fallback.js";
 import { registerPinterest } from "./handlers/pinterest.js";
 import { registerPixiv } from "./handlers/pixiv.js";
 import { registerPlay } from "./handlers/play.js";
+import { registerQuotaReset } from "./handlers/quotareset.js";
 import { registerSticker } from "./handlers/sticker.js";
 import { registerSys } from "./handlers/sys.js";
 import { registerToimg } from "./handlers/toimg.js";
@@ -59,6 +60,7 @@ export function createBot(token: string): Bot {
   registerBan(bot);
   registerCommandControl(bot);
   registerSys(bot);
+  registerQuotaReset(bot);
   registerFallback(bot);
 
   return bot;

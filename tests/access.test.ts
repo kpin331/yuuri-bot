@@ -4,6 +4,7 @@ import {
   checkRateLimit,
   consumeQuota,
   getQuota,
+  resetAllQuotas,
   resetRateLimits,
   resolveRole,
   roleLimit,
@@ -95,5 +96,48 @@ describe("whatsapp access control", () => {
 
     // After the window passes, allowed again.
     assert.equal(checkRateLimit("whatsapp", "u1", now + 61_000).allowed, true);
+  });
+
+  it("allows RATE_LIMIT requests per window and blocks the next", () => {
+    setEnv("RATE_LIMIT", "3");
+    setEnv("RATE_WINDOW_SECONDS", "60");
+
+    const now = Date.UTC(2026, 0, 1, 0, 0, 0);
+    // Arrivals 20s apart; the window is anchored at the first request, so all
+    // three count towards it even though they are spread over 40 seconds.
+    assert.equal(checkRateLimit("whatsapp", "slow", now).allowed, true);
+    assert.equal(checkRateLimit("whatsapp", "slow", now + 20_000).allowed, true);
+    assert.equal(checkRateLimit("whatsapp", "slow", now + 40_000).allowed, true);
+
+    const blocked = checkRateLimit("whatsapp", "slow", now + 55_000);
+    assert.equal(blocked.allowed, false);
+    assert.ok(blocked.retryAfterSeconds > 0);
+
+    // The window ends 60s after the first request.
+    assert.equal(checkRateLimit("whatsapp", "slow", now + 60_000).allowed, true);
+  });
+
+  it("resets every stored quota and reports the restored amount", () => {
+    setEnv("DEFAULT_QUOTA", "25");
+    setEnv("TIMEZONE", "UTC");
+
+    const day = Date.UTC(2026, 0, 1, 12, 0, 0);
+    getQuota("whatsapp", "u1", "member", "Alice", day);
+    consumeQuota("whatsapp", "u1");
+    consumeQuota("whatsapp", "u1");
+    getQuota("whatsapp", "u2", "member", "Bob", day);
+    consumeQuota("whatsapp", "u2");
+
+    const entries = resetAllQuotas(day);
+    const byUser = new Map(entries.map((entry) => [entry.userId, entry]));
+
+    assert.equal(byUser.get("u1")?.before, 23);
+    assert.equal(byUser.get("u1")?.after, 25);
+    assert.equal(byUser.get("u1")?.restored, 2);
+    assert.equal(byUser.get("u2")?.restored, 1);
+
+    // The rows are actually restored in the database.
+    assert.equal(getQuota("whatsapp", "u1", "member", null, day).quotaLeft, 25);
+    assert.equal(getQuota("whatsapp", "u2", "member", null, day).quotaLeft, 25);
   });
 });

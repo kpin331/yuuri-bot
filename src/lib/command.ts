@@ -94,3 +94,33 @@ export function registerOwnerCommand(bot: Bot, name: string, handler: CommandHan
     await handler(ctx);
   });
 }
+
+// Owner-only command that uses the `/` prefix but may contain characters
+// Telegram does not allow in a bot command (e.g. a hyphen, as in
+// `/quota-reset`). Telegram then reports no `bot_command` entity, so unlike
+// registerCommand this matches the raw text/caption instead of relying on the
+// entity. The owner check keeps it from being used by anyone else.
+export function registerOwnerSlashCommand(bot: Bot, name: string, handler: CommandHandler): void {
+  knownCommands.add(name.toLowerCase());
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`^/${escaped}(?:@[A-Za-z0-9_]+)?(?:\\s+([\\s\\S]*))?$`, "i");
+
+  bot.on("message", async (ctx, next) => {
+    const message = ctx.message;
+    const text = message.text ?? message.caption;
+    if (text === undefined) return next();
+
+    const match = pattern.exec(text.trim());
+    if (!match) return next();
+
+    if (!isOwner(ctx.from?.id)) {
+      await ctx.reply("🚫 This command is owner-only.").catch(() => undefined);
+      return;
+    }
+
+    if (await blockedByState(ctx, name)) return;
+
+    ctx.match = (match[1] ?? "").trimStart();
+    await handler(ctx);
+  });
+}
