@@ -9,7 +9,7 @@ import {
 import qrcode from "qrcode-terminal";
 import { getPairingNumber, getWaAuthDir } from "../../lib/config.js";
 import { extractIncoming } from "./message.js";
-import { logger } from "./logger.js";
+import { logger, installSessionLogRedaction } from "./logger.js";
 import type { IncomingMessage } from "./types.js";
 
 export interface ConnectionOptions {
@@ -36,6 +36,8 @@ function reasonName(statusCode: number | undefined): string {
 }
 
 export function connectWhatsApp(options: ConnectionOptions): WhatsAppConnection {
+  installSessionLogRedaction();
+
   let socket: WASocket | null = null;
   let stopped = false;
   let opening = false;
