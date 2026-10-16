@@ -2,6 +2,7 @@ import { Bot, GrammyError, HttpError } from "grammy";
 import { registerBan, registerBanGuard } from "./handlers/ban.js";
 import { registerCommandControl } from "./handlers/commandcontrol.js";
 import { registerCommands } from "./handlers/commands.js";
+import { registerDatabase } from "./handlers/database.js";
 import { registerDownloader } from "./handlers/download.js";
 import { registerFallback } from "./handlers/fallback.js";
 import { registerPinterest } from "./handlers/pinterest.js";
@@ -61,6 +62,7 @@ export function createBot(token: string): Bot {
   registerCommandControl(bot);
   registerSys(bot);
   registerQuotaReset(bot);
+  registerDatabase(bot);
   registerFallback(bot);
 
   return bot;

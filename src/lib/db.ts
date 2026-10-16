@@ -50,6 +50,12 @@ export function isDatabaseReady(): boolean {
   return db !== null;
 }
 
+// Raw handle for read-only introspection (the /database admin command). Callers
+// must check isDatabaseReady() first; this never opens a connection itself.
+export function getDb(): DatabaseSync | null {
+  return db;
+}
+
 export function initDatabase(path: string = getDbPath()): void {
   if (db) return;
 
