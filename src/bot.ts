@@ -14,7 +14,7 @@ import { registerSys } from "./handlers/sys.js";
 import { registerToimg } from "./handlers/toimg.js";
 import { registerTracking } from "./handlers/tracking.js";
 import { registerUserinfo } from "./handlers/userinfo.js";
-import { getOwnerId, isAuthorized, isEveryoneAllowed } from "./lib/config.js";
+import { isAuthorized, isEveryoneAllowed } from "./lib/config.js";
 
 export function createBot(token: string): Bot {
   const bot = new Bot(token);
@@ -36,9 +36,6 @@ export function createBot(token: string): Bot {
 
   bot.use(async (ctx, next) => {
     if (isEveryoneAllowed()) return next();
-
-    const ownerId = getOwnerId();
-    if (ownerId === null) return next();
     if (isAuthorized(ctx.from?.id)) return next();
 
     if (ctx.chat) {
