@@ -31,6 +31,7 @@ function sections(): Section[] {
       title: "Stickers",
       items: [
         { name: "s", label: `${p}s — Reply to an image or video to make a sticker` },
+        { name: "smeme", label: `${p}smeme — Turn an image or sticker into a meme with text (top | bottom)` },
         { name: "toimg", label: `${p}toimg — Reply to a sticker to make a PNG` },
       ],
     },

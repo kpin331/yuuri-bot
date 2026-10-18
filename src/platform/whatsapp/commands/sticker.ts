@@ -7,9 +7,9 @@ import { replyTo, sendSticker, sendText } from "../reply.js";
 import type { WaCommand } from "../types.js";
 
 // Pack name and author WhatsApp shows on every sticker this bot creates.
-const PACK_NAME = "build with love❤";
-const PACK_AUTHOR = "Yuuri Bot";
-const PACK_ID = "com.yuuri.bot.sticker";
+export const PACK_NAME = "build with love❤";
+export const PACK_AUTHOR = "Yuuri Bot";
+export const PACK_ID = "com.yuuri.bot.sticker";
 
 export const stickerCommand: WaCommand = {
   name: "s",

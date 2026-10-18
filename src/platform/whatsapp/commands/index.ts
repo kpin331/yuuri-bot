@@ -7,6 +7,7 @@ import { pinCommand } from "./pinterest.js";
 import { pixivCommand } from "./pixiv.js";
 import { playCommand } from "./play.js";
 import { quotaCommand } from "./quota.js";
+import { smemeCommand } from "./smeme.js";
 import { stickerCommand } from "./sticker.js";
 import { sysCommand } from "./sys.js";
 import { toimgCommand } from "./toimg.js";
@@ -19,6 +20,7 @@ const ALL: WaCommand[] = [
   userinfoCommand,
   quotaCommand,
   stickerCommand,
+  smemeCommand,
   toimgCommand,
   playCommand,
   ...downloadCommands,

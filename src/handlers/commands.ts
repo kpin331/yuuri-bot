@@ -31,6 +31,7 @@ const SECTIONS: MenuSection[] = [
     title: "Stickers",
     items: [
       { command: "s", label: "/s — Reply to an image or video to turn it into a sticker" },
+      { command: "smeme", label: "/smeme — Turn an image or sticker into a meme with text (top | bottom)" },
       { command: "toimg", label: "/toimg — Reply to a sticker to turn it into a PNG image" },
     ],
   },

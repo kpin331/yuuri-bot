@@ -6,13 +6,13 @@ import { downloadTelegramFile } from "../lib/media.js";
 import { makeStaticSticker, makeVideoSticker } from "../lib/stickers.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
 
-interface Source {
+export interface Source {
   fileId: string;
   kind: "image" | "video";
   ext: string;
 }
 
-function extractSource(message: Message): Source | null {
+export function extractSource(message: Message): Source | null {
   if (message.photo && message.photo.length > 0) {
     const largest = message.photo[message.photo.length - 1];
     if (largest) return { fileId: largest.file_id, kind: "image", ext: ".jpg" };
