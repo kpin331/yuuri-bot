@@ -13,7 +13,7 @@ export const toimgCommand: WaCommand = {
     const source = message.quoted ?? message.message;
 
     if (!isStickerMessage(source)) {
-      await sendText(reply, "Reply to a sticker with .toimg to convert it into a PNG image.");
+      await sendText(reply, "Balas stiker dengan .toimg untuk mengubahnya menjadi gambar PNG.");
       return;
     }
 
@@ -29,7 +29,7 @@ export const toimgCommand: WaCommand = {
       await sendDocument(reply, await readFile(output), "sticker.png");
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
-      await sendText(reply, `Could not convert the sticker: ${reason}`);
+      await sendText(reply, `Stiker tidak dapat dikonversi: ${reason}`);
     } finally {
       await removeDir(dir);
     }

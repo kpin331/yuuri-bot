@@ -55,7 +55,7 @@ export function registerSticker(bot: Bot): void {
 
     if (!source) {
       await ctx.reply(
-        "Reply to an image or video with /s, or send a media file with /s as its caption.",
+        "Balas gambar atau video dengan /s, atau kirim file media dengan /s sebagai keterangannya.",
       );
       return;
     }
@@ -78,7 +78,7 @@ export function registerSticker(bot: Bot): void {
       await ctx.replyWithSticker(new InputFile(output));
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
-      await ctx.reply(`Could not create a sticker: ${reason}`);
+      await ctx.reply(`Stiker gagal dibuat: ${reason}`);
     } finally {
       await removeDir(dir);
     }

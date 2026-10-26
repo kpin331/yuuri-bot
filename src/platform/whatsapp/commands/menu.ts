@@ -4,7 +4,7 @@ import { replyTo, sendImage, sendText } from "../reply.js";
 import type { WaCommand } from "../types.js";
 
 const TITLE = "Yuuri Bot V1.0✨";
-const SUBTITLE = "List command to use";
+const SUBTITLE = "Daftar perintah yang tersedia";
 
 interface Item {
   name: string;
@@ -20,46 +20,48 @@ function sections(): Section[] {
   const p = getCommandPrefix();
   return [
     {
-      title: "General",
+      title: "Umum",
       items: [
-        { name: "menu", label: `${p}menu — Show this menu` },
-        { name: "userinfo", label: `${p}userinfo — Show your stats and quota` },
-        { name: "quota", label: `${p}quota — Show remaining daily quota` },
+        { name: "menu", label: `${p}menu — Tampilkan menu ini` },
+        { name: "userinfo", label: `${p}userinfo — Tampilkan statistik dan kuota` },
+        { name: "quota", label: `${p}quota — Tampilkan sisa kuota harian` },
+        { name: "rank", label: `${p}rank — Tampilkan tingkat dan XP di grup ini` },
+        { name: "leaderboard", label: `${p}leaderboard — Tampilkan peringkat XP grup ini` },
       ],
     },
     {
-      title: "Stickers",
+      title: "Stiker",
       items: [
-        { name: "s", label: `${p}s — Reply to an image or video to make a sticker` },
-        { name: "smeme", label: `${p}smeme — Turn an image or sticker into a meme with text (top | bottom)` },
-        { name: "toimg", label: `${p}toimg — Reply to a sticker to make a PNG` },
+        { name: "s", label: `${p}s — Balas gambar atau video untuk membuat stiker` },
+        { name: "smeme", label: `${p}smeme — Ubah gambar atau stiker menjadi meme (atas | bawah)` },
+        { name: "toimg", label: `${p}toimg — Balas stiker untuk mengubahnya menjadi PNG` },
       ],
     },
     {
-      title: "Media",
-      items: [{ name: "play", label: `${p}play — Search YouTube and send audio or video` }],
+      title: "Multimedia",
+      items: [{ name: "play", label: `${p}play — Cari di YouTube lalu kirim audio atau video` }],
     },
     {
-      title: "Downloaders",
+      title: "Pengunduh",
       items: [
-        { name: "dl", label: `${p}dl — Download media from a supported link` },
-        { name: "ig", label: `${p}ig — Download from Instagram` },
-        { name: "x", label: `${p}x — Download from X (Twitter)` },
-        { name: "fb", label: `${p}fb — Download from Facebook` },
+        { name: "dl", label: `${p}dl — Unduh media dari tautan yang didukung` },
+        { name: "ig", label: `${p}ig — Unduh dari Instagram` },
+        { name: "x", label: `${p}x — Unduh dari X (Twitter)` },
+        { name: "fb", label: `${p}fb — Unduh dari Facebook` },
       ],
     },
     {
-      title: "Image Search",
+      title: "Pencarian Gambar",
       items: [
-        { name: "pin", label: `${p}pin — Top Pinterest image (query or link)` },
-        { name: "pixiv", label: `${p}pixiv — Top Pixiv illustration (query only)` },
+        { name: "pin", label: `${p}pin — Gambar Pinterest teratas (kata kunci atau tautan)` },
+        { name: "pixiv", label: `${p}pixiv — Ilustrasi Pixiv teratas (kata kunci saja)` },
       ],
     },
     {
-      title: "Moderation",
+      title: "Moderasi",
       items: [
-        { name: "ban", label: `${p}ban — Ban a user (admins)` },
-        { name: "unban", label: `${p}unban — Unban a user (admins)` },
+        { name: "ban", label: `${p}ban — Blokir pengguna (admin)` },
+        { name: "unban", label: `${p}unban — Buka blokir pengguna (admin)` },
       ],
     },
   ];
@@ -71,14 +73,14 @@ export function buildMenu(): string {
     lines.push("", `*${section.title}*`);
     for (const item of section.items) {
       // Informational only. Real enforcement happens in the router.
-      lines.push(isCommandEnabled(item.name) ? item.label : `${item.label} (OFF)`);
+      lines.push(isCommandEnabled(item.name) ? item.label : `${item.label} (NONAKTIF)`);
     }
   }
   lines.push(
     "",
-    "*System*",
-    "$sys — Show system info (owner only)",
-    "!<command> on|off — Enable or disable a command (admins)",
+    "*Sistem*",
+    "$sys — Tampilkan info sistem (khusus pemilik)",
+    "!<perintah> on|off — Aktifkan atau nonaktifkan perintah (admin)",
   );
   return lines.join("\n");
 }
@@ -104,7 +106,7 @@ export const menuCommand: WaCommand = {
         }
       }
     } catch (error) {
-      console.error("WhatsApp menu profile picture failed:", error);
+      console.error("Gagal mengambil foto profil untuk menu WhatsApp:", error);
     }
 
     await sendText(reply, caption);

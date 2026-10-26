@@ -28,23 +28,23 @@ async function runDownload(
   const url = extractUrl(message.text) ?? extractUrl(quotedText);
 
   if (!url) {
-    await sendText(reply, "Send a link, or reply to a message that contains one.");
+    await sendText(reply, "Kirim tautan atau balas pesan yang berisi tautan.");
     return;
   }
 
   const resolved = platform ?? detectPlatform(url);
-  await sendText(reply, "Downloading…");
+  await sendText(reply, "Sedang mengunduh…");
 
   const dir = await makeTempDir("wa-dl");
   try {
     if (!(await hasFreeSpace(dir, MAX_UPLOAD_BYTES))) {
-      await sendText(reply, "Not enough free disk space to download.");
+      await sendText(reply, "Ruang penyimpanan tidak cukup untuk mengunduh.");
       return;
     }
 
     const files = await download(url, resolved, dir);
     if (files.length === 0) {
-      await sendText(reply, "No downloadable media found at that link.");
+      await sendText(reply, "Tidak ditemukan media yang dapat diunduh dari tautan itu.");
       return;
     }
 
@@ -62,7 +62,7 @@ async function runDownload(
     }
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    await sendText(reply, `Download failed: ${reason}`);
+    await sendText(reply, `Pengunduhan gagal: ${reason}`);
   } finally {
     await removeDir(dir);
   }

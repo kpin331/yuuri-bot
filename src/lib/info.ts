@@ -113,7 +113,7 @@ export function formatInfo(info: MediaInfo): string | undefined {
   if (stats.length > 0) lines.push(stats.join("    "));
 
   if (info.caption) lines.push("", escapeHtml(info.caption));
-  if (info.source) lines.push("", `🔗 <a href="${escapeHtml(info.source)}">Source</a>`);
+  if (info.source) lines.push("", `🔗 <a href="${escapeHtml(info.source)}">Sumber</a>`);
 
   if (lines.length === 0) return undefined;
 

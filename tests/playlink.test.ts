@@ -131,8 +131,8 @@ describe("durationLimitError", () => {
 
   it("returns a message when over the limit", () => {
     const message = durationLimitError({ title: "x", duration: 900 }, 10);
-    assert.ok(message && message.includes("15 minutes"));
-    assert.ok(message.includes("10-minute"));
+    assert.ok(message && message.includes("15 menit"));
+    assert.ok(message.includes("batas 10 menit"));
   });
 
   it("ignores the check when the limit is disabled", () => {

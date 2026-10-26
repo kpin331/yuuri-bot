@@ -5,6 +5,7 @@ import { downloadCommands } from "./download.js";
 import { menuCommand } from "./menu.js";
 import { pinCommand } from "./pinterest.js";
 import { pixivCommand } from "./pixiv.js";
+import { rankCommands } from "./rank.js";
 import { playCommand } from "./play.js";
 import { quotaCommand } from "./quota.js";
 import { smemeCommand } from "./smeme.js";
@@ -19,6 +20,7 @@ const ALL: WaCommand[] = [
   menuCommand,
   userinfoCommand,
   quotaCommand,
+  ...rankCommands,
   stickerCommand,
   smemeCommand,
   toimgCommand,

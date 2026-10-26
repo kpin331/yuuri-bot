@@ -16,7 +16,7 @@ export async function runToggle(message: IncomingMessage, raw: string, role: Rol
   }
 
   if (role === "member") {
-    await sendText(reply, "🚫 Only admins and the owner can change command states.");
+    await sendText(reply, "🚫 Hanya admin dan pemilik bot yang dapat mengubah status perintah.");
     return;
   }
 

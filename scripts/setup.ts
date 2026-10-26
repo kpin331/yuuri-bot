@@ -77,28 +77,28 @@ async function verifyBotToken(
 async function promptToken(rl: Interface, suggested: string | undefined): Promise<string> {
   let token = suggested ?? "";
   if (token.length > 0) {
-    const keep = await confirm(rl, `Keep the existing bot token (…${token.slice(-4)})?`);
+    const keep = await confirm(rl, `Pertahankan token bot yang ada (…${token.slice(-4)})?`);
     if (!keep) token = "";
   }
 
   while (token.length === 0 || validateBotToken(token) !== null) {
     if (token.length > 0) console.log(`  ${validateBotToken(token)}`);
-    token = (await ask(rl, "Bot token from @BotFather")).trim();
+    token = (await ask(rl, "Token bot dari @BotFather")).trim();
   }
 
   while (true) {
     const { username, error } = await verifyBotToken(token);
     if (username) {
-      console.log(`Token verified: @${username}`);
+      console.log(`Token terverifikasi: @${username}`);
       return token;
     }
-    console.log(`Could not verify the token: ${error}`);
-    if (await confirm(rl, "Use it anyway?", false)) return token;
+    console.log(`Token tidak dapat diverifikasi: ${error}`);
+    if (await confirm(rl, "Tetap gunakan token ini?", false)) return token;
 
     token = "";
     while (token.length === 0 || validateBotToken(token) !== null) {
       if (token.length > 0) console.log(`  ${validateBotToken(token)}`);
-      token = (await ask(rl, "Bot token from @BotFather")).trim();
+      token = (await ask(rl, "Token bot dari @BotFather")).trim();
     }
   }
 }
@@ -110,23 +110,23 @@ async function telegramSetup(rl: Interface): Promise<void> {
   const token = await promptToken(rl, current.get("BOT_TOKEN"));
 
   let ownerId = current.get("OWNER_ID") ?? "";
-  if (ownerId.length > 0 && !(await confirm(rl, `Keep the existing owner ID (${ownerId})?`))) {
+  if (ownerId.length > 0 && !(await confirm(rl, `Pertahankan ID pemilik yang ada (${ownerId})?`))) {
     ownerId = "";
   }
   while (validateNumericId(ownerId) !== null) {
     if (ownerId.length > 0) console.log(`  ${validateNumericId(ownerId)}`);
-    ownerId = (await ask(rl, "Your Telegram user ID (message @userinfobot), digits only")).trim();
+    ownerId = (await ask(rl, "ID pengguna Telegram Anda (kirim pesan ke @userinfobot), angka saja")).trim();
   }
 
   const everyoneByDefault = (current.get("EVERYONE") ?? "true").trim().toLowerCase() !== "false";
-  const everyone = await confirm(rl, "Let everyone use the bot (EVERYONE)", everyoneByDefault);
+  const everyone = await confirm(rl, "Izinkan semua orang menggunakan bot (EVERYONE)", everyoneByDefault);
 
   await writeEnv({
     BOT_TOKEN: token,
     OWNER_ID: ownerId,
     EVERYONE: everyone ? "true" : "false",
   });
-  console.log("Telegram settings saved to .env");
+  console.log("Pengaturan Telegram disimpan ke .env");
 }
 
 async function hasRegisteredSession(authDir: string): Promise<boolean> {
@@ -144,8 +144,8 @@ async function waitForLogin(pairing: boolean): Promise<void> {
   const { connectWhatsApp } = await import("../src/platform/whatsapp/connection.js");
   console.log(
     pairing
-      ? "Requesting a pairing code… (enter it in WhatsApp > Linked devices > Link with phone number)"
-      : "Waiting for a QR scan… (WhatsApp > Linked devices > Link a device)",
+      ? "Meminta kode penautan… (masukkan di WhatsApp > Perangkat tertaut > Tautkan dengan nomor telepon)"
+      : "Menunggu pemindaian QR… (WhatsApp > Perangkat tertaut > Tautkan perangkat)",
   );
 
   await new Promise<void>((resolve, reject) => {
@@ -160,8 +160,8 @@ async function waitForLogin(pairing: boolean): Promise<void> {
       });
     };
     const timer = setTimeout(() => {
-      console.log("Timed out waiting for WhatsApp login.");
-      finish(new Error("WhatsApp login timed out"));
+      console.log("Waktu tunggu login WhatsApp habis.");
+      finish(new Error("Waktu tunggu login WhatsApp habis"));
     }, WA_LOGIN_TIMEOUT_MS);
     const connection = connectWhatsApp({
       onIncoming: async () => undefined,
@@ -175,13 +175,13 @@ async function whatsappSetup(rl: Interface): Promise<void> {
   const authDir = getWaAuthDir();
 
   if (await hasRegisteredSession(authDir)) {
-    console.log(`A WhatsApp session already exists in "${authDir}".`);
-    if (!(await confirm(rl, "Log in again? This replaces the current session.", false))) {
-      console.log("Keeping the existing WhatsApp session.");
+    console.log(`Sesi WhatsApp sudah tersedia di "${authDir}".`);
+    if (!(await confirm(rl, "Masuk lagi? Sesi saat ini akan diganti.", false))) {
+      console.log("Sesi WhatsApp yang ada tetap digunakan.");
       return;
     }
     await rm(authDir, { recursive: true, force: true });
-    console.log("Old session removed.");
+    console.log("Sesi lama dihapus.");
   }
 
   const current = parseEnvFile(await readExistingEnv());
@@ -189,11 +189,11 @@ async function whatsappSetup(rl: Interface): Promise<void> {
   while (validatePhoneNumber(number) !== null) {
     if (number.length > 0) console.log(`  ${validatePhoneNumber(number)}`);
     number = normalizePhoneNumber(
-      await ask(rl, "WhatsApp owner number (international format, digits only, e.g. 6281234567890)"),
+      await ask(rl, "Nomor WhatsApp pemilik (format internasional, angka saja, contoh: 6281234567890)"),
     );
   }
 
-  const mode = await ask(rl, "Login method: 1) QR code, 2) pairing code", { defaultValue: "1" });
+  const mode = await ask(rl, "Metode login: 1) kode QR, 2) kode penautan", { defaultValue: "1" });
   const pairing = mode.trim() === "2";
 
   process.env.OWNER_NUMBER = number;
@@ -206,24 +206,24 @@ async function whatsappSetup(rl: Interface): Promise<void> {
   }
 
   await waitForLogin(pairing);
-  console.log("WhatsApp login complete. The session is stored in the auth folder.");
+  console.log("Login WhatsApp selesai. Sesi tersimpan di folder auth.");
 }
 
 async function main(): Promise<void> {
   if (!existsSync(TEMPLATE_PATH)) {
-    throw new Error("Run this from the project root (.env.example is missing).");
+    throw new Error("Jalankan perintah ini dari folder utama proyek (.env.example tidak ditemukan).");
   }
 
   const rl = createInterface({ input, output });
   rl.on("SIGINT", () => {
-    console.log("\nAborted.");
+    console.log("\nDibatalkan.");
     process.exit(130);
   });
 
   try {
-    console.log("=== Yuuri Bot setup ===");
+    console.log("=== Penyiapan Yuuri Bot ===");
     const choice = (
-      await ask(rl, "Choose 1) Telegram  2) WhatsApp  3) Both  0) Exit", { defaultValue: "3" })
+      await ask(rl, "Pilih 1) Telegram  2) WhatsApp  3) Keduanya  0) Keluar", { defaultValue: "3" })
     ).trim();
 
     switch (choice) {
@@ -240,11 +240,11 @@ async function main(): Promise<void> {
       case "0":
         return;
       default:
-        console.log("Unknown choice. Run `npm run setup` again.");
+        console.log("Pilihan tidak dikenal. Jalankan kembali `npm run setup`.");
         return;
     }
 
-    console.log("\nDone. Start the bot with `npm run dev` (or `npm start` after `npm run build`).");
+    console.log("\nSelesai. Jalankan bot dengan `npm run dev` (atau `npm start` setelah `npm run build`).");
   } finally {
     rl.close();
   }

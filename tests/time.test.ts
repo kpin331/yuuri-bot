@@ -15,9 +15,9 @@ describe("time helpers", () => {
   });
 
   it("renders human-friendly wait times", () => {
-    assert.equal(formatWait(3661), "1h 1m");
-    assert.equal(formatWait(90), "1m 30s");
-    assert.equal(formatWait(30), "30s");
-    assert.equal(formatWait(0), "0s");
+    assert.equal(formatWait(3661), "1 jam 1 menit");
+    assert.equal(formatWait(90), "1 menit 30 detik");
+    assert.equal(formatWait(30), "30 detik");
+    assert.equal(formatWait(0), "0 detik");
   });
 });

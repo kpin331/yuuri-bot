@@ -6,7 +6,8 @@ import { registerCommand } from "../lib/command.js";
 import { isCommandEnabled } from "../lib/db.js";
 
 const TITLE = "Yuuri Bot V1.0✨";
-const SUBTITLE = "List command to use";
+const SUBTITLE = "Daftar perintah yang tersedia";
+const MENU_PHOTO_CAPTION_LIMIT = 900;
 
 interface MenuItem {
   command: string;
@@ -20,59 +21,65 @@ interface MenuSection {
 
 const SECTIONS: MenuSection[] = [
   {
-    title: "General",
+    title: "Umum",
     items: [
-      { command: "start", label: "/start — Show this menu" },
-      { command: "menu", label: "/menu — Show this menu" },
-      { command: "userinfo", label: "/userinfo — Show usage stats for a user" },
+      { command: "start", label: "/start — Tampilkan menu ini" },
+      { command: "menu", label: "/menu — Tampilkan menu ini" },
+      { command: "userinfo", label: "/userinfo — Tampilkan statistik pengguna" },
+      { command: "rank", label: "/rank — Tampilkan level dan XP-mu di grup ini" },
+      { command: "leaderboard", label: "/leaderboard — Tampilkan peringkat XP grup ini" },
     ],
   },
   {
-    title: "Stickers",
+    title: "Stiker",
     items: [
-      { command: "s", label: "/s — Reply to an image or video to turn it into a sticker" },
-      { command: "smeme", label: "/smeme — Turn an image or sticker into a meme with text (top | bottom)" },
-      { command: "toimg", label: "/toimg — Reply to a sticker to turn it into a PNG image" },
+      { command: "s", label: "/s — Balas gambar atau video untuk menjadikannya stiker" },
+      { command: "smeme", label: "/smeme — Tambahkan teks meme pada gambar atau stiker (atas | bawah)" },
+      { command: "toimg", label: "/toimg — Balas stiker untuk mengubahnya menjadi gambar PNG" },
     ],
   },
   {
-    title: "Media",
-    items: [{ command: "play", label: "/play — Search YouTube and download audio or video" }],
+    title: "Alat",
+    items: [{ command: "qr", label: "/qr — Buat kode QR atau baca QR dari gambar" }],
   },
   {
-    title: "Downloaders",
+    title: "Multimedia",
+    items: [{ command: "play", label: "/play — Cari lagu atau video dan unduh dari YouTube" }],
+  },
+  {
+    title: "Pengunduh",
     items: [
-      { command: "dl", label: "/dl — Download media from any supported link" },
-      { command: "ig", label: "/ig — Download from Instagram" },
-      { command: "x", label: "/x — Download from X (Twitter)" },
-      { command: "fb", label: "/fb — Download from Facebook" },
+      { command: "dl", label: "/dl — Unduh media dari tautan yang didukung" },
+      { command: "ig", label: "/ig — Unduh media dari Instagram" },
+      { command: "x", label: "/x — Unduh media dari X (Twitter)" },
+      { command: "fb", label: "/fb — Unduh media dari Facebook" },
     ],
   },
   {
-    title: "Image Search",
+    title: "Pencarian Gambar",
     items: [
-      { command: "pin", label: "/pin — Find the top Pinterest image (query or link)" },
-      { command: "pixiv", label: "/pixiv — Find the top Pixiv illustration (query only)" },
+      { command: "pin", label: "/pin — Cari gambar Pinterest (kata kunci atau tautan)" },
+      { command: "pixiv", label: "/pixiv — Cari ilustrasi Pixiv (kata kunci saja)" },
     ],
   },
   {
-    title: "Moderation",
+    title: "Moderasi",
     items: [
-      { command: "ban", label: "/ban — Ban a user (admins)" },
-      { command: "unban", label: "/unban — Unban a user (admins)" },
+      { command: "ban", label: "/ban — Blokir pengguna (admin)" },
+      { command: "unban", label: "/unban — Buka blokir pengguna (admin)" },
     ],
   },
 ];
 
 const FOOTER: string[] = [
-  "<b>System</b>",
-  "$sys — Show system info (owner only)",
-  "!&lt;command&gt; on|off — Enable or disable a command (admins)",
+  "<b>Sistem</b>",
+  "$sys — Tampilkan informasi sistem (khusus pemilik bot)",
+  "!&lt;perintah&gt; on|off — Aktifkan atau nonaktifkan perintah (admin)",
 ];
 
 function renderItem(item: MenuItem): string {
   // Informational only. The real enforcement happens in the command dispatch.
-  return isCommandEnabled(item.command) ? item.label : `${item.label} (OFF)`;
+  return isCommandEnabled(item.command) ? item.label : `${item.label} (NONAKTIF)`;
 }
 
 export function buildMenu(): string {
@@ -92,7 +99,7 @@ export async function getProfilePhotoFileId(api: Api, userId: number): Promise<s
     const first = photos.photos[0];
     return first?.[first.length - 1]?.file_id ?? null;
   } catch (error) {
-    console.error("getUserProfilePhotos failed:", error);
+    console.error("Gagal mengambil foto profil pengguna:", error);
     return null;
   }
 }
@@ -108,27 +115,42 @@ async function downloadProfilePhoto(api: Api, fileId: string): Promise<string | 
   return dest;
 }
 
+async function trySendMenuPhoto(
+  ctx: Context,
+  photo: string | InputFile,
+  caption: string,
+): Promise<boolean> {
+  const separateCaption = caption.length > MENU_PHOTO_CAPTION_LIMIT;
+  try {
+    await ctx.replyWithPhoto(photo, {
+      ...(separateCaption ? {} : { caption, parse_mode: "HTML" as const }),
+    });
+  } catch (error) {
+    console.error("Gagal mengirim foto menu:", error);
+    return false;
+  }
+
+  if (separateCaption) {
+    await ctx.reply(caption, { parse_mode: "HTML" }).catch((error: unknown) => {
+      console.error("Gagal mengirim teks menu:", error);
+    });
+  }
+  return true;
+}
+
 export function registerCommands(bot: Bot): void {
   const showMenu = async (ctx: Context): Promise<void> => {
     const caption = buildMenu();
     const fileId = await getProfilePhotoFileId(ctx.api, ctx.me.id);
 
     if (fileId) {
-      try {
-        await ctx.replyWithPhoto(fileId, { caption, parse_mode: "HTML" });
-        return;
-      } catch (error) {
-        console.error("replyWithPhoto(file_id) failed:", error);
-      }
+      if (await trySendMenuPhoto(ctx, fileId, caption)) return;
 
       try {
         const downloaded = await downloadProfilePhoto(ctx.api, fileId);
-        if (downloaded) {
-          await ctx.replyWithPhoto(new InputFile(downloaded), { caption, parse_mode: "HTML" });
-          return;
-        }
+        if (downloaded && (await trySendMenuPhoto(ctx, new InputFile(downloaded), caption))) return;
       } catch (error) {
-        console.error("replyWithPhoto(InputFile) failed:", error);
+        console.error("Gagal mengunduh foto profil bot:", error);
       }
     }
 

@@ -23,7 +23,7 @@ function resolveTarget(ctx: Context, token: string | null): Resolved {
     if (!replied) {
       return {
         ok: false,
-        error: "Reply to the user's message, or provide @username or a numeric user ID.",
+        error: "Balas pesan pengguna, atau masukkan @username maupun ID pengguna.",
       };
     }
     return { ok: true, userId: replied.id, label: displayName(replied) };
@@ -35,8 +35,8 @@ function resolveTarget(ctx: Context, token: string | null): Resolved {
       return {
         ok: false,
         error:
-          `I couldn't reliably resolve ${token}. The bot only knows users it has seen. ` +
-          "Reply to one of their messages, or use their numeric Telegram ID.",
+          `${token} tidak dapat ditemukan. Bot hanya mengenali pengguna yang pernah berinteraksi dengannya. ` +
+          "Balas salah satu pesannya atau masukkan ID Telegram pengguna tersebut.",
       };
     }
     const name = [record.firstName, record.lastName].filter(Boolean).join(" ").trim();
@@ -46,13 +46,13 @@ function resolveTarget(ctx: Context, token: string | null): Resolved {
 
   if (/^\d+$/.test(token)) {
     const id = Number(token);
-    if (!Number.isSafeInteger(id)) return { ok: false, error: "Invalid numeric user ID." };
+    if (!Number.isSafeInteger(id)) return { ok: false, error: "ID pengguna tidak valid." };
     return { ok: true, userId: id, label: `user ${id}` };
   }
 
   return {
     ok: false,
-    error: "Provide @username, a numeric user ID, or reply to the user's message.",
+    error: "Masukkan @username, ID pengguna, atau balas pesan pengguna tersebut.",
   };
 }
 
@@ -75,21 +75,21 @@ export function registerBanGuard(bot: Bot): void {
 
 async function requireAuthorized(ctx: Context): Promise<boolean> {
   if (isAuthorized(ctx.from?.id)) return true;
-  await ctx.reply("🚫 Only admins and the owner can use this command.").catch(() => undefined);
+  await ctx.reply("🚫 Hanya admin dan pemilik bot yang dapat menggunakan perintah ini.").catch(() => undefined);
   return false;
 }
 
 async function handleBan(ctx: Context): Promise<void> {
   if (!(await requireAuthorized(ctx))) return;
   if (!isDatabaseReady()) {
-    await ctx.reply("Storage is unavailable, so bans can't be saved.");
+    await ctx.reply("Penyimpanan tidak tersedia. Pemblokiran tidak dapat disimpan.");
     return;
   }
 
   const raw = typeof ctx.match === "string" ? ctx.match : "";
   const parsed = parseBanArgs(raw);
   if (!parsed.ok) {
-    await ctx.reply(`Usage: /ban <@username|id> [-d<days>|-h<hours>|<seconds>] — ${parsed.error}`);
+    await ctx.reply(`Cara pakai: /ban <@username|id> [-d<hari>|-h<jam>|<detik>] — ${parsed.error}`);
     return;
   }
 
@@ -100,7 +100,7 @@ async function handleBan(ctx: Context): Promise<void> {
   }
 
   if (isAuthorized(resolved.userId)) {
-    await ctx.reply("🚫 You can't ban an admin or the owner.");
+    await ctx.reply("🚫 Admin dan pemilik bot tidak dapat diblokir.");
     return;
   }
 
@@ -109,8 +109,8 @@ async function handleBan(ctx: Context): Promise<void> {
   addBan({ userId: resolved.userId, bannedBy: ctx.from?.id ?? null, createdAt: now, expiresAt });
 
   await ctx.reply(
-    `✅ Banned <b>${escapeHtml(resolved.label)}</b> (<code>${resolved.userId}</code>) ` +
-      `for ${formatDuration(parsed.seconds)} — until ${formatDate(expiresAt)}.`,
+    `✅ <b>${escapeHtml(resolved.label)}</b> (<code>${resolved.userId}</code>) diblokir ` +
+      `selama ${formatDuration(parsed.seconds)} — sampai ${formatDate(expiresAt)}.`,
     { parse_mode: "HTML" },
   );
 }
@@ -118,7 +118,7 @@ async function handleBan(ctx: Context): Promise<void> {
 async function handleUnban(ctx: Context): Promise<void> {
   if (!(await requireAuthorized(ctx))) return;
   if (!isDatabaseReady()) {
-    await ctx.reply("Storage is unavailable, so bans can't be changed.");
+    await ctx.reply("Penyimpanan tidak tersedia. Status blokir tidak dapat diubah.");
     return;
   }
 
@@ -126,7 +126,7 @@ async function handleUnban(ctx: Context): Promise<void> {
   // An unban takes only a target; reject stray duration tokens.
   const tokens = raw.trim().split(/\s+/).filter(Boolean);
   if (tokens.length > 1) {
-    await ctx.reply("Usage: /unban <@username|id> (or reply to the user's message).");
+    await ctx.reply("Cara pakai: /unban <@username|id> atau balas pesan pengguna.");
     return;
   }
 
@@ -139,12 +139,12 @@ async function handleUnban(ctx: Context): Promise<void> {
   const removed = removeBan(resolved.userId);
   if (removed) {
     await ctx.reply(
-      `✅ Unbanned <b>${escapeHtml(resolved.label)}</b> (<code>${resolved.userId}</code>).`,
+      `✅ Blokir untuk <b>${escapeHtml(resolved.label)}</b> (<code>${resolved.userId}</code>) dibuka.`,
       { parse_mode: "HTML" },
     );
   } else {
     await ctx.reply(
-      `<b>${escapeHtml(resolved.label)}</b> (<code>${resolved.userId}</code>) is not currently banned.`,
+      `<b>${escapeHtml(resolved.label)}</b> (<code>${resolved.userId}</code>) tidak sedang diblokir.`,
       { parse_mode: "HTML" },
     );
   }

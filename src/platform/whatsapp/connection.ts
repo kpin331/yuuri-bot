@@ -46,7 +46,7 @@ export function connectWhatsApp(options: ConnectionOptions): WhatsAppConnection 
     if (stopped) return;
     if (statusCode === DisconnectReason.loggedOut) {
       console.error(
-        "WhatsApp logged out. Delete the session folder (WA_AUTH_DIR) and restart to log in again.",
+        "WhatsApp telah keluar. Hapus folder sesi (WA_AUTH_DIR) lalu mulai ulang untuk masuk kembali.",
       );
       stopped = true;
       return;
@@ -59,7 +59,7 @@ export function connectWhatsApp(options: ConnectionOptions): WhatsAppConnection 
       try {
         await options.onIncoming(message);
       } catch (error) {
-        console.error("WhatsApp message handling failed:", error);
+        console.error("Penanganan pesan WhatsApp gagal:", error);
       }
     }
   };
@@ -96,18 +96,18 @@ export function connectWhatsApp(options: ConnectionOptions): WhatsAppConnection 
 
       sock.ev.on("connection.update", (update) => {
         if (update.qr && !pairingNumber) {
-          console.log("Scan this QR code with WhatsApp (Linked devices):");
+          console.log("Pindai kode QR ini melalui WhatsApp (Perangkat tertaut):");
           qrcode.generate(update.qr, { small: true });
         }
         if (update.connection === "open") {
-          console.log("WhatsApp connected.");
+          console.log("WhatsApp terhubung.");
           options.onOpen?.();
         }
         if (update.connection === "close") {
           const statusCode = (update.lastDisconnect?.error as { output?: { statusCode?: number } })
             ?.output?.statusCode;
           const reason = reasonName(statusCode);
-          console.log(`WhatsApp connection closed (status ${statusCode ?? "unknown"}: ${reason}).`);
+          console.log(`Koneksi WhatsApp terputus (status ${statusCode ?? "tidak diketahui"}: ${reason}).`);
           handleStatus(statusCode);
         }
       });
@@ -117,18 +117,18 @@ export function connectWhatsApp(options: ConnectionOptions): WhatsAppConnection 
           sock
             .requestPairingCode(pairingNumber)
             .then((code) => {
-              console.log(`WhatsApp pairing code for ${pairingNumber}: ${code}`);
+              console.log(`Kode penautan WhatsApp untuk ${pairingNumber}: ${code}`);
             })
             .catch((error) => {
-              console.error("requestPairingCode failed:", error);
+              console.error("Permintaan kode penautan gagal:", error);
             });
         }, 3000);
       }
     })()
       .catch((error) => {
-        console.error("WhatsApp connection failed:", error);
+        console.error("Koneksi WhatsApp gagal:", error);
         if (!stopped) {
-          console.log("Retrying WhatsApp connection in 5s…");
+          console.log("Mencoba menyambungkan kembali WhatsApp dalam 5 detik…");
           setTimeout(open, 5000);
         }
       })

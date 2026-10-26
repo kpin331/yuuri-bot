@@ -59,13 +59,13 @@ describe("parseBanArgs", () => {
 
 describe("formatDuration", () => {
   it("renders days, hours, minutes and seconds with pluralization", () => {
-    assert.equal(formatDuration(86_400), "1 day");
-    assert.equal(formatDuration(2 * 86_400), "2 days");
-    assert.equal(formatDuration(3_600), "1 hour");
-    assert.equal(formatDuration(7_200), "2 hours");
-    assert.equal(formatDuration(60), "1 minute");
-    assert.equal(formatDuration(45), "45 seconds");
-    assert.equal(formatDuration(1), "1 second");
+    assert.equal(formatDuration(86_400), "1 hari");
+    assert.equal(formatDuration(2 * 86_400), "2 hari");
+    assert.equal(formatDuration(3_600), "1 jam");
+    assert.equal(formatDuration(7_200), "2 jam");
+    assert.equal(formatDuration(60), "1 menit");
+    assert.equal(formatDuration(45), "45 detik");
+    assert.equal(formatDuration(1), "1 detik");
   });
 });
 
@@ -96,6 +96,6 @@ describe("ban guard", () => {
     registerFallback(t.bot);
 
     await t.bot.handleUpdate(t.textUpdate("/nope"));
-    assert.deepEqual(t.replies(), ["Unknown command."]);
+    assert.deepEqual(t.replies(), ["Perintah tidak dikenal."]);
   });
 });

@@ -13,11 +13,11 @@ import { probeMeta, searchYouTube } from "./youtube.js";
 
 export type PlaySource = "youtube" | "youtube-music" | "soundcloud" | "spotify";
 
-export const PLAYLIST_MESSAGE = "Playlists not supported yet, send a single track link.";
+export const PLAYLIST_MESSAGE = "Tautan daftar putar belum didukung. Kirim tautan satu lagu.";
 export const UNSUPPORTED_MESSAGE =
-  "Only YouTube, YouTube Music, SoundCloud and Spotify track links are supported.";
+  "Tautan lagu yang didukung berasal dari YouTube, YouTube Music, SoundCloud, atau Spotify.";
 export const UNREADABLE_MESSAGE =
-  "Could not read that link. It may be private, region-locked, or unavailable.";
+  "Tautan tidak dapat dibaca. Mungkin tautan bersifat privat, dibatasi wilayah, atau sudah tidak tersedia.";
 
 export type PlayLinkParse =
   | { type: "search" }
@@ -167,7 +167,7 @@ export function durationLimitError(meta: PlayMeta, maxMinutes: number): string |
   const { duration } = meta;
   if (typeof duration !== "number" || !Number.isFinite(duration) || duration <= 0) return null;
   if (duration <= maxMinutes * 60) return null;
-  return `That track is about ${Math.round(duration / 60)} minutes long, over the ${maxMinutes}-minute limit.`;
+  return `Durasi lagu sekitar ${Math.round(duration / 60)} menit, melebihi batas ${maxMinutes} menit.`;
 }
 
 // --- Resolution ---
@@ -274,13 +274,13 @@ async function resolveSpotify(url: string): Promise<PlayResolve> {
 
   const track = await fetchSpotifyTrack(trackId, url);
   if (!track) {
-    return { type: "error", message: "Could not read that Spotify link. Try again or send a YouTube link." };
+    return { type: "error", message: "Tautan Spotify tidak dapat dibaca. Coba lagi atau kirim tautan YouTube." };
   }
 
   const query = track.artist ? `${track.artist} - ${track.title}` : track.title;
   const results = await searchYouTube(query);
   if (results.length === 0) {
-    return { type: "error", message: `No YouTube match found for "${query}".` };
+    return { type: "error", message: `Tidak ditemukan hasil yang cocok di YouTube untuk "${query}".` };
   }
 
   const best = results[0]!;

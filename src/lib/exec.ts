@@ -28,7 +28,7 @@ export function exec(
     const timer = options.timeoutMs
       ? setTimeout(() => {
           child.kill();
-          reject(new Error(`Command timed out after ${options.timeoutMs}ms: ${command}`));
+          reject(new Error(`Perintah melewati batas waktu ${options.timeoutMs} ms: ${command}`));
         }, options.timeoutMs)
       : undefined;
 

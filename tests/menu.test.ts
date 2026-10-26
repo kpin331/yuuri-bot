@@ -1,0 +1,24 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { buildMenu, registerCommands } from "../src/handlers/commands.js";
+import { createTestBot } from "./helpers.js";
+
+describe("Telegram menu photo", () => {
+  it("sends a long menu as text after the profile photo", async () => {
+    const t = createTestBot({
+      getUserProfilePhotos: {
+        total_count: 1,
+        photos: [[{ file_id: "profile-photo" }]],
+      },
+    });
+    registerCommands(t.bot);
+
+    await t.bot.handleUpdate(t.textUpdate("/menu"));
+
+    const photo = t.calls.find((call) => call.method === "sendPhoto");
+    assert.ok(photo, "expected the profile photo to be sent");
+    assert.equal(photo.body.caption, undefined);
+    assert.ok(t.replies().some((reply) => reply.includes("Daftar perintah yang tersedia")));
+    assert.ok(buildMenu().length > 900);
+  });
+});

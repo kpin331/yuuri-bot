@@ -8,7 +8,9 @@ import { registerFallback } from "./handlers/fallback.js";
 import { registerPinterest } from "./handlers/pinterest.js";
 import { registerPixiv } from "./handlers/pixiv.js";
 import { registerPlay } from "./handlers/play.js";
+import { registerQr } from "./handlers/qr.js";
 import { registerQuotaReset } from "./handlers/quotareset.js";
+import { registerRank } from "./handlers/rank.js";
 import { registerSmeme } from "./handlers/smeme.js";
 import { registerSticker } from "./handlers/sticker.js";
 import { registerSys } from "./handlers/sys.js";
@@ -22,16 +24,16 @@ export function createBot(token: string): Bot {
 
   bot.catch((err) => {
     const ctx = err.ctx;
-    console.error(`Error while handling update ${ctx.update.update_id}:`);
+    console.error(`Terjadi kesalahan saat menangani pembaruan ${ctx.update.update_id}:`);
     const e = err.error;
     if (e instanceof GrammyError) {
-      console.error("Error in request:", e.description);
+      console.error("Kesalahan pada permintaan:", e.description);
     } else if (e instanceof HttpError) {
       // Log the message only: the underlying error can contain the request URL,
       // which embeds the bot token.
-      console.error("Could not contact Telegram:", e.message);
+      console.error("Tidak dapat menghubungi Telegram:", e.message);
     } else {
-      console.error("Unknown error:", e instanceof Error ? e.message : e);
+      console.error("Kesalahan tidak diketahui:", e instanceof Error ? e.message : e);
     }
   });
 
@@ -41,7 +43,7 @@ export function createBot(token: string): Bot {
 
     if (ctx.chat) {
       await ctx
-        .reply("🚫 This bot is private. Only the owner can use it.")
+        .reply("🚫 Bot ini bersifat privat. Hanya pemilik bot yang dapat menggunakannya.")
         .catch(() => undefined);
     }
   });
@@ -55,6 +57,8 @@ export function createBot(token: string): Bot {
   registerPixiv(bot);
   registerDownloader(bot);
   registerPlay(bot);
+  registerQr(bot);
+  registerRank(bot);
   registerToimg(bot);
   registerUserinfo(bot);
   registerBan(bot);

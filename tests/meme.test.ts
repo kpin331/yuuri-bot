@@ -85,7 +85,7 @@ describe("telegram smeme", () => {
     await ctx.bot.handleUpdate(ctx.textUpdate("/smeme top | bottom"));
 
     const text = ctx.replies().join("\n");
-    assert.ok(text.includes("Reply to an image or video with /smeme"));
+    assert.ok(text.includes("Balas gambar atau video dengan /smeme"));
     assert.equal(ctx.calls.some((call) => call.method === "sendSticker"), false);
   });
 
@@ -94,7 +94,7 @@ describe("telegram smeme", () => {
     await ctx.bot.handleUpdate(update);
 
     const text = ctx.replies().join("\n");
-    assert.ok(text.includes("top | bottom"));
+    assert.ok(text.includes("atas | bawah"));
     assert.equal(ctx.calls.some((call) => call.method === "sendSticker"), false);
   });
 });
@@ -133,7 +133,7 @@ describe("whatsapp smeme", () => {
       role: "member",
     });
 
-    assert.ok(sent[0]?.text?.includes("Reply to an image or video with .smeme"));
+    assert.ok(sent[0]?.text?.includes("Balas gambar atau video dengan .smeme"));
   });
 
   it("asks for text when the quoted message has no text", async () => {
@@ -144,6 +144,6 @@ describe("whatsapp smeme", () => {
       role: "member",
     });
 
-    assert.ok(sent[0]?.text?.includes("top | bottom"));
+    assert.ok(sent[0]?.text?.includes("atas | bawah"));
   });
 });

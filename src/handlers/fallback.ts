@@ -12,6 +12,6 @@ export function registerFallback(bot: Bot): void {
 
     if (!COMMAND_PATTERN.test(text.trimStart())) return;
 
-    await ctx.reply("Unknown command.").catch(() => undefined);
+    await ctx.reply("Perintah tidak dikenal.").catch(() => undefined);
   });
 }

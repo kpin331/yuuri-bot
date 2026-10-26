@@ -65,7 +65,7 @@ export function resolveMemeFont(): string {
   for (const candidate of FONT_CANDIDATES) {
     if (existsSync(candidate)) return candidate;
   }
-  throw new Error("No system font found for meme text. Set MEME_FONT_PATH to a .ttf file.");
+  throw new Error("Font sistem untuk teks meme tidak ditemukan. Atur MEME_FONT_PATH ke file .ttf.");
 }
 
 // The font and text files are copied next to the output and ffmpeg runs with
@@ -77,7 +77,7 @@ export async function renderMeme(
   options: MemeText & { kind: "image" | "video" },
 ): Promise<void> {
   const { top, bottom, kind } = options;
-  if (!top && !bottom) throw new Error("No meme text to draw.");
+  if (!top && !bottom) throw new Error("Teks meme belum diisi.");
 
   const dir = dirname(output);
   copyFileSync(resolveMemeFont(), join(dir, "font.ttf"));
@@ -110,7 +110,7 @@ export async function renderMeme(
     ["-hide_banner", "-loglevel", "error", "-y", "-i", input, "-vf", vf, ...args, output],
     { cwd: dir },
   );
-  if (code !== 0) throw new Error(`ffmpeg failed to draw meme text: ${stderr.trim()}`);
+  if (code !== 0) throw new Error(`Gagal menambahkan teks meme dengan ffmpeg: ${stderr.trim()}`);
 }
 
 async function probeWidth(path: string): Promise<number> {
@@ -127,7 +127,7 @@ async function probeWidth(path: string): Promise<number> {
   ]);
   const width = Number.parseInt(stdout.trim(), 10);
   if (code !== 0 || !Number.isFinite(width) || width <= 0) {
-    throw new Error(`Could not read media dimensions: ${stderr.trim() || "unknown format"}`);
+    throw new Error(`Dimensi media tidak dapat dibaca: ${stderr.trim() || "format tidak diketahui"}`);
   }
   return width;
 }

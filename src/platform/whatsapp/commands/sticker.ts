@@ -21,7 +21,7 @@ export const stickerCommand: WaCommand = {
     if (!media) {
       await sendText(
         reply,
-        "Reply to an image or video with .s, or send a media file with .s as its caption.",
+        "Balas gambar atau video dengan .s, atau kirim file media dengan .s sebagai keterangannya.",
       );
       return;
     }
@@ -50,7 +50,7 @@ export const stickerCommand: WaCommand = {
       );
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
-      await sendText(reply, `Could not create a sticker: ${reason}`);
+      await sendText(reply, `Stiker tidak dapat dibuat: ${reason}`);
     } finally {
       await removeDir(dir);
     }

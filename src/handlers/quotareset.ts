@@ -17,7 +17,7 @@ function describe(entry: QuotaResetEntry): string {
   return (
     `• <b>${escapeHtml(name)}</b> ` +
     `(<code>${escapeHtml(entry.userId)}</code>, ${labelFor(entry)}): ` +
-    `<code>${entry.before} → ${entry.after}</code> (+${Math.abs(entry.restored)} restored)`
+    `<code>${entry.before} → ${entry.after}</code> (+${Math.abs(entry.restored)} dipulihkan)`
   );
 }
 
@@ -29,7 +29,7 @@ export function registerQuotaReset(bot: Bot): void {
     const entries = resetAllQuotas();
 
     if (entries.length === 0) {
-      await ctx.reply("No stored quota records to reset.").catch(() => undefined);
+      await ctx.reply("Tidak ada catatan kuota untuk direset.").catch(() => undefined);
       return;
     }
 
@@ -37,12 +37,12 @@ export function registerQuotaReset(bot: Bot): void {
     const totalLabel = total >= 0 ? `+${total}` : `${total}`;
 
     const lines = [
-      "🔄 <b>Quota reset</b>",
-      `Reset <b>${entries.length}</b> user(s).`,
+      "🔄 <b>Reset kuota</b>",
+      `Kuota ${entries.length} pengguna direset.`,
       "",
       ...entries.map(describe),
       "",
-      `<b>Total restored: ${totalLabel}</b>`,
+      `<b>Total kuota dipulihkan: ${totalLabel}</b>`,
     ];
 
     await ctx.reply(lines.join("\n"), { parse_mode: "HTML" }).catch(() => undefined);

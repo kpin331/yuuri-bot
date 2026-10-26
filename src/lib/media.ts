@@ -127,12 +127,12 @@ export async function downloadTelegramFile(
 ): Promise<void> {
   const file = await bot.api.getFile(fileId);
   if (!file.file_path) {
-    throw new Error("Telegram did not return a file path.");
+    throw new Error("Telegram tidak memberikan lokasi file.");
   }
   const url = `https://api.telegram.org/file/bot${bot.token}/${file.file_path}`;
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`Failed to download file: ${response.status} ${response.statusText}`);
+    throw new Error(`Gagal mengunduh file: ${response.status} ${response.statusText}`);
   }
   const buffer = Buffer.from(await response.arrayBuffer());
   await writeFile(destPath, buffer);
@@ -162,7 +162,7 @@ export function exceedsUploadLimit(size: number): boolean {
 }
 
 export function uploadLimitError(size: number): string {
-  return `The file is too large (${formatBytes(size)}). The configured limit is ${formatBytes(MAX_UPLOAD_BYTES)}.`;
+  return `Ukuran file terlalu besar (${formatBytes(size)}). Batas yang diatur adalah ${formatBytes(MAX_UPLOAD_BYTES)}.`;
 }
 
 // Best-effort free-space probe so a large download doesn't fill the disk. When

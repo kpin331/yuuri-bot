@@ -61,7 +61,7 @@ async function run(fromId: number): Promise<string[]> {
   return sent;
 }
 
-const PRIVATE = "This bot is private";
+const PRIVATE = "Bot ini bersifat privat";
 
 describe("telegram access gate", () => {
   beforeEach(() => {
@@ -80,7 +80,7 @@ describe("telegram access gate", () => {
     // EVERYONE unset (private), OWNER_ID and ADMIN_IDS unset.
     const sent = await run(555);
     assert.ok(sent.some((line) => line.includes(PRIVATE)));
-    assert.ok(!sent.some((line) => line.includes("Unknown command")));
+    assert.ok(!sent.some((line) => line.includes("Perintah tidak dikenal")));
   });
 
   it("still lets configured admins through when no owner is set", async () => {

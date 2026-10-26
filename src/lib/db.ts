@@ -282,7 +282,7 @@ export function setCommandState(
   updatedBy: number | null,
   at: number = Date.now(),
 ): void {
-  if (!db) throw new Error("Storage is not available.");
+  if (!db) throw new Error("Penyimpanan tidak tersedia.");
   db.prepare(
     `INSERT INTO command_states (command, enabled, updated_at, updated_by)
      VALUES (?, ?, ?, ?)
@@ -325,7 +325,7 @@ export function isBanned(userId: number, at: number = Date.now()): boolean {
 }
 
 export function addBan(record: Omit<BanRecord, "reason"> & { reason?: string | null }): void {
-  if (!db) throw new Error("Storage is not available.");
+  if (!db) throw new Error("Penyimpanan tidak tersedia.");
   const reason = record.reason ?? null;
   db.prepare(
     `INSERT INTO bans (user_id, banned_by, created_at, expires_at, reason)
@@ -556,7 +556,7 @@ export function isWaBanned(userId: string, at: number = Date.now()): boolean {
 }
 
 export function addWaBan(record: Omit<WaBanRecord, "reason"> & { reason?: string | null }): void {
-  if (!db) throw new Error("Storage is not available.");
+  if (!db) throw new Error("Penyimpanan tidak tersedia.");
   const reason = record.reason ?? null;
   db.prepare(
     `INSERT INTO wa_bans (user_id, banned_by, created_at, expires_at, reason)

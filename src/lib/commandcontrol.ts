@@ -16,15 +16,15 @@ function normalizeName(value: string): string {
 
 export function parseToggleInput(raw: string): ToggleParse {
   const tokens = raw.trim().split(/\s+/).filter(Boolean);
-  if (tokens.length === 0) return { ok: false, error: "Usage: !<command> on|off" };
-  if (tokens.length !== 2) return { ok: false, error: "Usage: !<command> on|off" };
+  if (tokens.length === 0) return { ok: false, error: "Cara pakai: !<perintah> on|off" };
+  if (tokens.length !== 2) return { ok: false, error: "Cara pakai: !<perintah> on|off" };
 
   const command = normalizeName(tokens[0] ?? "");
   const stateToken = (tokens[1] ?? "").toLowerCase();
 
-  if (command.length === 0) return { ok: false, error: "Usage: !<command> on|off" };
+  if (command.length === 0) return { ok: false, error: "Cara pakai: !<perintah> on|off" };
   if (stateToken !== "on" && stateToken !== "off") {
-    return { ok: false, error: "State must be 'on' or 'off'." };
+    return { ok: false, error: "Status harus 'on' atau 'off'." };
   }
 
   return { ok: true, command, state: stateToken === "on" };
@@ -46,18 +46,18 @@ export function applyCommandToggle(
   const name = normalizeName(command);
 
   if (!isKnownCommand(name)) {
-    return { ok: false, error: `Unknown command: /${name}` };
+    return { ok: false, error: `Perintah tidak dikenal: /${name}` };
   }
   if (!enable && isProtectedCommand(name)) {
-    return { ok: false, error: `/${name} is protected and can't be disabled.` };
+    return { ok: false, error: `/${name} dilindungi dan tidak dapat dinonaktifkan.` };
   }
   if (!isDatabaseReady()) {
-    return { ok: false, error: "Storage is unavailable, so the state was not saved." };
+    return { ok: false, error: "Penyimpanan tidak tersedia. Status perintah tidak disimpan." };
   }
 
   setCommandState(name, enable, actorId);
   return {
     ok: true,
-    message: `✅ /${name} is now ${enable ? "enabled" : "disabled"}.`,
+    message: `✅ /${name} sekarang ${enable ? "aktif" : "nonaktif"}.`,
   };
 }

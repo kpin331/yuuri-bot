@@ -100,10 +100,10 @@ describe("database lib", () => {
 
   it("rejects unknown columns and non-numeric comparisons", () => {
     const unknown = prepareFilter("users", [{ column: "nope", operator: "eq", value: "1" }]);
-    assert.ok(unknown.error?.includes("Unknown column"));
+    assert.ok(unknown.error?.includes("Kolom tidak dikenal"));
 
     const badNumber = prepareFilter("users", [{ column: "user_id", operator: "gt", value: "abc" }]);
-    assert.ok(badNumber.error?.includes("not a number"));
+    assert.ok(badNumber.error?.includes("bukan angka"));
   });
 
   it("counts and pages rows in rowid order", () => {
@@ -127,7 +127,7 @@ describe("database lib", () => {
   it("formats epoch timestamps and nulls", () => {
     assert.equal(formatTimestampValue("first_seen", SEED_AT), "2026-01-02 03:04:05 UTC");
     assert.equal(formatTimestampValue("username", SEED_AT), null);
-    assert.equal(formatCellValue("last_name", null), "null");
+    assert.equal(formatCellValue("last_name", null), "kosong");
     assert.equal(formatCellValue("user_id", 7), "7");
   });
 
@@ -143,7 +143,7 @@ describe("database lib", () => {
       rows,
       conditions,
     });
-    assert.ok(text.includes("filter: username = alice"));
+    assert.ok(text.includes("Saringan: username = alice"));
     assert.ok(text.includes("1. "));
     assert.ok(text.includes("username=alice"));
   });
@@ -218,7 +218,7 @@ describe("/database command", () => {
     await t.bot.handleUpdate(t.textUpdate("/database", { fromId: OWNER }));
 
     const reply = t.replies().join("\n");
-    assert.ok(reply.includes("Database"), reply);
+    assert.ok(reply.includes("Basis data"), reply);
     const send = t.calls.find((call) => call.method === "sendMessage");
     const markup = send?.body.reply_markup as
       | { inline_keyboard: Array<Array<{ callback_data: string }>> }
@@ -232,7 +232,7 @@ describe("/database command", () => {
     registerDatabase(t.bot);
 
     await t.bot.handleUpdate(t.textUpdate("/database", { fromId: 999 }));
-    assert.ok(t.replies().some((reply) => reply.includes("owner-only")));
+    assert.ok(t.replies().some((reply) => reply.includes("pemilik bot")));
   });
 
   it("blocks non-owner callback button presses", async () => {
@@ -241,7 +241,7 @@ describe("/database command", () => {
 
     await t.bot.handleUpdate(t.callbackUpdate({ data: "db:tbl:users", fromId: 999 }));
     const answer = t.calls.find((call) => call.method === "answerCallbackQuery");
-    assert.ok(String(answer?.body.text).includes("Owner only"));
+    assert.ok(String(answer?.body.text).includes("pemilik bot"));
   });
 
   it("browses, filters and exports a table", async () => {
@@ -254,7 +254,7 @@ describe("/database command", () => {
     await t.bot.handleUpdate(t.callbackUpdate({ data: "db:tbl:users", ...from }));
 
     const rowsView = t.editedTexts().at(-1) ?? "";
-    assert.ok(rowsView.includes("filter: none"), rowsView);
+    assert.ok(rowsView.includes("Saringan: tidak ada"), rowsView);
     assert.ok(rowsView.includes("username=alice"), rowsView);
 
     await t.bot.handleUpdate(t.callbackUpdate({ data: "db:filter", ...from }));
@@ -264,7 +264,7 @@ describe("/database command", () => {
     await t.bot.handleUpdate(t.textUpdate("bob", from));
 
     const filtered = t.editedTexts().at(-1) ?? "";
-    assert.ok(filtered.includes("filter: username = bob"), filtered);
+    assert.ok(filtered.includes("Saringan: username = bob"), filtered);
     assert.ok(filtered.includes("username=bob"), filtered);
     assert.ok(!filtered.includes("alice"), filtered);
 
@@ -303,7 +303,7 @@ describe("/database command", () => {
     await t.bot.handleUpdate(t.callbackUpdate({ data: "db:op:gt", ...from }));
     await t.bot.handleUpdate(t.textUpdate("not-a-number", from));
 
-    assert.ok(t.replies().some((reply) => reply.includes("Enter a number")));
+    assert.ok(t.replies().some((reply) => reply.includes("Masukkan angka")));
   });
 
   it("reports an expired menu", async () => {
@@ -312,6 +312,6 @@ describe("/database command", () => {
 
     await t.bot.handleUpdate(t.callbackUpdate({ data: "db:tbl:users", chatId: 779, fromId: OWNER }));
     const answer = t.calls.find((call) => call.method === "answerCallbackQuery");
-    assert.ok(String(answer?.body.text).includes("expired"));
+    assert.ok(String(answer?.body.text).includes("kedaluwarsa"));
   });
 });

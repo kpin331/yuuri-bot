@@ -8,7 +8,7 @@ import { downloadIllust, searchIllust } from "../lib/pixiv.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
 
 function usage(): string {
-  return "Usage: /pixiv <search query>";
+  return "Cara pakai: /pixiv <kata kunci pencarian>";
 }
 
 async function handlePixiv(ctx: Context): Promise<void> {
@@ -20,11 +20,11 @@ async function handlePixiv(ctx: Context): Promise<void> {
 
   const refreshToken = getPixivRefreshToken();
   if (!refreshToken) {
-    await ctx.reply("Pixiv is not configured. Set PIXIV_REFRESH_TOKEN in .env.");
+    await ctx.reply("Pixiv belum dikonfigurasi. Isi PIXIV_REFRESH_TOKEN di berkas .env.");
     return;
   }
 
-  const status = await ctx.reply("Searching Pixiv…");
+  const status = await ctx.reply("Sedang mencari di Pixiv…");
   const dir = await makeTempDir("pixiv");
 
   try {
@@ -35,7 +35,7 @@ async function handlePixiv(ctx: Context): Promise<void> {
       await ctx.api.editMessageText(
         status.chat.id,
         status.message_id,
-        "No Pixiv illustration found for that query.",
+        "Ilustrasi Pixiv tidak ditemukan.",
       );
       return;
     }
@@ -57,7 +57,7 @@ async function handlePixiv(ctx: Context): Promise<void> {
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     await ctx.api
-      .editMessageText(status.chat.id, status.message_id, `Pixiv search failed: ${reason}`)
+      .editMessageText(status.chat.id, status.message_id, `Pencarian Pixiv gagal: ${reason}`)
       .catch(() => undefined);
   } finally {
     await removeDir(dir);

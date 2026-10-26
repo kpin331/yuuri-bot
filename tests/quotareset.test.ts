@@ -59,7 +59,7 @@ describe("/quota-reset", () => {
     await t.bot.handleUpdate(t.textUpdate("/quota-reset", { fromId: 222 }));
 
     const reply = t.replies().join("\n");
-    assert.ok(reply.includes("Quota reset"), reply);
+    assert.ok(reply.includes("Reset kuota"), reply);
     assert.ok(reply.includes("Raka"), reply);
     assert.ok(reply.includes("+25"), reply);
     assert.ok(reply.includes("+5"), reply);
@@ -74,6 +74,6 @@ describe("/quota-reset", () => {
 
     await t.bot.handleUpdate(t.textUpdate("/quota-reset", { fromId: 999 }));
 
-    assert.ok(t.replies().some((reply) => reply.includes("owner-only")));
+    assert.ok(t.replies().some((reply) => reply.includes("pemilik bot")));
   });
 });

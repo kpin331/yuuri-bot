@@ -64,15 +64,15 @@ function rowsKeyboard(
 
   const pages = pageCount(total);
   if (pages > 1) {
-    if (session.page > 1) keyboard.text("« prev", `${PREFIX}pg:${session.page - 1}`);
+    if (session.page > 1) keyboard.text("« sebelumnya", `${PREFIX}pg:${session.page - 1}`);
     keyboard.text(`${session.page}/${pages}`, `${PREFIX}noop`);
-    if (session.page < pages) keyboard.text("next »", `${PREFIX}pg:${session.page + 1}`);
+    if (session.page < pages) keyboard.text("berikutnya »", `${PREFIX}pg:${session.page + 1}`);
     keyboard.row();
   }
 
-  keyboard.text("Filter", `${PREFIX}filter`).text("Export .xlsx", `${PREFIX}x`);
-  if (session.conditions.length > 0) keyboard.text("Clear filter", `${PREFIX}clear`);
-  keyboard.row().text("Tables", `${PREFIX}tables`);
+  keyboard.text("Saring", `${PREFIX}filter`).text("Ekspor .xlsx", `${PREFIX}x`);
+  if (session.conditions.length > 0) keyboard.text("Hapus saringan", `${PREFIX}clear`);
+  keyboard.row().text("Daftar tabel", `${PREFIX}tables`);
   return keyboard;
 }
 
@@ -105,7 +105,7 @@ async function showRows(ctx: Context, session: DbSession): Promise<void> {
   const { filter, error } = prepareFilter(session.table, session.conditions);
   if (error) {
     session.conditions = [];
-    await edit(ctx, session, `⚠️ ${escapeHtml(error)}`, new InlineKeyboard().text("Tables", `${PREFIX}tables`));
+    await edit(ctx, session, `⚠️ ${escapeHtml(error)}`, new InlineKeyboard().text("Daftar tabel", `${PREFIX}tables`));
     return;
   }
 
@@ -129,7 +129,7 @@ async function showDetail(ctx: Context, session: DbSession, rowid: number): Prom
   if (!session.table || !Number.isFinite(rowid)) return;
   const row = fetchRowByRowid(session.table, rowid);
   if (!row) {
-    await ctx.reply("That row no longer exists.").catch(() => undefined);
+    await ctx.reply("Baris itu sudah tidak ada.").catch(() => undefined);
     return;
   }
   session.stage = "detail";
@@ -137,21 +137,21 @@ async function showDetail(ctx: Context, session: DbSession, rowid: number): Prom
     ctx,
     session,
     renderRowDetail(session.table, row),
-    new InlineKeyboard().text("Back", `${PREFIX}back`),
+    new InlineKeyboard().text("Kembali", `${PREFIX}back`),
   );
 }
 
 async function showFilterMenu(ctx: Context, session: DbSession): Promise<void> {
   session.stage = "filter";
   const text = [
-    `🔎 <b>Filter: ${escapeHtml(session.table ?? "")}</b>`,
-    `Current: ${escapeHtml(describeConditions(session.conditions))}`,
+    `🔎 <b>Saringan: ${escapeHtml(session.table ?? "")}</b>`,
+    `Saat ini: ${escapeHtml(describeConditions(session.conditions))}`,
     "",
-    "Pick a column, then an operator, then send a value.",
+    "Pilih kolom, pilih operator, lalu kirim nilainya.",
   ].join("\n");
-  const keyboard = new InlineKeyboard().text("+ Add condition", `${PREFIX}add`).row();
-  if (session.conditions.length > 0) keyboard.text("Clear all", `${PREFIX}clear`).row();
-  keyboard.text("Back to rows", `${PREFIX}back`);
+  const keyboard = new InlineKeyboard().text("+ Tambah kondisi", `${PREFIX}add`).row();
+  if (session.conditions.length > 0) keyboard.text("Hapus semua", `${PREFIX}clear`).row();
+  keyboard.text("Kembali ke baris", `${PREFIX}back`);
   await edit(ctx, session, text, keyboard);
 }
 
@@ -162,8 +162,8 @@ async function showColumnPicker(ctx: Context, session: DbSession): Promise<void>
   for (const column of getColumns(session.table)) {
     keyboard.text(column, `${PREFIX}col:${column}`).row();
   }
-  keyboard.text("Back", `${PREFIX}filter`);
-  await edit(ctx, session, `🔎 Pick a column in <b>${escapeHtml(session.table)}</b>`, keyboard);
+  keyboard.text("Kembali", `${PREFIX}filter`);
+  await edit(ctx, session, `🔎 Pilih kolom di <b>${escapeHtml(session.table)}</b>`, keyboard);
 }
 
 async function showOperatorPicker(ctx: Context, session: DbSession): Promise<void> {
@@ -173,15 +173,15 @@ async function showOperatorPicker(ctx: Context, session: DbSession): Promise<voi
   for (const operator of FILTER_OPERATORS) {
     keyboard.text(operator.label, `${PREFIX}op:${operator.code}`);
   }
-  keyboard.row().text("Back", `${PREFIX}add`);
-  await edit(ctx, session, `🔎 Operator for <b>${escapeHtml(session.pendingColumn)}</b>`, keyboard);
+  keyboard.row().text("Kembali", `${PREFIX}add`);
+  await edit(ctx, session, `🔎 Operator untuk <b>${escapeHtml(session.pendingColumn)}</b>`, keyboard);
 }
 
 async function showValuePrompt(ctx: Context, session: DbSession): Promise<void> {
   session.stage = "value";
   const column = session.pendingColumn ?? "";
   const operator = session.pendingOperator ?? "eq";
-  const hint = NUMERIC_OPERATORS.has(operator) ? "Send a number." : "Send the text to match.";
+  const hint = NUMERIC_OPERATORS.has(operator) ? "Kirim angka." : "Kirim teks yang ingin dicari.";
   await edit(
     ctx,
     session,
@@ -189,9 +189,9 @@ async function showValuePrompt(ctx: Context, session: DbSession): Promise<void> 
       `🔎 <b>${escapeHtml(column)} ${escapeHtml(operatorLabel(operator))}</b>`,
       hint,
       "",
-      "Send the value as a plain message.",
+      "Kirim nilai sebagai pesan teks biasa.",
     ].join("\n"),
-    new InlineKeyboard().text("Back", `${PREFIX}add`),
+    new InlineKeyboard().text("Kembali", `${PREFIX}add`),
   );
 }
 
@@ -204,7 +204,7 @@ async function exportTable(ctx: Context, session: DbSession): Promise<void> {
     return;
   }
 
-  const status = await ctx.reply("Building the Excel file…").catch(() => undefined);
+  const status = await ctx.reply("Sedang membuat file Excel…").catch(() => undefined);
   const dir = await makeTempDir("db");
   try {
     const { buffer, rows, truncated } = await buildWorkbook(session.table, filter);
@@ -215,15 +215,15 @@ async function exportTable(ctx: Context, session: DbSession): Promise<void> {
 
     const caption = [
       `🗄️ <b>${escapeHtml(session.table)}</b>`,
-      `${rows} row(s)${truncated ? ` (capped at ${EXPORT_ROW_CAP})` : ""}`,
-      `filter: ${escapeHtml(describeConditions(session.conditions))}`,
+      `${rows} baris${truncated ? ` (dibatasi ${EXPORT_ROW_CAP} baris)` : ""}`,
+      `Saringan: ${escapeHtml(describeConditions(session.conditions))}`,
     ].join("\n");
     await ctx.replyWithDocument(new InputFile(path, name), { caption, parse_mode: "HTML" });
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     if (status) {
       await ctx.api
-        .editMessageText(status.chat.id, status.message_id, `Export failed: ${reason}`)
+        .editMessageText(status.chat.id, status.message_id, `Ekspor gagal: ${reason}`)
         .catch(() => undefined);
     }
   } finally {
@@ -237,7 +237,7 @@ async function exportTable(ctx: Context, session: DbSession): Promise<void> {
 
 async function handleCommand(ctx: Context): Promise<void> {
   if (!isDatabaseReady()) {
-    await ctx.reply("The database is not available.").catch(() => undefined);
+    await ctx.reply("Basis data tidak tersedia.").catch(() => undefined);
     return;
   }
   const chatId = ctx.chat?.id;
@@ -273,14 +273,14 @@ async function handleCallback(ctx: Context): Promise<void> {
 
   if (!isOwner(userId)) {
     await ctx
-      .answerCallbackQuery({ text: "Owner only.", show_alert: true })
+      .answerCallbackQuery({ text: "Khusus pemilik bot.", show_alert: true })
       .catch(() => undefined);
     return;
   }
 
   if (!isDatabaseReady()) {
     await ctx
-      .answerCallbackQuery({ text: "The database is not available.", show_alert: true })
+      .answerCallbackQuery({ text: "Basis data tidak tersedia.", show_alert: true })
       .catch(() => undefined);
     return;
   }
@@ -288,7 +288,7 @@ async function handleCallback(ctx: Context): Promise<void> {
   const session = sessions.get(chatId, userId);
   if (!session) {
     await ctx
-      .answerCallbackQuery({ text: "This menu expired. Send /database again.", show_alert: true })
+      .answerCallbackQuery({ text: "Menu ini sudah kedaluwarsa. Kirim /database lagi.", show_alert: true })
       .catch(() => undefined);
     return;
   }
@@ -307,7 +307,7 @@ async function handleCallback(ctx: Context): Promise<void> {
 
     case "tbl": {
       if (!value || !isDbTable(value)) {
-        await ctx.answerCallbackQuery({ text: "Unknown table.", show_alert: true }).catch(() => undefined);
+        await ctx.answerCallbackQuery({ text: "Tabel tidak dikenal.", show_alert: true }).catch(() => undefined);
         return;
       }
       await ctx.answerCallbackQuery().catch(() => undefined);
@@ -346,7 +346,7 @@ async function handleCallback(ctx: Context): Promise<void> {
 
     case "col": {
       if (!session.table || !value || !getColumns(session.table).includes(value)) {
-        await ctx.answerCallbackQuery({ text: "Unknown column.", show_alert: true }).catch(() => undefined);
+        await ctx.answerCallbackQuery({ text: "Kolom tidak dikenal.", show_alert: true }).catch(() => undefined);
         return;
       }
       await ctx.answerCallbackQuery().catch(() => undefined);
@@ -357,7 +357,7 @@ async function handleCallback(ctx: Context): Promise<void> {
 
     case "op": {
       if (!value || !isFilterOperator(value)) {
-        await ctx.answerCallbackQuery({ text: "Unknown operator.", show_alert: true }).catch(() => undefined);
+        await ctx.answerCallbackQuery({ text: "Operator tidak dikenal.", show_alert: true }).catch(() => undefined);
         return;
       }
       await ctx.answerCallbackQuery().catch(() => undefined);
@@ -404,7 +404,7 @@ async function handleValueMessage(ctx: Context, next: () => Promise<void>): Prom
   if (!column || !operator) return next();
 
   if (NUMERIC_OPERATORS.has(operator) && !Number.isFinite(Number(text))) {
-    await ctx.reply(`⚠️ Enter a number for ${escapeHtml(operatorLabel(operator))}.`, { parse_mode: "HTML" }).catch(() => undefined);
+    await ctx.reply(`⚠️ Masukkan angka untuk operator ${escapeHtml(operatorLabel(operator))}.`, { parse_mode: "HTML" }).catch(() => undefined);
     return;
   }
 

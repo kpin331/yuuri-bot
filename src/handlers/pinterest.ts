@@ -15,11 +15,11 @@ export function registerPinterest(bot: Bot): void {
         : (replied?.text ?? replied?.caption ?? "").trim();
 
     if (!query) {
-      await ctx.reply("Usage: /pin <search query or Pinterest link>");
+      await ctx.reply("Cara pakai: /pin <kata kunci atau tautan Pinterest>");
       return;
     }
 
-    const status = await ctx.reply("Searching Pinterest…");
+    const status = await ctx.reply("Sedang mencari di Pinterest…");
     const dir = await makeTempDir("pin");
 
     try {
@@ -30,7 +30,7 @@ export function registerPinterest(bot: Bot): void {
         await ctx.api.editMessageText(
           status.chat.id,
           status.message_id,
-          "No Pinterest image found for that query.",
+          "Gambar Pinterest tidak ditemukan.",
         );
         return;
       }
@@ -41,14 +41,14 @@ export function registerPinterest(bot: Bot): void {
         await ctx.api.editMessageText(
           status.chat.id,
           status.message_id,
-          "Found a pin but no downloadable image.",
+          "Pin ditemukan, tetapi gambarnya tidak dapat diunduh.",
         );
         return;
       }
 
       const response = await fetch(imageUrl);
       if (!response.ok) {
-        throw new Error(`image download failed (${response.status})`);
+        throw new Error(`Gagal mengunduh gambar (status ${response.status})`);
       }
       const buffer = Buffer.from(await response.arrayBuffer());
       const ext = extname(new URL(imageUrl).pathname) || ".jpg";
@@ -70,7 +70,7 @@ export function registerPinterest(bot: Bot): void {
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       await ctx.api
-        .editMessageText(status.chat.id, status.message_id, `Pinterest search failed: ${reason}`)
+        .editMessageText(status.chat.id, status.message_id, `Pencarian Pinterest gagal: ${reason}`)
         .catch(() => undefined);
     } finally {
       await removeDir(dir);

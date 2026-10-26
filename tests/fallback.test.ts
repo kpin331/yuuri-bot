@@ -28,13 +28,13 @@ describe("fallback (echo fix)", () => {
     assert.deepEqual(ctx.replies(), []);
   });
 
-  it("replies 'Unknown command.' to an unrecognised command", async () => {
+  it("replies in Indonesian to an unrecognised command", async () => {
     await ctx.bot.handleUpdate(ctx.textUpdate("/nope"));
-    assert.deepEqual(ctx.replies(), ["Unknown command."]);
+    assert.deepEqual(ctx.replies(), ["Perintah tidak dikenal."]);
   });
 
-  it("replies 'Unknown command.' to a command with an argument", async () => {
+  it("replies in Indonesian to a command with an argument", async () => {
     await ctx.bot.handleUpdate(ctx.textUpdate("/nope@somebot thing"));
-    assert.deepEqual(ctx.replies(), ["Unknown command."]);
+    assert.deepEqual(ctx.replies(), ["Perintah tidak dikenal."]);
   });
 });

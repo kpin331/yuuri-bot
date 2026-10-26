@@ -27,7 +27,7 @@ export function registerCommandControl(bot: Bot): void {
 
     if (!authorized) {
       await ctx
-        .reply("🚫 Only admins and the owner can change command states.")
+        .reply("🚫 Hanya admin dan pemilik bot yang dapat mengubah status perintah.")
         .catch(() => undefined);
       return;
     }

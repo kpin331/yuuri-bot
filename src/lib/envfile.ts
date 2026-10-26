@@ -89,20 +89,20 @@ export function buildEnvFile({ template, existing, updates }: BuildEnvOptions): 
 
 export function validateBotToken(value: string): string | null {
   const token = value.trim();
-  if (token.length === 0) return "The bot token is required.";
+  if (token.length === 0) return "Token bot wajib diisi.";
   if (!/^\d{5,}:[A-Za-z0-9_-]{25,}$/.test(token)) {
-    return "That does not look like a bot token (expected digits, a colon, then the secret, like 123456789:ABC...).";
+    return "Format token bot tidak sesuai (harus berupa angka, titik dua, lalu kode rahasia, misalnya 123456789:ABC...).";
   }
   return null;
 }
 
 export function validateNumericId(value: string): string | null {
   const id = value.trim();
-  if (id.length === 0) return "The owner ID is required.";
+  if (id.length === 0) return "ID pemilik wajib diisi.";
   if (!/^\d+$/.test(id)) {
-    return "The owner ID must be digits only. Message @userinfobot to get your numeric ID.";
+    return "ID pemilik hanya boleh berisi angka. Kirim pesan ke @userinfobot untuk mengetahui ID Anda.";
   }
-  if (!Number.isSafeInteger(Number(id))) return "That ID is not a valid Telegram user ID.";
+  if (!Number.isSafeInteger(Number(id))) return "ID tersebut bukan ID pengguna Telegram yang valid.";
   return null;
 }
 
@@ -115,8 +115,8 @@ export function normalizePhoneNumber(value: string): string {
 export function validatePhoneNumber(value: string): string | null {
   const digits = normalizePhoneNumber(value);
   if (digits.length < 8) {
-    return "Enter the full number in international format, digits only (e.g. 6281234567890).";
+    return "Masukkan nomor lengkap dalam format internasional, angka saja (contoh: 6281234567890).";
   }
-  if (digits.length > 15) return "That number is too long (international numbers have at most 15 digits).";
+  if (digits.length > 15) return "Nomor terlalu panjang (nomor internasional maksimal 15 digit).";
   return null;
 }

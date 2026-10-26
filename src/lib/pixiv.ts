@@ -65,13 +65,13 @@ async function refreshAccessToken(refreshToken: string): Promise<TokenState> {
     signal: AbortSignal.timeout(AUTH_TIMEOUT_MS),
   });
 
-  if (!res.ok) throw new Error(`Pixiv auth failed (HTTP ${res.status})`);
+  if (!res.ok) throw new Error(`Autentikasi Pixiv gagal (HTTP ${res.status})`);
 
   const data = (await res.json()) as {
     response?: { access_token?: string; refresh_token?: string; expires_in?: number };
   };
   const response = data.response;
-  if (!response?.access_token) throw new Error("Pixiv auth returned no access token");
+  if (!response?.access_token) throw new Error("Autentikasi Pixiv tidak menghasilkan token akses.");
 
   return {
     accessToken: response.access_token,
@@ -103,7 +103,7 @@ export async function searchIllust(
     headers: { ...API_HEADERS, Authorization: `Bearer ${accessToken}` },
     signal: AbortSignal.timeout(API_TIMEOUT_MS),
   });
-  if (!res.ok) throw new Error(`Pixiv search failed (HTTP ${res.status})`);
+  if (!res.ok) throw new Error(`Pencarian Pixiv gagal (HTTP ${res.status})`);
 
   const data = (await res.json()) as {
     illusts?: Array<{
@@ -129,7 +129,7 @@ export async function searchIllust(
   return {
     id: illust.id,
     title: illust.title?.trim() || "Untitled",
-    author: illust.user?.name?.trim() || "Unknown",
+    author: illust.user?.name?.trim() || "Tidak diketahui",
     imageUrl,
     pageUrl: `https://www.pixiv.net/artworks/${illust.id}`,
     tags: (illust.tags ?? []).map((t) => t.name?.trim()).filter((n): n is string => !!n),
@@ -142,6 +142,6 @@ export async function downloadIllust(imageUrl: string): Promise<Buffer> {
     headers: { Referer: IMAGE_REFERER, "User-Agent": USER_AGENT },
     signal: AbortSignal.timeout(API_TIMEOUT_MS),
   });
-  if (!res.ok) throw new Error(`Pixiv image download failed (HTTP ${res.status})`);
+  if (!res.ok) throw new Error(`Gagal mengunduh gambar Pixiv (HTTP ${res.status})`);
   return Buffer.from(await res.arrayBuffer());
 }

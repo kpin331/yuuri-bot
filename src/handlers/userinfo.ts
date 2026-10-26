@@ -82,27 +82,27 @@ function buildReport(ctx: Context, target: Target): string {
   if (target.username) lines.push(`@${escapeHtml(target.username)}`);
   lines.push(`ID: <code>${canSeeId ? target.userId : maskId(target.userId)}</code>`);
 
-  lines.push("", "<b>Activity</b>");
+  lines.push("", "<b>Aktivitas</b>");
   const stats = getStats(target.userId);
   if (!stats) {
-    lines.push("No data recorded.");
+    lines.push("Belum ada data yang tercatat.");
   } else {
-    lines.push(`Messages: <b>${stats.messages}</b>`);
-    lines.push(`Active days: <b>${stats.activeDays}</b>`);
-    lines.push(`Commands used: <b>${stats.commandCount}</b>`);
-    lines.push(`Top command: ${stats.topCommand ? `/${escapeHtml(stats.topCommand)}` : "—"}`);
-    lines.push(`First seen: ${formatDate(stats.firstSeen)}`);
-    lines.push(`Last seen: ${formatDate(stats.lastSeen)}`);
+    lines.push(`Pesan: <b>${stats.messages}</b>`);
+    lines.push(`Hari aktif: <b>${stats.activeDays}</b>`);
+    lines.push(`Perintah digunakan: <b>${stats.commandCount}</b>`);
+    lines.push(`Perintah teratas: ${stats.topCommand ? `/${escapeHtml(stats.topCommand)}` : "—"}`);
+    lines.push(`Pertama terlihat: ${formatDate(stats.firstSeen)}`);
+    lines.push(`Terakhir terlihat: ${formatDate(stats.lastSeen)}`);
   }
 
-  lines.push("", "Phone: not accessible via the Bot API.");
+  lines.push("", "Nomor telepon tidak dapat diakses melalui Bot API.");
   return lines.join("\n");
 }
 
 export function registerUserinfo(bot: Bot): void {
   registerCommand(bot, "userinfo", async (ctx: Context) => {
     if (!isDatabaseReady()) {
-      await ctx.reply("Storage is not available, so there are no statistics to show.");
+      await ctx.reply("Penyimpanan tidak tersedia, jadi statistik tidak dapat ditampilkan.");
       return;
     }
 
@@ -110,14 +110,14 @@ export function registerUserinfo(bot: Bot): void {
     if (target === "unknown-username") {
       const arg = typeof ctx.match === "string" ? ctx.match.trim() : "";
       await ctx.reply(
-        `No data recorded for ${escapeHtml(arg)}. The bot only knows users who have interacted with it.`,
+        `Belum ada data untuk ${escapeHtml(arg)}. Bot hanya mengenali pengguna yang pernah berinteraksi dengannya.`,
         { parse_mode: "HTML" },
       );
       return;
     }
 
     if (!target) {
-      await ctx.reply("Could not determine which user to look up.");
+      await ctx.reply("Tidak dapat menentukan pengguna yang ingin dilihat.");
       return;
     }
 
@@ -132,7 +132,7 @@ export function registerUserinfo(bot: Bot): void {
         await ctx.replyWithPhoto(fileId, { caption: report, parse_mode: "HTML" });
         return;
       } catch (error) {
-        console.error("userinfo profile photo failed:", error);
+        console.error("Gagal mengirim foto profil untuk info pengguna:", error);
       }
     }
 

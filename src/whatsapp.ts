@@ -11,7 +11,7 @@ export function startWhatsApp(): WhatsAppConnection | null {
 
   if (ownerNumbers.length === 0 && !pairing) {
     console.log(
-      "WhatsApp not started: set OWNER_NUMBER (and optionally PAIRING_NUMBER) in .env to enable it.",
+      "WhatsApp tidak dijalankan: isi OWNER_NUMBER (dan opsional PAIRING_NUMBER) di .env untuk mengaktifkannya.",
     );
     return null;
   }

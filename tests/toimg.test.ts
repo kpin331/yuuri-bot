@@ -34,7 +34,7 @@ describe("toimg", () => {
     await ctx.bot.handleUpdate(update);
 
     const text = ctx.replies().join("\n");
-    assert.ok(text.includes("Animated"));
+    assert.ok(text.includes("Stiker animasi"));
     assert.ok(text.includes(".tgs"));
     assert.equal(ctx.calls.some((call) => call.method === "sendDocument"), false);
   });
@@ -43,7 +43,7 @@ describe("toimg", () => {
     await ctx.bot.handleUpdate(ctx.textUpdate("/toimg"));
 
     const text = ctx.replies().join("\n");
-    assert.ok(text.includes("Reply to a sticker"));
+    assert.ok(text.includes("Balas stiker"));
     assert.equal(ctx.calls.some((call) => call.method === "sendDocument"), false);
   });
 });

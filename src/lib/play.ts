@@ -147,7 +147,7 @@ export function formatSearchList(results: SearchResult[]): string {
     const suffix = time ? ` <i>(${time})</i>` : "";
     return `${result.index}. ${escapeHtml(truncate(result.title, 64))}${suffix}`;
   });
-  return ["🔎 <b>Search results</b>", ...lines].join("\n");
+  return ["🔎 <b>Hasil pencarian</b>", ...lines].join("\n");
 }
 
 export function buildPlayCaption(meta: PlayMeta, kind: PlayKind): string {
@@ -156,7 +156,7 @@ export function buildPlayCaption(meta: PlayMeta, kind: PlayKind): string {
   if (meta.uploader) lines.push(`👤 ${escapeHtml(meta.uploader)}`);
   const time = formatTime(meta.duration);
   if (time) lines.push(`⏱ ${time}`);
-  if (meta.webpageUrl) lines.push("", `🔗 <a href="${escapeHtml(meta.webpageUrl)}">Source</a>`);
+  if (meta.webpageUrl) lines.push("", `🔗 <a href="${escapeHtml(meta.webpageUrl)}">Sumber</a>`);
   return lines.join("\n");
 }
 

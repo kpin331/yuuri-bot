@@ -41,7 +41,7 @@ export async function makeStaticSticker(input: string, output: string): Promise<
       output,
     ]);
     if (code !== 0) {
-      throw new Error(`ffmpeg failed to build sticker: ${stderr.trim()}`);
+      throw new Error(`Gagal membuat stiker dengan ffmpeg: ${stderr.trim()}`);
     }
     if ((await sizeOf(output)) <= STATIC_LIMIT) return;
   }
@@ -90,7 +90,7 @@ export async function makeVideoSticker(input: string, output: string): Promise<v
       output,
     ]);
     if (code !== 0) {
-      throw new Error(`ffmpeg failed to build sticker: ${stderr.trim()}`);
+      throw new Error(`Gagal membuat stiker dengan ffmpeg: ${stderr.trim()}`);
     }
     if ((await sizeOf(output)) <= VIDEO_LIMIT) return;
   }
@@ -125,7 +125,7 @@ export async function makeAnimatedSticker(input: string, output: string): Promis
       output,
     ]);
     if (code !== 0) {
-      throw new Error(`ffmpeg failed to build sticker: ${stderr.trim()}`);
+      throw new Error(`Gagal membuat stiker dengan ffmpeg: ${stderr.trim()}`);
     }
     if ((await sizeOf(output)) <= WA_ANIMATED_LIMIT) return;
   }
@@ -210,7 +210,7 @@ function readWebpChunks(webp: Buffer): WebpChunk[] {
     webp.toString("ascii", 0, 4) !== "RIFF" ||
     webp.toString("ascii", 8, 12) !== "WEBP"
   ) {
-    throw new Error("Not a WebP file");
+    throw new Error("File bukan gambar WebP.");
   }
 
   const chunks: WebpChunk[] = [];
@@ -280,6 +280,6 @@ export async function stickerToPng(input: string, output: string): Promise<void>
     output,
   ]);
   if (code !== 0) {
-    throw new Error(`ffmpeg failed to convert the sticker: ${stderr.trim()}`);
+    throw new Error(`Gagal mengonversi stiker dengan ffmpeg: ${stderr.trim()}`);
   }
 }

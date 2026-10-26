@@ -30,13 +30,13 @@ export function registerToimg(bot: Bot): void {
     const source = resolveSticker(candidate);
 
     if (!source) {
-      await ctx.reply("Reply to a sticker with /toimg to convert it into a PNG image.");
+      await ctx.reply("Balas stiker dengan /toimg untuk mengubahnya menjadi gambar PNG.");
       return;
     }
 
     if (source.kind === "animated" || !source.fileId) {
       await ctx.reply(
-        "Animated stickers (.tgs) can't be converted. Only static and video stickers are supported.",
+        "Stiker animasi (.tgs) tidak dapat dikonversi. Hanya stiker statis dan video yang didukung.",
       );
       return;
     }
@@ -55,7 +55,7 @@ export function registerToimg(bot: Bot): void {
       await ctx.replyWithDocument(new InputFile(output, "sticker.png"));
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
-      await ctx.reply(`Could not convert the sticker: ${reason}`);
+      await ctx.reply(`Stiker gagal dikonversi: ${reason}`);
     } finally {
       await removeDir(dir);
     }

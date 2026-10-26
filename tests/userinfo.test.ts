@@ -21,7 +21,7 @@ describe("userinfo", () => {
 
     await t.bot.handleUpdate(t.textUpdate("/userinfo", { fromId: 222 }));
 
-    assert.ok(t.replies().some((r) => r.includes("Activity")));
+    assert.ok(t.replies().some((r) => r.includes("Aktivitas")));
     assert.equal(
       t.calls.some((call) => call.method === "sendPhoto"),
       false,
@@ -43,6 +43,6 @@ describe("userinfo", () => {
     const photoCall = t.calls.find((call) => call.method === "sendPhoto");
     assert.ok(photoCall, "expected a sendPhoto call");
     assert.equal(photoCall?.body.photo, "pfp-large");
-    assert.ok(String(photoCall?.body.caption ?? "").includes("Activity"));
+    assert.ok(String(photoCall?.body.caption ?? "").includes("Aktivitas"));
   });
 });

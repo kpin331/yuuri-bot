@@ -9,15 +9,15 @@ export const quotaCommand: WaCommand = {
   run: async ({ message, role }) => {
     const quota = getQuota("whatsapp", message.userId, role, message.name);
     if (quota.unlimited) {
-      await sendText(replyTo(message), "♾️ You have unlimited quota.");
+      await sendText(replyTo(message), "♾️ Kuota Anda tidak terbatas.");
       return;
     }
 
     const lines = [
-      "*Your quota*",
-      `Role: ${role}`,
-      `Left today: ${quota.quotaLeft} / ${quota.total}`,
-      `Resets in ${formatWait(quota.resetInSeconds)}`,
+      "*Kuota Anda*",
+      `Peran: ${role === "owner" ? "pemilik" : role === "admin" ? "admin" : "anggota"}`,
+      `Sisa hari ini: ${quota.quotaLeft} / ${quota.total}`,
+      `Diatur ulang dalam ${formatWait(quota.resetInSeconds)}`,
     ];
     await sendText(replyTo(message), lines.join("\n"));
   },

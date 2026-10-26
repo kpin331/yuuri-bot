@@ -11,16 +11,16 @@ export const EXPORT_ROW_CAP = 50_000;
 export const DB_SESSION_TTL_MS = 5 * 60 * 1000;
 
 export const DB_TABLES = [
-  { name: "users", label: "Telegram users" },
-  { name: "activity", label: "Telegram daily messages" },
-  { name: "command_activity", label: "Telegram command uses" },
-  { name: "command_states", label: "Command on/off states" },
-  { name: "bans", label: "Telegram bans" },
-  { name: "platform_quota", label: "Quota (all platforms)" },
-  { name: "wa_users", label: "WhatsApp users" },
-  { name: "wa_activity", label: "WhatsApp daily messages" },
-  { name: "wa_command_activity", label: "WhatsApp command uses" },
-  { name: "wa_bans", label: "WhatsApp bans" },
+  { name: "users", label: "Pengguna Telegram" },
+  { name: "activity", label: "Pesan harian Telegram" },
+  { name: "command_activity", label: "Penggunaan perintah Telegram" },
+  { name: "command_states", label: "Status aktif/nonaktif perintah" },
+  { name: "bans", label: "Blokir Telegram" },
+  { name: "platform_quota", label: "Kuota semua platform" },
+  { name: "wa_users", label: "Pengguna WhatsApp" },
+  { name: "wa_activity", label: "Pesan harian WhatsApp" },
+  { name: "wa_command_activity", label: "Penggunaan perintah WhatsApp" },
+  { name: "wa_bans", label: "Blokir WhatsApp" },
 ] as const;
 
 export type DbTable = (typeof DB_TABLES)[number]["name"];
@@ -53,7 +53,7 @@ export function isTimestampColumn(column: string): boolean {
 export const FILTER_OPERATORS = [
   { code: "eq", label: "=" },
   { code: "ne", label: "!=" },
-  { code: "ct", label: "contains" },
+  { code: "ct", label: "memuat" },
   { code: "gt", label: ">" },
   { code: "ge", label: ">=" },
   { code: "lt", label: "<" },
@@ -100,7 +100,7 @@ export interface DbSession {
 
 function requireDb(): DatabaseSync {
   const db = getDb();
-  if (!db) throw new Error("Storage is not available.");
+  if (!db) throw new Error("Penyimpanan tidak tersedia.");
   return db;
 }
 
@@ -151,7 +151,7 @@ export function prepareFilter(
 
   for (const condition of conditions) {
     if (!columns.has(condition.column)) {
-      return { filter: { sql: "", params: [] }, error: `Unknown column: ${condition.column}` };
+      return { filter: { sql: "", params: [] }, error: `Kolom tidak dikenal: ${condition.column}` };
     }
     const quoted = `"${condition.column}"`;
     switch (condition.operator) {
@@ -175,7 +175,7 @@ export function prepareFilter(
         if (!Number.isFinite(number)) {
           return {
             filter: { sql: "", params: [] },
-            error: `"${condition.value}" is not a number (needed for ${operatorLabel(condition.operator)}).`,
+            error: `"${condition.value}" bukan angka (dibutuhkan untuk operator ${operatorLabel(condition.operator)}).`,
           };
         }
         const symbol = { gt: ">", ge: ">=", lt: "<", le: "<=" }[condition.operator];
@@ -193,10 +193,10 @@ export function prepareFilter(
 }
 
 export function describeConditions(conditions: FilterCondition[]): string {
-  if (conditions.length === 0) return "none";
+  if (conditions.length === 0) return "tidak ada";
   return conditions
     .map((condition) => `${condition.column} ${operatorLabel(condition.operator)} ${condition.value}`)
-    .join(" AND ");
+    .join(" DAN ");
 }
 
 // === Queries ===
@@ -245,7 +245,7 @@ export function formatTimestampValue(column: string, value: unknown): string | n
 }
 
 export function formatCellValue(column: string, value: unknown): string {
-  if (value === null || value === undefined) return "null";
+  if (value === null || value === undefined) return "kosong";
   const timestamp = formatTimestampValue(column, value);
   if (timestamp) return timestamp;
   if (value instanceof Uint8Array) return `<${value.length} bytes>`;
@@ -265,7 +265,7 @@ export function toCellValue(value: unknown): string | number {
 
 export function renderTableList(tables: TableSummary[]): string {
   const total = tables.reduce((sum, table) => sum + table.count, 0);
-  return [`🗄️ <b>Database</b>`, `${tables.length} tables, ${total} rows total.`].join("\n");
+  return [`🗄️ <b>Basis data</b>`, `${tables.length} tabel, total ${total} baris.`].join("\n");
 }
 
 export function renderRowsPage(input: {
@@ -279,12 +279,12 @@ export function renderRowsPage(input: {
   const { table, page, total, columns, rows, conditions } = input;
   const lines = [
     `🗄️ <b>${escapeHtml(table)}</b> (${escapeHtml(tableLabel(table))})`,
-    `${total} row(s) · page ${page}/${pageCount(total)}`,
-    `filter: ${escapeHtml(describeConditions(conditions))}`,
+    `${total} baris · halaman ${page}/${pageCount(total)}`,
+    `Saringan: ${escapeHtml(describeConditions(conditions))}`,
   ];
 
   if (rows.length === 0) {
-    lines.push("", "No rows match.");
+    lines.push("", "Tidak ada baris yang cocok.");
     return lines.join("\n");
   }
 

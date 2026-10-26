@@ -13,33 +13,34 @@ export const userinfoCommand: WaCommand = {
   name: "userinfo",
   free: true,
   run: async ({ message, role }) => {
-    const lines = ["*Profile*", `Name: ${escapeWhatsApp(message.name ?? "unknown")}`];
-    lines.push(`Number: ${message.phone ? `+${message.phone}` : "hidden (LID)"}`);
-    lines.push(`Role: ${role}`);
+    const roleName = role === "owner" ? "pemilik" : role === "admin" ? "admin" : "anggota";
+    const lines = ["*Profil*", `Nama: ${escapeWhatsApp(message.name ?? "tidak diketahui")}`];
+    lines.push(`Nomor: ${message.phone ? `+${message.phone}` : "tersembunyi (LID)"}`);
+    lines.push(`Peran: ${roleName}`);
     // The group id is what goes into ALLOWED_GROUPS when GROUP_ONLY is on.
-    if (message.isGroup) lines.push(`Group ID: ${message.chatId}`);
+    if (message.isGroup) lines.push(`ID grup: ${message.chatId}`);
 
     const quota = getQuota("whatsapp", message.userId, role, message.name);
-    lines.push("", "*Quota*");
+    lines.push("", "*Kuota*");
     if (quota.unlimited) {
-      lines.push("Unlimited");
+      lines.push("Tidak terbatas");
     } else {
       lines.push(
-        `${quota.quotaLeft} / ${quota.total} left — resets in ${formatWait(quota.resetInSeconds)}`,
+        `Sisa ${quota.quotaLeft} / ${quota.total} — diatur ulang dalam ${formatWait(quota.resetInSeconds)}`,
       );
     }
 
-    lines.push("", "*Activity*");
+    lines.push("", "*Aktivitas*");
     const stats = getWaStats(message.userId);
     if (!stats) {
-      lines.push("No data recorded.");
+      lines.push("Belum ada data yang tercatat.");
     } else {
-      lines.push(`Messages: ${stats.messages}`);
-      lines.push(`Active days: ${stats.activeDays}`);
-      lines.push(`Commands used: ${stats.commandCount}`);
-      lines.push(`Top command: ${stats.topCommand ? `.${stats.topCommand}` : "—"}`);
-      lines.push(`First seen: ${formatDate(stats.firstSeen)}`);
-      lines.push(`Last seen: ${formatDate(stats.lastSeen)}`);
+      lines.push(`Pesan: ${stats.messages}`);
+      lines.push(`Hari aktif: ${stats.activeDays}`);
+      lines.push(`Perintah digunakan: ${stats.commandCount}`);
+      lines.push(`Perintah teratas: ${stats.topCommand ? `.${stats.topCommand}` : "—"}`);
+      lines.push(`Pertama terlihat: ${formatDate(stats.firstSeen)}`);
+      lines.push(`Terakhir terlihat: ${formatDate(stats.lastSeen)}`);
     }
 
     await sendText(replyTo(message), lines.join("\n"));

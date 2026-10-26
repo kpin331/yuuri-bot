@@ -1,10 +1,12 @@
 import type { Bot, Context } from "grammy";
 import { isCommandEnabled } from "./db.js";
 import { isOwner } from "./config.js";
+import { addXp } from "./postgres.js";
+import { rollXp } from "./xp.js";
 
 type CommandHandler = (ctx: Context) => Promise<void> | void;
 
-const DISABLED_MESSAGE = "⚠️ This command is currently disabled.";
+const DISABLED_MESSAGE = "⚠️ Perintah ini sedang dinonaktifkan.";
 
 const patternCache = new Map<string, RegExp>();
 const knownCommands = new Set<string>();
@@ -39,6 +41,21 @@ async function blockedByState(ctx: Context, name: string): Promise<boolean> {
   return true;
 }
 
+async function awardCommandXp(ctx: Context): Promise<void> {
+  const user = ctx.from;
+  const chat = ctx.chat;
+  if (!user || !chat || user.is_bot) return;
+
+  const displayName = [user.first_name, user.last_name].filter(Boolean).join(" ").trim();
+  await addXp({
+    platform: "telegram",
+    chatId: String(chat.id),
+    userId: String(user.id),
+    displayName: displayName || user.username || String(user.id),
+    amount: rollXp(),
+  });
+}
+
 // grammY's built-in `command` only matches `entities`, so commands sent as a
 // media caption (which Telegram reports in `caption_entities`) never fire.
 // This registers a message handler that accepts both.
@@ -65,6 +82,7 @@ export function registerCommand(bot: Bot, name: string, handler: CommandHandler)
 
     ctx.match = (match[2] ?? "").trimStart();
     await handler(ctx);
+    await awardCommandXp(ctx);
   });
 }
 
@@ -84,7 +102,7 @@ export function registerOwnerCommand(bot: Bot, name: string, handler: CommandHan
     if (!match) return next();
 
     if (!isOwner(ctx.from?.id)) {
-      await ctx.reply("🚫 This command is owner-only.").catch(() => undefined);
+      await ctx.reply("🚫 Perintah ini hanya untuk pemilik bot.").catch(() => undefined);
       return;
     }
 
@@ -92,6 +110,7 @@ export function registerOwnerCommand(bot: Bot, name: string, handler: CommandHan
 
     ctx.match = (match[1] ?? "").trimStart();
     await handler(ctx);
+    await awardCommandXp(ctx);
   });
 }
 
@@ -114,7 +133,7 @@ export function registerOwnerSlashCommand(bot: Bot, name: string, handler: Comma
     if (!match) return next();
 
     if (!isOwner(ctx.from?.id)) {
-      await ctx.reply("🚫 This command is owner-only.").catch(() => undefined);
+      await ctx.reply("🚫 Perintah ini hanya untuk pemilik bot.").catch(() => undefined);
       return;
     }
 
@@ -122,5 +141,6 @@ export function registerOwnerSlashCommand(bot: Bot, name: string, handler: Comma
 
     ctx.match = (match[1] ?? "").trimStart();
     await handler(ctx);
+    await awardCommandXp(ctx);
   });
 }

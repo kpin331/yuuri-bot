@@ -20,25 +20,25 @@ export const playStore = new WaPlaySessionStore();
 function formatPrompt(meta: PlayMeta, note?: string): string {
   const caption = htmlToWhatsApp(buildPlayCaption(meta, "video"));
   const noteLine = note ? `\n\nℹ️ ${note}` : "";
-  return `${caption}${noteLine}\n\nReply *1* for audio or *2* for video.`;
+  return `${caption}${noteLine}\n\nBalas *1* untuk audio atau *2* untuk video.`;
 }
 
 async function deliver(message: IncomingMessage, session: WaPlaySession, kind: PlayKind): Promise<void> {
   const reply = replyTo(message);
   const url = session.selected?.url;
   if (!url) {
-    await sendText(reply, `That selection expired. Start again with ${getCommandPrefix()}play.`);
+    await sendText(reply, `Pilihan itu kedaluwarsa. Mulai lagi dengan ${getCommandPrefix()}play.`);
     return;
   }
 
   const meta = session.meta;
-  await sendText(reply, kind === "audio" ? "Downloading audio…" : "Downloading video…");
+  await sendText(reply, kind === "audio" ? "Sedang mengunduh audio…" : "Sedang mengunduh video…");
 
   const dir = await makeTempDir("wa-play");
   try {
     const result = kind === "audio" ? await downloadAudio(dir, url) : await downloadVideo(dir, url);
     if (!result) {
-      await sendText(reply, "Download failed.");
+      await sendText(reply, "Pengunduhan gagal.");
       return;
     }
 
@@ -56,7 +56,7 @@ async function deliver(message: IncomingMessage, session: WaPlaySession, kind: P
     }
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    await sendText(reply, `Download failed: ${reason}`);
+    await sendText(reply, `Pengunduhan gagal: ${reason}`);
   } finally {
     await removeDir(dir);
   }
@@ -70,7 +70,7 @@ export const playCommand: WaCommand = {
     const query = args.trim();
 
     if (!query) {
-      await sendText(reply, `Usage: ${prefix}play <song name or link>`);
+      await sendText(reply, `Cara pakai: ${prefix}play <judul lagu atau tautan>`);
       return;
     }
 
@@ -83,10 +83,10 @@ export const playCommand: WaCommand = {
     }
 
     if (parsed.type === "search") {
-      await sendText(reply, "Searching YouTube…");
+      await sendText(reply, "Sedang mencari di YouTube…");
       const results = await searchYouTube(query);
       if (results.length === 0) {
-        await sendText(reply, "No results found.");
+        await sendText(reply, "Tidak ada hasil yang ditemukan.");
         return;
       }
 
@@ -100,7 +100,7 @@ export const playCommand: WaCommand = {
       return;
     }
 
-    await sendText(reply, "Fetching media info…");
+    await sendText(reply, "Sedang mengambil info media…");
     const resolved = await resolvePlayInput(query);
     if (resolved.type === "error") {
       await sendText(reply, resolved.message);
@@ -109,7 +109,7 @@ export const playCommand: WaCommand = {
     if (resolved.type !== "media") return;
 
     const { value } = resolved;
-    const note = value.matchedFromYouTube ? `Matched from YouTube: ${value.matchedQuery}` : undefined;
+    const note = value.matchedFromYouTube ? `Hasil yang cocok dari YouTube: ${value.matchedQuery}` : undefined;
 
     playStore.create({
       chatId: message.chatId,
@@ -150,7 +150,7 @@ export async function maybeHandlePlayReply(message: IncomingMessage): Promise<bo
     if (!Number.isInteger(num) || num < 1 || num > session.results.length) {
       await sendText(
         reply,
-        `Reply with a number between 1 and ${session.results.length}, or ${prefix}play <query> to search again.`,
+        `Balas dengan angka 1 sampai ${session.results.length}, atau kirim ${prefix}play <kata kunci> untuk mencari lagi.`,
       );
       return true;
     }
@@ -179,7 +179,7 @@ export async function maybeHandlePlayReply(message: IncomingMessage): Promise<bo
         : null;
 
   if (!kind) {
-    await sendText(reply, "Reply *1* for audio or *2* for video.");
+    await sendText(reply, "Balas *1* untuk audio atau *2* untuk video.");
     return true;
   }
 

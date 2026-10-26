@@ -49,13 +49,13 @@ const banCommand: WaCommand = {
     const prefix = getCommandPrefix();
 
     if (!isDatabaseReady()) {
-      await sendText(reply, "Storage is unavailable, so bans can't be saved.");
+      await sendText(reply, "Penyimpanan tidak tersedia, pemblokiran tidak dapat disimpan.");
       return;
     }
 
     const parsed = parseBanArgs(args);
     if (!parsed.ok) {
-      await sendText(reply, `Usage: ${prefix}ban <number> [-d<days>|-h<hours>|<seconds>] — ${parsed.error}`);
+      await sendText(reply, `Cara pakai: ${prefix}ban <nomor> [-d<hari>|-h<jam>|<detik>] — ${parsed.error}`);
       return;
     }
 
@@ -63,13 +63,13 @@ const banCommand: WaCommand = {
     if (!target) {
       await sendText(
         reply,
-        "Reply to the user's message, or provide a number (e.g. 6281234567890).",
+        "Balas pesan pengguna atau masukkan nomor (contoh: 6281234567890).",
       );
       return;
     }
 
     if (resolveRole(target.userId.startsWith("lid:") ? null : target.userId, false) !== "member") {
-      await sendText(reply, "🚫 You can't ban an admin or the owner.");
+      await sendText(reply, "🚫 Admin dan pemilik bot tidak dapat diblokir.");
       return;
     }
 
@@ -79,7 +79,7 @@ const banCommand: WaCommand = {
 
     await sendText(
       reply,
-      `✅ Banned ${target.label} (${target.userId}) for ${formatDuration(parsed.seconds)} — until ${formatDate(expiresAt)}.`,
+      `✅ ${target.label} (${target.userId}) diblokir selama ${formatDuration(parsed.seconds)} — sampai ${formatDate(expiresAt)}.`,
     );
   },
 };
@@ -92,26 +92,26 @@ const unbanCommand: WaCommand = {
     const prefix = getCommandPrefix();
 
     if (!isDatabaseReady()) {
-      await sendText(reply, "Storage is unavailable, so bans can't be changed.");
+      await sendText(reply, "Penyimpanan tidak tersedia, status pemblokiran tidak dapat diubah.");
       return;
     }
 
     const tokens = args.trim().split(/\s+/).filter(Boolean);
     if (tokens.length > 1) {
-      await sendText(reply, `Usage: ${prefix}unban <number> (or reply to the user's message).`);
+      await sendText(reply, `Cara pakai: ${prefix}unban <nomor> (atau balas pesan pengguna).`);
       return;
     }
 
     const target = resolveTarget(tokens[0] ?? null, quotedSenderId(message));
     if (!target) {
-      await sendText(reply, "Reply to the user's message, or provide a number to unban.");
+      await sendText(reply, "Balas pesan pengguna atau masukkan nomor untuk membuka blokir.");
       return;
     }
 
     if (removeWaBan(target.userId)) {
-      await sendText(reply, `✅ Unbanned ${target.label} (${target.userId}).`);
+      await sendText(reply, `✅ Blokir ${target.label} (${target.userId}) telah dibuka.`);
     } else {
-      await sendText(reply, `${target.label} (${target.userId}) is not currently banned.`);
+      await sendText(reply, `${target.label} (${target.userId}) tidak sedang diblokir.`);
     }
   },
 };

@@ -8,6 +8,8 @@ import {
   isGroupAllowed,
 } from "../../lib/config.js";
 import { isCommandEnabled, isDatabaseReady, isWaBanned, recordWaIncoming } from "../../lib/db.js";
+import { addXp } from "../../lib/postgres.js";
+import { rollXp } from "../../lib/xp.js";
 import { findCommand } from "./commands/index.js";
 import { maybeHandlePlayReply } from "./commands/play.js";
 import { runToggle } from "./commands/toggle.js";
@@ -64,7 +66,7 @@ async function isGroupAdmin(message: IncomingMessage): Promise<boolean> {
       }
     }
   } catch (error) {
-    console.error("WhatsApp group metadata lookup failed:", error);
+    console.error("Gagal mengambil metadata grup WhatsApp:", error);
   }
 
   groupAdminCache.set(key, { value, expires: now + GROUP_ADMIN_CACHE_MS });
@@ -100,7 +102,7 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   // Private-bot mode, mirroring the Telegram EVERYONE switch. Only configured
   // owner/admins (by number) count here, not group admins.
   if (!isEveryoneAllowed() && baseRole === "member") {
-    await sendText(reply, "🚫 This bot is private. Only the owner can use it.");
+    await sendText(reply, "🚫 Bot ini bersifat privat. Hanya pemilik yang dapat menggunakannya.");
     return;
   }
 
@@ -116,7 +118,7 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
         command: parsed.name,
       });
     } catch (error) {
-      console.error("Failed to record WhatsApp activity:", error);
+      console.error("Gagal mencatat aktivitas WhatsApp:", error);
     }
   }
 
@@ -133,37 +135,37 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   // "$command" — explicit owner-only invocation.
   if (parsed.prefix === getOwnerPrefix()) {
     if (!command || !command.ownerOnly) {
-      await sendText(reply, "Unknown command.");
+      await sendText(reply, "Perintah tidak dikenal.");
       return;
     }
     if (role !== "owner") {
-      await sendText(reply, "🚫 This command is owner-only.");
+      await sendText(reply, "🚫 Perintah ini hanya dapat digunakan pemilik bot.");
       return;
     }
   } else if (!command) {
-    await sendText(reply, `Unknown command. Send ${commandPrefix}menu for the list.`);
+    await sendText(reply, `Perintah tidak dikenal. Kirim ${commandPrefix}menu untuk melihat daftar perintah.`);
     return;
   }
 
   if (!command) return;
 
   if (command.ownerOnly && role !== "owner") {
-    await sendText(reply, "🚫 This command is owner-only.");
+    await sendText(reply, "🚫 Perintah ini hanya dapat digunakan pemilik bot.");
     return;
   }
   if (command.adminOnly && role === "member") {
-    await sendText(reply, "🚫 Only admins and the owner can use this command.");
+    await sendText(reply, "🚫 Hanya admin dan pemilik bot yang dapat menggunakan perintah ini.");
     return;
   }
 
   if (!isCommandEnabled(command.name)) {
-    await sendText(reply, "⚠️ This command is currently disabled.");
+    await sendText(reply, "⚠️ Perintah ini sedang dinonaktifkan.");
     return;
   }
 
   const rate = checkRateLimit("whatsapp", message.userId);
   if (!rate.allowed) {
-    await sendText(reply, `⏳ Too many requests. Try again in ${formatWait(rate.retryAfterSeconds)}.`);
+    await sendText(reply, `⏳ Terlalu banyak permintaan. Coba lagi dalam ${formatWait(rate.retryAfterSeconds)}.`);
     return;
   }
 
@@ -171,18 +173,25 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   if (!quotaFree && role !== "owner") {
     const quota = getQuota("whatsapp", message.userId, role, message.name);
     if (quota.quotaLeft <= 0) {
-      await sendText(reply, `🚫 Daily quota reached. Resets in ${formatWait(quota.resetInSeconds)}.`);
+      await sendText(reply, `🚫 Kuota harian habis. Diatur ulang dalam ${formatWait(quota.resetInSeconds)}.`);
       return;
     }
   }
 
   try {
     await command.run({ message, args: parsed.args, role });
+    await addXp({
+      platform: "whatsapp",
+      chatId: message.chatId,
+      userId: message.userId,
+      displayName: message.name,
+      amount: rollXp(),
+    });
   } catch (error) {
-    console.error(`WhatsApp command .${command.name} failed:`, error);
+    console.error(`Perintah WhatsApp .${command.name} gagal:`, error);
     await sendText(
       reply,
-      `Command failed: ${error instanceof Error ? error.message : String(error)}`,
+      `Perintah gagal: ${error instanceof Error ? error.message : String(error)}`,
     ).catch(() => undefined);
   }
 

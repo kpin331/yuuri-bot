@@ -65,13 +65,13 @@ describe("applyCommandToggle", () => {
   it("rejects unknown commands", () => {
     const result = applyCommandToggle("nope", true, 1);
     assert.equal(result.ok, false);
-    assert.ok(!result.ok && result.error.includes("Unknown command"));
+    assert.ok(!result.ok && result.error.includes("Perintah tidak dikenal"));
   });
 
   it("refuses to disable protected commands but allows enabling", () => {
     const disable = applyCommandToggle("start", false, 1);
     assert.equal(disable.ok, false);
-    assert.ok(!disable.ok && disable.error.includes("protected"));
+    assert.ok(!disable.ok && disable.error.includes("dilindungi"));
 
     const enable = applyCommandToggle("start", true, 1);
     assert.equal(enable.ok, true);
@@ -107,11 +107,11 @@ describe("registerCommandControl", () => {
 
     await t.bot.handleUpdate(t.textUpdate("!play off", { fromId: 222 }));
     assert.equal(isCommandEnabled("play"), false);
-    assert.ok(t.replies().some((r) => r.includes("disabled")));
+    assert.ok(t.replies().some((r) => r.includes("nonaktif")));
 
     await t.bot.handleUpdate(t.textUpdate("!play on", { fromId: 222 }));
     assert.equal(isCommandEnabled("play"), true);
-    assert.ok(t.replies().some((r) => r.includes("enabled")));
+    assert.ok(t.replies().some((r) => r.includes("aktif")));
   });
 
   it("denies non-admins", async () => {
@@ -120,7 +120,7 @@ describe("registerCommandControl", () => {
 
     await t.bot.handleUpdate(t.textUpdate("!play off", { fromId: 999 }));
     assert.equal(isCommandEnabled("play"), true);
-    assert.ok(t.replies().some((r) => r.includes("Only admins")));
+    assert.ok(t.replies().some((r) => r.includes("Hanya admin")));
   });
 
   it("ignores unknown or malformed toggles from non-admins", async () => {
@@ -137,6 +137,6 @@ describe("registerCommandControl", () => {
 
     await t.bot.handleUpdate(t.textUpdate("!start off", { fromId: 222 }));
     assert.equal(isCommandEnabled("start"), true);
-    assert.ok(t.replies().some((r) => r.includes("protected")));
+    assert.ok(t.replies().some((r) => r.includes("dilindungi")));
   });
 });

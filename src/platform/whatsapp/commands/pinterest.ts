@@ -13,27 +13,27 @@ export const pinCommand: WaCommand = {
     const quotedText = message.quoted ? extractText(message.quoted) : "";
     const query = args.trim() || quotedText.trim();
     if (!query) {
-      await sendText(reply, `Usage: ${getCommandPrefix()}pin <search query or Pinterest link>`);
+      await sendText(reply, `Cara pakai: ${getCommandPrefix()}pin <kata kunci atau tautan Pinterest>`);
       return;
     }
 
-    await sendText(reply, "Searching Pinterest…");
+    await sendText(reply, "Sedang mencari di Pinterest…");
     try {
       const pins = await searchPins(buildSearchUrl(query));
       if (pins.length === 0) {
-        await sendText(reply, "No Pinterest image found for that query.");
+        await sendText(reply, "Gambar Pinterest tidak ditemukan untuk kata kunci tersebut.");
         return;
       }
 
       const pin = pins[0]!;
       const imageUrl = bestImageUrl(pin);
       if (!imageUrl) {
-        await sendText(reply, "Found a pin but no downloadable image.");
+        await sendText(reply, "Pin ditemukan, tetapi gambarnya tidak dapat diunduh.");
         return;
       }
 
       const response = await fetch(imageUrl);
-      if (!response.ok) throw new Error(`image download failed (${response.status})`);
+      if (!response.ok) throw new Error(`Gagal mengunduh gambar (status ${response.status})`);
       const buffer = Buffer.from(await response.arrayBuffer());
 
       const pinId = typeof pin.id === "string" ? pin.id : undefined;
@@ -46,7 +46,7 @@ export const pinCommand: WaCommand = {
       await sendImage(reply, buffer, caption ? htmlToWhatsApp(caption) : undefined);
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
-      await sendText(reply, `Pinterest search failed: ${reason}`);
+      await sendText(reply, `Pencarian Pinterest gagal: ${reason}`);
     }
   },
 };

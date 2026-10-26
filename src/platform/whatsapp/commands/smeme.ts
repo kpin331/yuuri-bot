@@ -13,9 +13,9 @@ import type { WaCommand } from "../types.js";
 import { PACK_AUTHOR, PACK_ID, PACK_NAME } from "./sticker.js";
 
 const USAGE_MEDIA =
-  "Reply to an image or video with .smeme, or send a media file with .smeme as its caption.";
+  "Balas gambar atau video dengan .smeme, atau kirim file media dengan .smeme sebagai keterangannya.";
 const USAGE_TEXT =
-  "Add some text: .smeme top | bottom. With no | the text goes at the bottom.";
+  "Tambahkan teks: .smeme atas | bawah. Tanpa tanda |, teks ditempatkan di bawah.";
 
 export const smemeCommand: WaCommand = {
   name: "smeme",
@@ -62,7 +62,7 @@ export const smemeCommand: WaCommand = {
       );
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
-      await sendText(reply, `Could not create a meme sticker: ${reason}`);
+      await sendText(reply, `Stiker meme tidak dapat dibuat: ${reason}`);
     } finally {
       await removeDir(dir);
     }

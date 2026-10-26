@@ -32,7 +32,7 @@ export function registerTracking(bot: Bot): void {
           at: (message.date ?? Math.floor(Date.now() / 1000)) * 1000,
         });
       } catch (error) {
-        console.error("Failed to record activity:", error);
+        console.error("Gagal mencatat aktivitas:", error);
       }
     }
 

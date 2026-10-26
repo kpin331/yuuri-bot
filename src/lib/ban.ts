@@ -14,7 +14,7 @@ function isTargetToken(token: string): boolean {
 export function parseDurationTokens(tokens: string[]): DurationResult {
   if (tokens.length === 0) return { ok: true, seconds: DEFAULT_BAN_SECONDS };
   if (tokens.length > 1) {
-    return { ok: false, error: "Provide only one duration: -d<days>, -h<hours>, or <seconds>." };
+    return { ok: false, error: "Masukkan satu durasi: -d<hari>, -h<jam>, atau <detik>." };
   }
 
   const token = tokens[0] ?? "";
@@ -32,15 +32,15 @@ export function parseDurationTokens(tokens: string[]): DurationResult {
   } else {
     return {
       ok: false,
-      error: `Invalid duration '${token}'. Use -d<days>, -h<hours>, or <seconds>.`,
+      error: `Durasi '${token}' tidak valid. Gunakan -d<hari>, -h<jam>, atau <detik>.`,
     };
   }
 
   if (!Number.isSafeInteger(seconds) || seconds <= 0) {
-    return { ok: false, error: "Duration must be a positive number (zero and negatives are invalid)." };
+    return { ok: false, error: "Durasi harus berupa angka positif, bukan nol atau angka negatif." };
   }
   if (seconds > MAX_BAN_SECONDS) {
-    return { ok: false, error: `Duration is too long. The maximum is ${MAX_BAN_SECONDS / 86_400} days.` };
+    return { ok: false, error: `Durasi terlalu lama. Batas maksimal ${MAX_BAN_SECONDS / 86_400} hari.` };
   }
 
   return { ok: true, seconds };
@@ -67,15 +67,15 @@ export function parseBanArgs(raw: string): BanArgs {
 export function formatDuration(seconds: number): string {
   if (seconds % 86_400 === 0) {
     const days = seconds / 86_400;
-    return `${days} day${days === 1 ? "" : "s"}`;
+    return `${days} hari`;
   }
   if (seconds % 3_600 === 0) {
     const hours = seconds / 3_600;
-    return `${hours} hour${hours === 1 ? "" : "s"}`;
+    return `${hours} jam`;
   }
   if (seconds % 60 === 0) {
     const minutes = seconds / 60;
-    return `${minutes} minute${minutes === 1 ? "" : "s"}`;
+    return `${minutes} menit`;
   }
-  return `${seconds} second${seconds === 1 ? "" : "s"}`;
+  return `${seconds} detik`;
 }

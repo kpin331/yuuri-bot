@@ -84,14 +84,14 @@ async function handleDownload(ctx: Context, platform: Platform | null): Promise<
 
   const url = extractUrl(text);
   if (!url) {
-    await ctx.reply("Send a link, e.g. `/dl https://…`, or reply to a message containing a link.", {
+    await ctx.reply("Kirim tautan, misalnya `/dl https://…`, atau balas pesan yang berisi tautan.", {
       parse_mode: "Markdown",
     });
     return;
   }
 
   const resolved = platform ?? detectPlatform(url);
-  const status = await ctx.reply("Downloading…");
+  const status = await ctx.reply("Sedang mengunduh…");
 
   const dir = await makeTempDir("dl");
   try {
@@ -99,7 +99,7 @@ async function handleDownload(ctx: Context, platform: Platform | null): Promise<
       await ctx.api.editMessageText(
         status.chat.id,
         status.message_id,
-        "Not enough free disk space to download safely.",
+        "Ruang penyimpanan tidak cukup untuk mengunduh file dengan aman.",
       );
       return;
     }
@@ -116,7 +116,7 @@ async function handleDownload(ctx: Context, platform: Platform | null): Promise<
       await ctx.api.editMessageText(
         status.chat.id,
         status.message_id,
-        "Could not find any downloadable media at that link. The post may be private, or require cookies.",
+        "Tidak ditemukan media yang dapat diunduh dari tautan itu. Kiriman mungkin privat atau memerlukan cookie.",
       );
       return;
     }
@@ -128,7 +128,7 @@ async function handleDownload(ctx: Context, platform: Platform | null): Promise<
     await ctx.api.editMessageText(
       status.chat.id,
       status.message_id,
-      `Found ${photos.length} photo(s) and ${videos.length} video(s).`,
+      `Ditemukan ${photos.length} foto dan ${videos.length} video.`,
     );
 
     await sendPhotos(ctx, photos);
@@ -142,12 +142,12 @@ async function handleDownload(ctx: Context, platform: Platform | null): Promise<
       const list = oversized
         .map((file) => `• ${file.name} (${formatBytes(file.size)}) — ${uploadLimitError(file.size)}`)
         .join("\n");
-      await ctx.reply(`Skipped ${oversized.length} file(s) over the limit:\n${list}`);
+      await ctx.reply(`${oversized.length} file dilewati karena melebihi batas:\n${list}`);
     }
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     await ctx.api
-      .editMessageText(status.chat.id, status.message_id, `Download failed: ${reason}`)
+      .editMessageText(status.chat.id, status.message_id, `Unduhan gagal: ${reason}`)
       .catch(() => undefined);
   } finally {
     await removeDir(dir);

@@ -11,21 +11,21 @@ export const pixivCommand: WaCommand = {
     const reply = replyTo(message);
     const query = args.trim();
     if (!query) {
-      await sendText(reply, `Usage: ${getCommandPrefix()}pixiv <search query>`);
+      await sendText(reply, `Cara pakai: ${getCommandPrefix()}pixiv <kata kunci>`);
       return;
     }
 
     const refreshToken = getPixivRefreshToken();
     if (!refreshToken) {
-      await sendText(reply, "Pixiv is not configured. Set PIXIV_REFRESH_TOKEN in .env.");
+      await sendText(reply, "Pixiv belum dikonfigurasi. Atur PIXIV_REFRESH_TOKEN di file .env.");
       return;
     }
 
-    await sendText(reply, "Searching Pixiv…");
+    await sendText(reply, "Sedang mencari di Pixiv…");
     try {
       const illust = await searchIllust(refreshToken, query);
       if (!illust) {
-        await sendText(reply, "No Pixiv illustration found for that query.");
+        await sendText(reply, "Ilustrasi Pixiv tidak ditemukan untuk kata kunci tersebut.");
         return;
       }
 
@@ -42,7 +42,7 @@ export const pixivCommand: WaCommand = {
       await sendImage(reply, buffer, caption ? htmlToWhatsApp(caption) : undefined);
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
-      await sendText(reply, `Pixiv search failed: ${reason}`);
+      await sendText(reply, `Pencarian Pixiv gagal: ${reason}`);
     }
   },
 };

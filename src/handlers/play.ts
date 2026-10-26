@@ -25,7 +25,7 @@ import { downloadAudio, downloadVideo, probeMeta, searchYouTube } from "../lib/y
 const sessions = new PlaySessionStore();
 
 function usage(): string {
-  return "Usage: /play <search query or video link>";
+  return "Cara pakai: /play <kata kunci atau tautan video>";
 }
 
 function chooseKeyboard(session: PlaySession): InlineKeyboard {
@@ -46,9 +46,9 @@ function formatPrompt(meta: PlayMeta, note?: string): string {
   if (meta.uploader) lines.push(`👤 ${escapeHtml(meta.uploader)}`);
   const time = formatTime(meta.duration);
   if (time) lines.push(`⏱ ${time}`);
-  if (meta.isLive) lines.push("🔴 Live stream");
+  if (meta.isLive) lines.push("🔴 Siaran langsung");
   if (note) lines.push("", `ℹ️ ${escapeHtml(note)}`);
-  lines.push("", "Choose a format:");
+  lines.push("", "Pilih format:");
   return lines.join("\n");
 }
 
@@ -97,14 +97,14 @@ async function handlePlay(ctx: Context): Promise<void> {
 
   // Plain text (or anything that is not a link) keeps the original search flow.
   if (parsed.type === "search") {
-    const status = await ctx.reply("Searching…");
+    const status = await ctx.reply("Sedang mencari…");
     await ctx.replyWithChatAction("typing");
     const results = await searchYouTube(input);
     if (results.length === 0) {
       await ctx.api.editMessageText(
         status.chat.id,
         status.message_id,
-        "No results found for that query.",
+        "Tidak ada hasil untuk pencarian tersebut.",
       );
       return;
     }
@@ -131,7 +131,7 @@ async function handlePlay(ctx: Context): Promise<void> {
     return;
   }
 
-  const status = await ctx.reply("Fetching media info…");
+  const status = await ctx.reply("Sedang mengambil info media…");
   await ctx.replyWithChatAction("typing");
   const resolved = await resolvePlayInput(input);
   if (resolved.type === "error") {
@@ -141,7 +141,7 @@ async function handlePlay(ctx: Context): Promise<void> {
   if (resolved.type !== "media") return;
 
   const { value } = resolved;
-  const note = value.matchedFromYouTube ? `Matched from YouTube: ${value.matchedQuery}` : undefined;
+  const note = value.matchedFromYouTube ? `Hasil yang cocok dari YouTube: ${value.matchedQuery}` : undefined;
 
   sessions.create({
     chatId,
@@ -171,12 +171,12 @@ async function handlePlay(ctx: Context): Promise<void> {
 async function handlePick(ctx: Context, session: PlaySession, index: number): Promise<void> {
   const result = session.results.find((item) => item.index === index);
   if (!result) {
-    await ctx.answerCallbackQuery({ text: "Invalid selection.", show_alert: true }).catch(() => undefined);
+    await ctx.answerCallbackQuery({ text: "Pilihan tidak valid.", show_alert: true }).catch(() => undefined);
     return;
   }
 
   await ctx.answerCallbackQuery().catch(() => undefined);
-  await ctx.editMessageText("Loading…").catch(() => undefined);
+  await ctx.editMessageText("Memuat…").catch(() => undefined);
 
   const meta = await probeMeta(result.url);
   if (!meta) {
@@ -207,19 +207,19 @@ async function handleFormat(ctx: Context, session: PlaySession, kind: PlayKind):
   sessions.delete(session.chatId, session.userId);
 
   const label = kind === "audio" ? "audio" : "video";
-  await ctx.editMessageText(`Downloading ${label}…`).catch(() => undefined);
+  await ctx.editMessageText(`Sedang mengunduh ${label}…`).catch(() => undefined);
   await ctx.replyWithChatAction(kind === "audio" ? "upload_voice" : "upload_video");
 
   const dir = await makeTempDir("play");
   try {
     if (!(await hasFreeSpace(dir, MAX_UPLOAD_BYTES))) {
-      await ctx.editMessageText("Not enough free disk space to download safely.").catch(() => undefined);
+      await ctx.editMessageText("Ruang penyimpanan tidak cukup untuk mengunduh dengan aman.").catch(() => undefined);
       return;
     }
 
     const download = kind === "audio" ? await downloadAudio(dir, url) : await downloadVideo(dir, url);
     if (!download) {
-      await ctx.editMessageText(`Could not download the ${label}.`).catch(() => undefined);
+      await ctx.editMessageText(`Tidak dapat mengunduh ${label}.`).catch(() => undefined);
       return;
     }
 
@@ -234,7 +234,7 @@ async function handleFormat(ctx: Context, session: PlaySession, kind: PlayKind):
     await ctx.deleteMessage().catch(() => undefined);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    await ctx.editMessageText(`Download failed: ${reason}`).catch(() => undefined);
+    await ctx.editMessageText(`Pengunduhan gagal: ${reason}`).catch(() => undefined);
   } finally {
     await removeDir(dir);
   }
@@ -254,7 +254,7 @@ async function handleCallback(ctx: Context): Promise<void> {
   // A disabled command must not be runnable through its inline buttons either.
   if (!isCommandEnabled("play")) {
     await ctx
-      .answerCallbackQuery({ text: "This command is currently disabled.", show_alert: true })
+      .answerCallbackQuery({ text: "Perintah ini sedang dinonaktifkan.", show_alert: true })
       .catch(() => undefined);
     return;
   }
@@ -262,7 +262,7 @@ async function handleCallback(ctx: Context): Promise<void> {
   const session = sessions.get(chatId, userId);
   if (!session) {
     await ctx
-      .answerCallbackQuery({ text: "This request expired. Send /play again.", show_alert: true })
+      .answerCallbackQuery({ text: "Permintaan ini kedaluwarsa. Kirim /play lagi.", show_alert: true })
       .catch(() => undefined);
     return;
   }
@@ -272,7 +272,7 @@ async function handleCallback(ctx: Context): Promise<void> {
   if (action === "pick") {
     if (session.stage !== "choose") {
       await ctx
-        .answerCallbackQuery({ text: "This selection is no longer available.", show_alert: true })
+        .answerCallbackQuery({ text: "Pilihan ini sudah tidak tersedia.", show_alert: true })
         .catch(() => undefined);
       return;
     }
@@ -283,7 +283,7 @@ async function handleCallback(ctx: Context): Promise<void> {
   if (action === "audio" || action === "video") {
     if (session.stage !== "format") {
       await ctx
-        .answerCallbackQuery({ text: "This request expired. Send /play again.", show_alert: true })
+        .answerCallbackQuery({ text: "Permintaan ini kedaluwarsa. Kirim /play lagi.", show_alert: true })
         .catch(() => undefined);
       return;
     }
