@@ -26,6 +26,8 @@ const SECTIONS: MenuSection[] = [
       { command: "start", label: "/start — Tampilkan menu ini" },
       { command: "menu", label: "/menu — Tampilkan menu ini" },
       { command: "userinfo", label: "/userinfo — Tampilkan statistik pengguna" },
+      { command: "ping", label: "!ping — Cek respons bot (admin grup)" },
+      { command: "groupinfo", label: "!groupinfo — Tampilkan info grup (admin grup)" },
       { command: "rank", label: "/rank — Tampilkan level dan XP-mu di grup ini" },
       { command: "leaderboard", label: "/leaderboard — Tampilkan peringkat XP grup ini" },
     ],

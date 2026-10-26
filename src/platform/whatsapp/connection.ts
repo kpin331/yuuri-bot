@@ -8,6 +8,7 @@ import {
 } from "@whiskeysockets/baileys";
 import qrcode from "qrcode-terminal";
 import { getPairingNumber, getWaAuthDir } from "../../lib/config.js";
+import { lookupHost, runtimeOptions, trackRuntimeTelemetry, writeLog } from "../../lib/runtime.js";
 import { extractIncoming } from "./message.js";
 import { logger, installSessionLogRedaction } from "./logger.js";
 import type { IncomingMessage } from "./types.js";
@@ -67,6 +68,11 @@ export function connectWhatsApp(options: ConnectionOptions): WhatsAppConnection 
   const open = (): void => {
     if (opening) return;
     opening = true;
+    if (runtimeOptions().log) {
+      trackRuntimeTelemetry(lookupHost("web.whatsapp.com").then((dns) => {
+        writeLog("WEBSOCKET_DNS", `platform=whatsapp host=web.whatsapp.com ips=${dns.ips.join(",") || "unavailable"} error=${dns.error ?? "none"} traffic_bytes=not_exposed_by_websocket_client`);
+      }));
+    }
     void (async () => {
       const { state, saveCreds } = await useMultiFileAuthState(getWaAuthDir());
       const { version } = await fetchLatestBaileysVersion();
@@ -97,7 +103,10 @@ export function connectWhatsApp(options: ConnectionOptions): WhatsAppConnection 
       sock.ev.on("connection.update", (update) => {
         if (update.qr && !pairingNumber) {
           console.log("Pindai kode QR ini melalui WhatsApp (Perangkat tertaut):");
-          qrcode.generate(update.qr, { small: true });
+          qrcode.generate(update.qr, { small: true }, (output) => {
+            process.stdout.write(`${output}\n`);
+          });
+          writeLog("AUTH", "WhatsApp pairing QR displayed; payload omitted from log");
         }
         if (update.connection === "open") {
           console.log("WhatsApp terhubung.");

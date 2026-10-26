@@ -5,6 +5,7 @@ import { registerCommand } from "../lib/command.js";
 import { formatInfo, parseInfo } from "../lib/info.js";
 import { bestImageUrl, buildSearchUrl, searchPins } from "../lib/pinterest.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
+import { archiveMediaFile } from "../lib/runtime.js";
 
 export function registerPinterest(bot: Bot): void {
   registerCommand(bot, "pin", async (ctx) => {
@@ -63,6 +64,7 @@ export function registerPinterest(bot: Bot): void {
       });
 
       await ctx.api.deleteMessage(status.chat.id, status.message_id).catch(() => undefined);
+      await archiveMediaFile(path);
       await ctx.replyWithPhoto(
         new InputFile(path),
         caption ? { caption, parse_mode: "HTML" } : {},

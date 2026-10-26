@@ -3,6 +3,7 @@ import { extname } from "node:path";
 import type { AnyMessageContent, WASocket, WAMessage } from "@whiskeysockets/baileys";
 import type { MediaFile } from "../../lib/media.js";
 import type { IncomingMessage } from "./types.js";
+import { archiveMediaBuffer } from "../../lib/runtime.js";
 
 // Everything needed to answer a message: the socket, where to send, and the
 // message to quote so replies stay threaded.
@@ -29,12 +30,22 @@ export function sendText(target: ReplyTarget, text: string): Promise<void> {
   return send(target, { text });
 }
 
-export function sendImage(target: ReplyTarget, image: Buffer, caption?: string): Promise<void> {
-  return send(target, caption ? { image, caption } : { image });
+export function sendImage(
+  target: ReplyTarget,
+  image: Buffer,
+  caption?: string,
+  fileName = "image.jpg",
+): Promise<void> {
+  return archiveMediaBuffer(image, fileName).then(() => send(target, caption ? { image, caption } : { image }));
 }
 
-export function sendVideo(target: ReplyTarget, video: Buffer, caption?: string): Promise<void> {
-  return send(target, caption ? { video, caption } : { video });
+export function sendVideo(
+  target: ReplyTarget,
+  video: Buffer,
+  caption?: string,
+  fileName = "video.mp4",
+): Promise<void> {
+  return archiveMediaBuffer(video, fileName).then(() => send(target, caption ? { video, caption } : { video }));
 }
 
 export function sendAudio(target: ReplyTarget, audio: Buffer, seconds?: number): Promise<void> {
@@ -44,11 +55,11 @@ export function sendAudio(target: ReplyTarget, audio: Buffer, seconds?: number):
     ptt: false,
     ...(seconds !== undefined ? { seconds } : {}),
   };
-  return send(target, content);
+  return archiveMediaBuffer(audio, "audio.mp4").then(() => send(target, content));
 }
 
-export function sendSticker(target: ReplyTarget, sticker: Buffer): Promise<void> {
-  return send(target, { sticker });
+export function sendSticker(target: ReplyTarget, sticker: Buffer, fileName = "sticker.webp"): Promise<void> {
+  return archiveMediaBuffer(sticker, fileName).then(() => send(target, { sticker }));
 }
 
 export function sendDocument(
@@ -58,12 +69,12 @@ export function sendDocument(
   caption?: string,
 ): Promise<void> {
   const mimetype = guessMime(fileName);
-  return send(target, {
+  return archiveMediaBuffer(document, fileName).then(() => send(target, {
     document,
     mimetype,
     fileName,
     ...(caption ? { caption } : {}),
-  });
+  }));
 }
 
 // Formats WhatsApp renders as an inline photo/video. Anything else (e.g. an
@@ -82,9 +93,9 @@ export async function sendMediaFile(
   const buffer = await readFile(file.path);
   const ext = extname(file.path).toLowerCase();
   if (file.kind === "photo" && INLINE_IMAGE.has(ext)) {
-    await sendImage(target, buffer, caption);
+    await sendImage(target, buffer, caption, file.name);
   } else if (file.kind === "video" && INLINE_VIDEO.has(ext)) {
-    await sendVideo(target, buffer, caption);
+    await sendVideo(target, buffer, caption, file.name);
   } else {
     await sendDocument(target, buffer, file.name, caption);
   }

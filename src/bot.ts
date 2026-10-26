@@ -17,7 +17,9 @@ import { registerSys } from "./handlers/sys.js";
 import { registerToimg } from "./handlers/toimg.js";
 import { registerTracking } from "./handlers/tracking.js";
 import { registerUserinfo } from "./handlers/userinfo.js";
+import { registerAdminCommands } from "./platform/admincommands.js";
 import { isAuthorized, isEveryoneAllowed } from "./lib/config.js";
+import { writeLog } from "./lib/runtime.js";
 
 export function createBot(token: string): Bot {
   const bot = new Bot(token);
@@ -38,8 +40,23 @@ export function createBot(token: string): Bot {
   });
 
   bot.use(async (ctx, next) => {
+    const updateKind = Object.keys(ctx.update).filter((key) => key !== "update_id").join(",") || "unknown";
+    const chat = ctx.chat;
+    const actor = ctx.from?.id ?? "unknown";
+    const group = chat?.type === "group" || chat?.type === "supergroup";
+    const commandText = ctx.message?.text ?? ctx.message?.caption ?? "";
+    const command = /^\s*(\/[A-Za-z0-9_]+|[$!][A-Za-z0-9_]+)/.exec(commandText)?.[1] ?? "none";
+    writeLog(
+      "INTERACTION",
+      `platform=telegram update=${updateKind} update_id=${ctx.update.update_id} user_id=${actor} phone=not_provided_by_telegram sender_ip=not_exposed_by_platform chat_id=${chat?.id ?? "unknown"} chat_type=${chat?.type ?? "unknown"}${group ? ` group_id=${chat.id} group_title=${"title" in chat ? chat.title : "unknown"}` : ""} command=${command}`,
+    );
     if (isEveryoneAllowed()) return next();
     if (isAuthorized(ctx.from?.id)) return next();
+
+    const text = ctx.message?.text ?? ctx.message?.caption ?? "";
+    if (/^!(ping|groupinfo)$/i.test(text.trim()) && isGroup(ctx.chat?.type)) {
+      return next();
+    }
 
     if (ctx.chat) {
       await ctx
@@ -62,6 +79,7 @@ export function createBot(token: string): Bot {
   registerToimg(bot);
   registerUserinfo(bot);
   registerBan(bot);
+  registerAdminCommands(bot);
   registerCommandControl(bot);
   registerSys(bot);
   registerQuotaReset(bot);
@@ -69,4 +87,8 @@ export function createBot(token: string): Bot {
   registerFallback(bot);
 
   return bot;
+}
+
+function isGroup(type: string | undefined): boolean {
+  return type === "group" || type === "supergroup";
 }

@@ -4,6 +4,7 @@ import { registerCommand } from "../lib/command.js";
 import { downloadTelegramFile } from "../lib/media.js";
 import { decodeQr, generateQr } from "../lib/qr.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
+import { archiveMediaBuffer } from "../lib/runtime.js";
 import { extractSource } from "./sticker.js";
 
 const USAGE =
@@ -16,6 +17,7 @@ export function registerQr(bot: Bot): void {
     if (raw.length > 0) {
       try {
         const image = await generateQr(raw);
+        await archiveMediaBuffer(image, "qr.png");
         await ctx.replyWithPhoto(new InputFile(image, "qr.png"));
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);

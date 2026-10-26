@@ -13,6 +13,7 @@ import { rollXp } from "../../lib/xp.js";
 import { findCommand } from "./commands/index.js";
 import { maybeHandlePlayReply } from "./commands/play.js";
 import { runToggle } from "./commands/toggle.js";
+import { writeLog } from "../../lib/runtime.js";
 import { replyTo, sendText } from "./reply.js";
 import type { IncomingMessage } from "./types.js";
 
@@ -76,6 +77,12 @@ async function isGroupAdmin(message: IncomingMessage): Promise<boolean> {
 // The main entry point: decides the sender's role, applies the shared anti-abuse
 // rules (ban, rate limit, daily quota), then runs the matching command.
 export async function handleIncoming(message: IncomingMessage): Promise<void> {
+  const commandName = parseCommand(message.text)?.name ?? "none";
+  const sender = message.phone ? `+${message.phone}` : message.userId;
+  writeLog(
+    "INTERACTION",
+    `platform=whatsapp message_id=${message.message?.key?.id ?? "unknown"} sender=${sender} sender_ip=not_exposed_by_platform chat_id=${message.chatId}${message.isGroup ? ` group_id=${message.chatId}` : ""} chat_type=${message.isGroup ? "group" : "private"} command=${commandName}`,
+  );
   if (!message.text) return;
 
   // We use the number-based role for these cheap, offline gates (the group-admin
@@ -99,15 +106,21 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   const parsed = parseCommand(message.text);
   if (!parsed) return;
 
-  // Private-bot mode, mirroring the Telegram EVERYONE switch. Only configured
-  // owner/admins (by number) count here, not group admins.
-  if (!isEveryoneAllowed() && baseRole === "member") {
+  const adminUtility =
+    parsed.prefix === getAdminPrefix() &&
+    parsed.args === "" &&
+    (parsed.name === "ping" || parsed.name === "groupinfo");
+  let groupAdmin = adminUtility ? await isGroupAdmin(message) : false;
+
+  // Private-bot mode still lets verified group admins use the admin utilities.
+  if (!isEveryoneAllowed() && baseRole === "member" && !(adminUtility && message.isGroup && groupAdmin)) {
     await sendText(reply, "🚫 Bot ini bersifat privat. Hanya pemilik yang dapat menggunakannya.");
     return;
   }
 
+  if (!adminUtility) groupAdmin = await isGroupAdmin(message);
+
   // Group admins gain the admin role for command gating.
-  const groupAdmin = await isGroupAdmin(message);
   const role = resolveRole(message.phone, groupAdmin);
 
   if (isDatabaseReady()) {
@@ -124,13 +137,27 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
 
   const commandPrefix = getCommandPrefix();
 
-  // "!command on|off" — administrative toggle, handled before normal lookup.
+  let command = findCommand(parsed.name);
+  let adminPrefixCommand = false;
+
+  // Keep the existing toggle syntax while allowing the two admin utilities.
   if (parsed.prefix === getAdminPrefix()) {
-    await runToggle(message, `${parsed.name} ${parsed.args}`.trim(), role);
-    return;
+    if (parsed.args === "" && (parsed.name === "ping" || parsed.name === "groupinfo")) {
+      adminPrefixCommand = true;
+    } else {
+      await runToggle(message, `${parsed.name} ${parsed.args}`.trim(), role);
+      return;
+    }
   }
 
-  const command = findCommand(parsed.name);
+  if (adminPrefixCommand && role !== "owner" && (!message.isGroup || !groupAdmin)) {
+    await sendText(reply, "🚫 Perintah ini hanya untuk admin grup dan pemilik bot.");
+    return;
+  }
+  if (adminPrefixCommand && parsed.name === "groupinfo" && !message.isGroup) {
+    await sendText(reply, "Perintah ini hanya dapat digunakan di grup.");
+    return;
+  }
 
   // "$command" — explicit owner-only invocation.
   if (parsed.prefix === getOwnerPrefix()) {
@@ -179,6 +206,7 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   }
 
   try {
+    writeLog("COMMAND", `whatsapp ${parsed.prefix}${parsed.name} started`);
     await command.run({ message, args: parsed.args, role });
     await addXp({
       platform: "whatsapp",
@@ -187,7 +215,9 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
       displayName: message.name,
       amount: rollXp(),
     });
+    writeLog("COMMAND", `whatsapp ${parsed.prefix}${parsed.name} status=success`);
   } catch (error) {
+    writeLog("ERROR", `whatsapp ${parsed.prefix}${command.name} status=failed`);
     console.error(`Perintah WhatsApp .${command.name} gagal:`, error);
     await sendText(
       reply,

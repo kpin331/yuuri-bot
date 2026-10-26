@@ -21,6 +21,7 @@ import {
 import { parsePlayLink, resolvePlayInput } from "../lib/playlink.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
 import { downloadAudio, downloadVideo, probeMeta, searchYouTube } from "../lib/youtube.js";
+import { archiveMediaFile } from "../lib/runtime.js";
 
 const sessions = new PlaySessionStore();
 
@@ -60,6 +61,7 @@ async function sendMedia(
   caption: string | undefined,
 ): Promise<void> {
   const options = caption ? { caption, parse_mode: "HTML" as const } : {};
+  await archiveMediaFile(path);
 
   try {
     if (kind === "audio") {

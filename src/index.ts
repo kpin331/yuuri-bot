@@ -1,11 +1,20 @@
 import { config } from "dotenv";
 import { createBot } from "./bot.js";
 import { closeDatabase, initDatabase } from "./lib/db.js";
-import { checkRequiredTools } from "./lib/tools.js";
+import { checkRequiredTools, TOOLS } from "./lib/tools.js";
 import { closePostgres, initPostgres } from "./lib/postgres.js";
 import { startWhatsApp } from "./whatsapp.js";
+import { configureRuntime, flushRuntimeLogs, logRuntimeEnvironment, parseRuntimeArgs, writeLog } from "./lib/runtime.js";
 
 config();
+
+try {
+  configureRuntime(parseRuntimeArgs(process.argv.slice(2)));
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
+writeLog("STARTUP", "bot starting");
 
 const token = process.env.BOT_TOKEN;
 
@@ -17,6 +26,9 @@ if (!token) {
 }
 
 const missingTools = await checkRequiredTools();
+logRuntimeEnvironment(
+  Object.fromEntries(Object.keys(TOOLS).map((name) => [name, !missingTools.includes(name as keyof typeof TOOLS)])),
+);
 if (missingTools.length > 0) {
   console.warn(
     `Peringatan: alat yang diperlukan belum tersedia: ${missingTools.join(", ")}. ` +
@@ -41,10 +53,12 @@ console.log(`Bot berjalan sebagai @${bot.botInfo.username}`);
 const whatsapp = startWhatsApp();
 
 const shutdown = (): void => {
+  writeLog("SHUTDOWN", "bot stopping");
   closeDatabase();
   void closePostgres();
   void whatsapp?.close();
   void bot.stop();
+  void flushRuntimeLogs();
 };
 
 process.once("SIGINT", shutdown);

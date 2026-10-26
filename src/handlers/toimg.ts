@@ -5,6 +5,7 @@ import { registerCommand } from "../lib/command.js";
 import { downloadTelegramFile } from "../lib/media.js";
 import { stickerToPng } from "../lib/stickers.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
+import { archiveMediaFile } from "../lib/runtime.js";
 
 type StickerKind = "static" | "video" | "animated";
 
@@ -52,6 +53,7 @@ export function registerToimg(bot: Bot): void {
       await downloadTelegramFile(bot, source.fileId, input);
       await stickerToPng(input, output);
 
+      await archiveMediaFile(output, "sticker.png");
       await ctx.replyWithDocument(new InputFile(output, "sticker.png"));
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);

@@ -6,6 +6,7 @@ import { getPixivRefreshToken } from "../lib/config.js";
 import { formatInfo } from "../lib/info.js";
 import { downloadIllust, searchIllust } from "../lib/pixiv.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
+import { archiveMediaFile } from "../lib/runtime.js";
 
 function usage(): string {
   return "Cara pakai: /pixiv <kata kunci pencarian>";
@@ -53,6 +54,7 @@ async function handlePixiv(ctx: Context): Promise<void> {
     });
 
     await ctx.api.deleteMessage(status.chat.id, status.message_id).catch(() => undefined);
+    await archiveMediaFile(path);
     await ctx.replyWithPhoto(new InputFile(path), caption ? { caption, parse_mode: "HTML" } : {});
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);

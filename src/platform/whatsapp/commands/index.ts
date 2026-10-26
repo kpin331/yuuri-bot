@@ -1,6 +1,7 @@
 import { registerKnownCommand } from "../../../lib/command.js";
 import type { WaCommand } from "../types.js";
 import { banCommands } from "./ban.js";
+import { groupinfoCommand, pingCommand } from "./admin.js";
 import { downloadCommands } from "./download.js";
 import { menuCommand } from "./menu.js";
 import { pinCommand } from "./pinterest.js";
@@ -18,6 +19,8 @@ import { userinfoCommand } from "./userinfo.js";
 // so the shared enable/disable state applies to both platforms.
 const ALL: WaCommand[] = [
   menuCommand,
+  pingCommand,
+  groupinfoCommand,
   userinfoCommand,
   quotaCommand,
   ...rankCommands,

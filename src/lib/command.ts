@@ -3,6 +3,7 @@ import { isCommandEnabled } from "./db.js";
 import { isOwner } from "./config.js";
 import { addXp } from "./postgres.js";
 import { rollXp } from "./xp.js";
+import { writeLog } from "./runtime.js";
 
 type CommandHandler = (ctx: Context) => Promise<void> | void;
 
@@ -81,8 +82,15 @@ export function registerCommand(bot: Bot, name: string, handler: CommandHandler)
     if (await blockedByState(ctx, name)) return;
 
     ctx.match = (match[2] ?? "").trimStart();
-    await handler(ctx);
-    await awardCommandXp(ctx);
+    writeLog("COMMAND", `telegram /${name} started`);
+    try {
+      await handler(ctx);
+      await awardCommandXp(ctx);
+      writeLog("COMMAND", `telegram /${name} status=success`);
+    } catch (error) {
+      writeLog("ERROR", `telegram /${name} status=failed`);
+      throw error;
+    }
   });
 }
 
@@ -109,8 +117,15 @@ export function registerOwnerCommand(bot: Bot, name: string, handler: CommandHan
     if (await blockedByState(ctx, name)) return;
 
     ctx.match = (match[1] ?? "").trimStart();
-    await handler(ctx);
-    await awardCommandXp(ctx);
+    writeLog("COMMAND", `telegram $${name} started`);
+    try {
+      await handler(ctx);
+      await awardCommandXp(ctx);
+      writeLog("COMMAND", `telegram $${name} status=success`);
+    } catch (error) {
+      writeLog("ERROR", `telegram $${name} status=failed`);
+      throw error;
+    }
   });
 }
 
@@ -140,7 +155,14 @@ export function registerOwnerSlashCommand(bot: Bot, name: string, handler: Comma
     if (await blockedByState(ctx, name)) return;
 
     ctx.match = (match[1] ?? "").trimStart();
-    await handler(ctx);
-    await awardCommandXp(ctx);
+    writeLog("COMMAND", `telegram /${name} started`);
+    try {
+      await handler(ctx);
+      await awardCommandXp(ctx);
+      writeLog("COMMAND", `telegram /${name} status=success`);
+    } catch (error) {
+      writeLog("ERROR", `telegram /${name} status=failed`);
+      throw error;
+    }
   });
 }

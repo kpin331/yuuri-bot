@@ -5,6 +5,7 @@ import { downloadTelegramFile } from "../lib/media.js";
 import { parseMemeText, renderMeme } from "../lib/meme.js";
 import { makeStaticSticker, makeVideoSticker } from "../lib/stickers.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
+import { archiveMediaFile } from "../lib/runtime.js";
 import { extractSource } from "./sticker.js";
 
 const USAGE_MEDIA =
@@ -49,6 +50,7 @@ export function registerSmeme(bot: Bot): void {
         await makeVideoSticker(meme, output);
       }
 
+      await archiveMediaFile(output);
       await ctx.replyWithSticker(new InputFile(output));
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);

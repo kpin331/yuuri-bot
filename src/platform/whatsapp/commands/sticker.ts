@@ -47,6 +47,7 @@ export const stickerCommand: WaCommand = {
           packName: PACK_NAME,
           publisher: PACK_AUTHOR,
         }),
+        media.kind === "image" ? "sticker.webp" : "sticker.webm",
       );
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);

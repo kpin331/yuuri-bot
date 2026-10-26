@@ -15,6 +15,7 @@ import {
   type MediaFile,
 } from "../lib/media.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
+import { archiveMediaFile } from "../lib/runtime.js";
 
 const VIDEO_EXTENSIONS = new Set([".mp4", ".m4v", ".mov"]);
 
@@ -35,11 +36,13 @@ async function sendPhotos(ctx: Context, photos: MediaFile[]): Promise<void> {
     const firstCaption = captionOf(group[0]!);
     try {
       if (group.length === 1) {
+        await archiveMediaFile(group[0]!.path, group[0]!.name);
         await ctx.replyWithPhoto(
           new InputFile(group[0]!.path),
           firstCaption ? { caption: firstCaption, parse_mode: "HTML" } : {},
         );
       } else {
+        await Promise.all(group.map((file) => archiveMediaFile(file.path, file.name)));
         const media = group.map((file, index) =>
           InputMediaBuilder.photo(
             new InputFile(file.path),
@@ -66,12 +69,14 @@ async function sendVideo(ctx: Context, file: MediaFile): Promise<void> {
   const sendable = VIDEO_EXTENSIONS.has(extname(file.path).toLowerCase());
   if (sendable) {
     try {
+      await archiveMediaFile(file.path, file.name);
       await ctx.replyWithVideo(new InputFile(file.path), options);
       return;
     } catch {
       // fall through to document
     }
   }
+  await archiveMediaFile(file.path, file.name);
   await ctx.replyWithDocument(new InputFile(file.path), options);
 }
 

@@ -5,6 +5,7 @@ import { registerCommand } from "../lib/command.js";
 import { downloadTelegramFile } from "../lib/media.js";
 import { makeStaticSticker, makeVideoSticker } from "../lib/stickers.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
+import { archiveMediaFile } from "../lib/runtime.js";
 
 export interface Source {
   fileId: string;
@@ -75,6 +76,7 @@ export function registerSticker(bot: Bot): void {
         await makeVideoSticker(input, output);
       }
 
+      await archiveMediaFile(output);
       await ctx.replyWithSticker(new InputFile(output));
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
