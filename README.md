@@ -8,6 +8,10 @@ Yuuri bot adalah bot cross-platform yang tersedia di telegram dan whatsapp.
 - `!ping` — cek respons bot dan waktu respons; admin grup atau owner.
 - `!groupinfo` — tampilkan nama, ID, jumlah anggota, dan deskripsi grup; hanya di grup.
 - `!<command> on|off` — aktifkan atau nonaktifkan command; perilaku toggle tetap sama.
+- `$SHELL -E SetQuota 4` — set sisa kuota semua pengguna tercatat sampai reset harian.
+- `$SHELL -E pause` / `$SHELL -E resume` — jeda atau lanjutkan bot; hanya owner.
+- `$SHELL -E git` — tinjau perubahan, lalu minta pesan commit dan push ke `origin`.
+- `$SHELL -E secret` — kirim foto dari `secrets` setelah PIN owner diverifikasi di chat pribadi.
 
 ### Opsi startup
 

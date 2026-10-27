@@ -15,11 +15,12 @@ import { registerRank } from "./handlers/rank.js";
 import { registerSmeme } from "./handlers/smeme.js";
 import { registerSticker } from "./handlers/sticker.js";
 import { registerSys } from "./handlers/sys.js";
+import { isBotPaused, isShellResumeCommand, registerShell } from "./platform/shell.js";
 import { registerToimg } from "./handlers/toimg.js";
 import { registerTracking } from "./handlers/tracking.js";
 import { registerUserinfo } from "./handlers/userinfo.js";
 import { registerAdminCommands } from "./platform/admincommands.js";
-import { isAuthorized, isEveryoneAllowed } from "./lib/config.js";
+import { isAuthorized, isEveryoneAllowed, isOwner } from "./lib/config.js";
 import { writeLog } from "./lib/runtime.js";
 
 export function createBot(token: string): Bot {
@@ -51,10 +52,11 @@ export function createBot(token: string): Bot {
       "INTERACTION",
       `platform=telegram update=${updateKind} update_id=${ctx.update.update_id} user_id=${actor} phone=not_provided_by_telegram sender_ip=not_exposed_by_platform chat_id=${chat?.id ?? "unknown"} chat_type=${chat?.type ?? "unknown"}${group ? ` group_id=${chat.id} group_title=${"title" in chat ? chat.title : "unknown"}` : ""} command=${command}`,
     );
+    const text = ctx.message?.text ?? ctx.message?.caption ?? "";
+    if (isBotPaused() && !(isOwner(ctx.from?.id) && isShellResumeCommand(text))) return;
     if (isEveryoneAllowed()) return next();
     if (isAuthorized(ctx.from?.id)) return next();
 
-    const text = ctx.message?.text ?? ctx.message?.caption ?? "";
     if (/^!(ping|groupinfo)$/i.test(text.trim()) && isGroup(ctx.chat?.type)) {
       return next();
     }
@@ -66,6 +68,7 @@ export function createBot(token: string): Bot {
     }
   });
 
+  registerShell(bot);
   registerBanGuard(bot);
   registerTracking(bot);
   registerCommands(bot);

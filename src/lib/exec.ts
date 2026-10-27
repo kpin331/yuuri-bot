@@ -10,6 +10,7 @@ export interface ExecResult {
 
 export interface ExecOptions {
   cwd?: string;
+  env?: NodeJS.ProcessEnv;
   timeoutMs?: number;
   maxOutputBytes?: number;
 }
@@ -41,6 +42,7 @@ export function exec(
 
     const child = spawn(command, args, {
       cwd: options.cwd,
+      env: options.env ? { ...process.env, ...options.env } : process.env,
       windowsHide: true,
     });
 

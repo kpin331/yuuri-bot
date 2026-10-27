@@ -6,6 +6,7 @@ import {
   getRateLimit,
   getRateWindowSeconds,
   getTimezone,
+  isOwner,
 } from "../lib/config.js";
 import { getQuotaRow, isDatabaseReady, listQuotaRows, setQuotaRow } from "../lib/db.js";
 import { secondsUntilNextMidnight, tzDateKey } from "./time.js";
@@ -215,4 +216,27 @@ export function resetAllQuotas(now: number = Date.now()): QuotaResetEntry[] {
   }
 
   return entries;
+}
+
+export function setRemainingQuotaForKnownUsers(quotaLeft: number, now: number = Date.now()): number | null {
+  if (!Number.isSafeInteger(quotaLeft) || quotaLeft < 0) return null;
+  if (!isDatabaseReady()) return null;
+
+  const today = tzDateKey(now, getTimezone());
+  const rows = listQuotaRows();
+  let affected = 0;
+  for (const row of rows) {
+    if (row.platform === "telegram" && isOwner(Number(row.userId))) continue;
+    if (row.platform === "whatsapp" && resolveRole(row.userId, false) === "owner") continue;
+    setQuotaRow({
+      platform: row.platform,
+      userId: row.userId,
+      quotaLeft,
+      lastReset: today,
+      displayName: row.displayName,
+      at: now,
+    });
+    affected += 1;
+  }
+  return affected;
 }

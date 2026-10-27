@@ -17,6 +17,8 @@ import { normalizeMessageContent } from "@whiskeysockets/baileys";
 import { runtimeOptions, writeLog } from "../../lib/runtime.js";
 import { replyTo, sendText, wasSentByBot } from "./reply.js";
 import type { IncomingMessage } from "./types.js";
+import { readFile } from "node:fs/promises";
+import { handleShellMessage, isBotPaused, isShellResumeCommand } from "../shell.js";
 
 interface ParsedCommand {
   prefix: string;
@@ -89,6 +91,24 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   // We use the number-based role for these cheap, offline gates (the group-admin
   // role needs a metadata lookup and cannot be banned anyway).
   const baseRole = resolveRole(message.phone, false);
+  if (isBotPaused() && !(baseRole === "owner" && isShellResumeCommand(message.text))) return;
+
+  const shellHandled = await handleShellMessage({
+    platform: "whatsapp",
+    userId: message.userId,
+    chatId: message.chatId,
+    isOwner: baseRole === "owner",
+    isPrivate: !message.isGroup,
+    text: message.text,
+    reply: (text) => sendText(replyTo(message), text),
+    sendSecretPhoto: async (path, index, total) => {
+      await message.sock.sendMessage(message.chatId, {
+        image: await readFile(path),
+        caption: `Foto ${index}/${total}`,
+      });
+    },
+  });
+  if (shellHandled) return;
 
   // Group allowlist: with GROUP_ONLY on, members may only use the bot in listed
   // groups. Owner and admins (by number) are never restricted, which also lets

@@ -10,4 +10,6 @@ data/
 *.db-shm
 AGENTS.md
 auth/
+secrets/*
+!secrets/.gitkeep
 *.creds.json
