@@ -11,6 +11,7 @@ export interface ExecResult {
 export interface ExecOptions {
   cwd?: string;
   timeoutMs?: number;
+  maxOutputBytes?: number;
 }
 
 export function exec(
@@ -45,6 +46,7 @@ export function exec(
 
     let stdout = "";
     let stderr = "";
+    let outputBytes = 0;
 
     let finished = false;
     let timer: NodeJS.Timeout | undefined;
@@ -62,12 +64,21 @@ export function exec(
       }, options.timeoutMs);
     }
 
-    child.stdout?.on("data", (chunk: Buffer) => {
-      stdout += chunk.toString();
-    });
-    child.stderr?.on("data", (chunk: Buffer) => {
-      stderr += chunk.toString();
-    });
+    const maxOutputBytes = options.maxOutputBytes ?? 10 * 1024 * 1024;
+    const capture = (target: "stdout" | "stderr", chunk: Buffer): void => {
+      if (finished) return;
+      outputBytes += chunk.length;
+      if (outputBytes > maxOutputBytes) {
+        logResult("output_limit");
+        child.kill();
+        reject(new Error(`Keluaran perintah melebihi batas ${maxOutputBytes} byte: ${program}`));
+        return;
+      }
+      if (target === "stdout") stdout += chunk.toString();
+      else stderr += chunk.toString();
+    };
+    child.stdout?.on("data", (chunk: Buffer) => capture("stdout", chunk));
+    child.stderr?.on("data", (chunk: Buffer) => capture("stderr", chunk));
 
     child.on("error", (error) => {
       logResult(`spawn_error=${error.name}`);

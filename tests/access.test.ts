@@ -117,6 +117,17 @@ describe("whatsapp access control", () => {
     assert.equal(checkRateLimit("whatsapp", "slow", now + 60_000).allowed, true);
   });
 
+  it("keeps active rate limits when the bucket cap is reached", () => {
+    setEnv("RATE_LIMIT", "1");
+    const now = Date.UTC(2026, 0, 1, 0, 0, 0);
+    for (let index = 0; index < 10_000; index += 1) {
+      assert.equal(checkRateLimit("telegram", `u${index}`, now).allowed, true);
+    }
+
+    assert.equal(checkRateLimit("telegram", "u0", now).allowed, false);
+    assert.equal(checkRateLimit("telegram", "new-user", now).allowed, false);
+  });
+
   it("resets every stored quota and reports the restored amount", () => {
     setEnv("DEFAULT_QUOTA", "25");
     setEnv("TIMEZONE", "UTC");

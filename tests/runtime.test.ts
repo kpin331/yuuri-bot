@@ -113,4 +113,11 @@ describe("runtime options", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("stops child processes that exceed the captured output limit", async () => {
+    await assert.rejects(
+      exec(process.execPath, ["-e", "process.stdout.write('x'.repeat(4096))"], { maxOutputBytes: 1024 }),
+      /Keluaran perintah melebihi batas 1024 byte/,
+    );
+  });
 });

@@ -112,6 +112,8 @@ interface RateBucket {
 }
 
 const rateBuckets = new Map<string, RateBucket>();
+const MAX_RATE_BUCKETS = 10_000;
+let rateBucketInsertions = 0;
 
 export interface RateResult {
   allowed: boolean;
@@ -127,6 +129,15 @@ export function checkRateLimit(
   const limit = getRateLimit();
   const key = `${platform}:${userId}`;
 
+  if (!rateBuckets.has(key)) {
+    rateBucketInsertions += 1;
+    if (rateBucketInsertions % 256 === 0) {
+      for (const [bucketKey, value] of rateBuckets) {
+        if (now - value.windowStart >= windowMs) rateBuckets.delete(bucketKey);
+      }
+    }
+  }
+
   // Start a fresh window on the first request or once the previous one expired.
   let bucket = rateBuckets.get(key);
   if (!bucket || now - bucket.windowStart >= windowMs) {
@@ -140,6 +151,15 @@ export function checkRateLimit(
     return { allowed: false, retryAfterSeconds: Math.max(1, remaining) };
   }
 
+  if (!rateBuckets.has(key) && rateBuckets.size >= MAX_RATE_BUCKETS) {
+    const earliestExpiry = Math.min(
+      ...[...rateBuckets.values()].map((value) => value.windowStart + windowMs),
+    );
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.max(1, Math.ceil((earliestExpiry - now) / 1000)),
+    };
+  }
   bucket.count += 1;
   rateBuckets.set(key, bucket);
   return { allowed: true, retryAfterSeconds: 0 };
@@ -148,6 +168,7 @@ export function checkRateLimit(
 // Test helper: forget all rate-limit history.
 export function resetRateLimits(): void {
   rateBuckets.clear();
+  rateBucketInsertions = 0;
 }
 
 export interface QuotaResetEntry {
