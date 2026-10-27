@@ -44,9 +44,9 @@ describe("runtime options", () => {
   });
 
   it("parses save, drive and log options", () => {
-    assert.deepEqual(parseRuntimeArgs(["-S", "E:", "--log"], "C:\\bot"), {
+    assert.deepEqual(parseRuntimeArgs(["-S", "G:", "--log"], "C:\\bot"), {
       saveMedia: true,
-      mediaDirectory: "E:\\Media",
+      mediaDirectory: "G:\\Media",
       log: true,
     });
     assert.equal(parseRuntimeArgs(["-S", "--log"], "C:\\bot").mediaDirectory, join("C:\\bot", "Media"));

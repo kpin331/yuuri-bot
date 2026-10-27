@@ -48,7 +48,7 @@ function contextOf(content: proto.IMessage): proto.IContextInfo | null {
 
 // Rebuilds the quoted message as a WAMessage so it can be downloaded or replied
 // to. Baileys only hands us the inner content, so we reconstruct a minimal key.
-export function extractQuoted(message: WAMessage): WAMessage | null {
+export function extractQuoted(message: WAMessage, sock?: WASocket): WAMessage | null {
   const content = normalizeMessageContent(message.message);
   if (!content) return null;
 
@@ -57,15 +57,25 @@ export function extractQuoted(message: WAMessage): WAMessage | null {
   const stanzaId = context?.stanzaId;
   if (!quoted || !stanzaId) return null;
 
+  const botIds = [sock?.user?.id, sock?.user?.lid]
+    .filter((id): id is string => typeof id === "string")
+    .map(normalizeJid);
+  const fromMe = Boolean(context?.participant && botIds.includes(normalizeJid(context.participant)));
+
   return {
     key: {
       remoteJid: message.key.remoteJid ?? undefined,
       id: stanzaId,
       participant: context?.participant ?? undefined,
-      fromMe: false,
+      fromMe,
     },
     message: quoted,
   };
+}
+
+function normalizeJid(jid: string): string {
+  const [user, server] = jid.split("@");
+  return `${user?.split(":")[0] ?? ""}@${server ?? ""}`;
 }
 
 // Turns a raw Baileys message into the normalized form used by the command
@@ -99,7 +109,7 @@ export function extractIncoming(sock: WASocket, message: WAMessage): IncomingMes
     name: message.pushName?.trim() || null,
     text: extractText(message),
     message,
-    quoted: extractQuoted(message),
+    quoted: extractQuoted(message, sock),
   };
 }
 

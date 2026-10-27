@@ -1,6 +1,6 @@
 import type { Bot } from "grammy";
 import { parseToggleInput, applyCommandToggle } from "../lib/commandcontrol.js";
-import { isAuthorized } from "../lib/config.js";
+import { isAuthorized, isOwner } from "../lib/config.js";
 import { registerAdminCommandText } from "../platform/admincommands.js";
 import { writeLog } from "../lib/runtime.js";
 
@@ -15,6 +15,30 @@ export function registerCommandControl(bot: Bot): void {
     if (text === undefined) return next();
 
     const trimmed = text.trim();
+    const ownerToggle = /^\$toggle(?:\s+([\s\S]*))?$/i.exec(trimmed);
+    if (ownerToggle) {
+      if (!isOwner(ctx.from?.id)) {
+        await ctx.reply("🚫 Hanya pemilik bot yang dapat menggunakan $toggle.").catch(() => undefined);
+        return;
+      }
+
+      const raw = ownerToggle[1] ?? "";
+      const parsed = parseToggleInput(raw);
+      if (!raw.trim()) {
+        await ctx.reply("Cara pakai: $toggle <perintah> on|off").catch(() => undefined);
+        return;
+      }
+      if (!parsed.ok) {
+        await ctx.reply(parsed.error.replace("!<perintah> on|off", "$toggle <perintah> on|off")).catch(() => undefined);
+        return;
+      }
+
+      const result = applyCommandToggle(parsed.command, parsed.state, ctx.from?.id ?? null);
+      writeLog("COMMAND", `telegram $toggle ${parsed.command} state=${parsed.state ? "on" : "off"} status=${result.ok ? "success" : "failed"}`);
+      await ctx.reply(result.ok ? result.message : result.error).catch(() => undefined);
+      return;
+    }
+
     if (!trimmed.startsWith("!")) return next();
 
     if (await registerAdminCommandText(ctx, trimmed)) return;

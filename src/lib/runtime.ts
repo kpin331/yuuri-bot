@@ -1,4 +1,4 @@
-import { appendFile, copyFile, mkdir, writeFile } from "node:fs/promises";
+import { appendFile, copyFile, mkdir, open, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { lookup } from "node:dns/promises";
@@ -45,6 +45,7 @@ let consoleWrapped = false;
 let wrappedFetch: typeof fetch | null = null;
 let originalFetch: typeof fetch | null = null;
 const pendingTelemetry: Promise<void>[] = [];
+const pendingMediaWrites = new Set<Promise<void>>();
 
 export function configureRuntime(next: RuntimeOptions): void {
   options = next;
@@ -192,26 +193,51 @@ export function trackRuntimeTelemetry(task: Promise<void>): void {
   pendingTelemetry.push(task);
 }
 
-export async function saveMediaFile(path: string, name = basename(path)): Promise<void> {
-  if (!options.saveMedia) return;
-  await mkdir(options.mediaDirectory, { recursive: true });
-  const safeName = basename(name).replace(/[<>:"/\\|?*\x00-\x1f]/g, "_");
-  const extension = safeName.includes(".") ? safeName.slice(safeName.lastIndexOf(".")) : "";
-  const stem = extension ? safeName.slice(0, -extension.length) : safeName;
-  const destination = join(options.mediaDirectory, `${stem}-${randomUUID()}${extension}`);
-  await copyFile(path, destination);
-  writeLog("MEDIA", `disimpan ${destination}`);
+function trackMediaWrite(task: Promise<void>): Promise<void> {
+  pendingMediaWrites.add(task);
+  void task.then(
+    () => pendingMediaWrites.delete(task),
+    () => pendingMediaWrites.delete(task),
+  );
+  return task;
 }
 
-export async function saveMediaBuffer(buffer: Buffer, name: string): Promise<void> {
-  if (!options.saveMedia) return;
-  await mkdir(options.mediaDirectory, { recursive: true });
+function mediaDestination(name: string): string {
   const safeName = basename(name).replace(/[<>:"/\\|?*\x00-\x1f]/g, "_");
   const extension = safeName.includes(".") ? safeName.slice(safeName.lastIndexOf(".")) : "";
   const stem = extension ? safeName.slice(0, -extension.length) : safeName;
-  const destination = join(options.mediaDirectory, `${stem}-${randomUUID()}${extension}`);
-  await writeFile(destination, buffer);
-  writeLog("MEDIA", `disimpan ${destination}`);
+  return join(options.mediaDirectory, `${stem}-${randomUUID()}${extension}`);
+}
+
+async function syncFile(path: string): Promise<void> {
+  const file = await open(path, "r+");
+  try {
+    await file.sync();
+  } finally {
+    await file.close();
+  }
+}
+
+export function saveMediaFile(path: string, name = basename(path)): Promise<void> {
+  if (!options.saveMedia) return Promise.resolve();
+  return trackMediaWrite((async () => {
+    await mkdir(options.mediaDirectory, { recursive: true });
+    const destination = mediaDestination(name);
+    await copyFile(path, destination);
+    await syncFile(destination);
+    writeLog("MEDIA", `disimpan ${destination}`);
+  })());
+}
+
+export function saveMediaBuffer(buffer: Buffer, name: string): Promise<void> {
+  if (!options.saveMedia) return Promise.resolve();
+  return trackMediaWrite((async () => {
+    await mkdir(options.mediaDirectory, { recursive: true });
+    const destination = mediaDestination(name);
+    await writeFile(destination, buffer);
+    await syncFile(destination);
+    writeLog("MEDIA", `disimpan ${destination}`);
+  })());
 }
 
 export async function archiveMediaBuffer(buffer: Buffer, name: string): Promise<void> {
@@ -235,5 +261,11 @@ export async function flushRuntimeLogs(): Promise<void> {
     await Promise.allSettled(pendingTelemetry.splice(0));
   }
   await logReady;
+}
+
+export async function flushRuntimeMedia(): Promise<void> {
+  while (pendingMediaWrites.size > 0) {
+    await Promise.allSettled([...pendingMediaWrites]);
+  }
 }
 

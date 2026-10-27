@@ -23,3 +23,24 @@ export async function runToggle(message: IncomingMessage, raw: string, role: Rol
   const result = applyCommandToggle(parsed.command, parsed.state, null);
   await sendText(reply, result.ok ? result.message : result.error);
 }
+
+export async function runOwnerToggle(message: IncomingMessage, raw: string, role: Role): Promise<void> {
+  const reply = replyTo(message);
+  if (role !== "owner") {
+    await sendText(reply, "🚫 Hanya pemilik bot yang dapat menggunakan $toggle.");
+    return;
+  }
+  if (!raw.trim()) {
+    await sendText(reply, "Cara pakai: $toggle <perintah> on|off");
+    return;
+  }
+
+  const parsed = parseToggleInput(raw);
+  if (!parsed.ok) {
+    await sendText(reply, parsed.error.replace("!<perintah> on|off", "$toggle <perintah> on|off"));
+    return;
+  }
+
+  const result = applyCommandToggle(parsed.command, parsed.state, null);
+  await sendText(reply, result.ok ? result.message : result.error);
+}

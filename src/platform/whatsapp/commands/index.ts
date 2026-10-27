@@ -46,6 +46,7 @@ for (const command of ALL) {
     registerKnownCommand(alias);
   }
 }
+registerKnownCommand("d");
 
 export function findCommand(name: string): WaCommand | undefined {
   return byName.get(name.toLowerCase());

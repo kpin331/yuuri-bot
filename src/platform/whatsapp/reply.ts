@@ -13,17 +13,33 @@ export interface ReplyTarget {
   quoted?: WAMessage | null;
 }
 
+const sentMessageIds = new Map<string, Set<string>>();
+
+export function wasSentByBot(chatId: string, messageId: string): boolean {
+  return sentMessageIds.get(chatId)?.has(messageId) ?? false;
+}
+
 // Builds a ReplyTarget that quotes the message being answered.
 export function replyTo(message: IncomingMessage): ReplyTarget {
   return { sock: message.sock, jid: message.chatId, quoted: message.message };
 }
 
 async function send(target: ReplyTarget, content: AnyMessageContent): Promise<void> {
-  await target.sock.sendMessage(
+  const result = await target.sock.sendMessage(
     target.jid,
     content,
     target.quoted ? { quoted: target.quoted } : {},
   );
+  const id = result?.key.id;
+  if (id) {
+    let ids = sentMessageIds.get(target.jid);
+    if (!ids) {
+      ids = new Set();
+      sentMessageIds.set(target.jid, ids);
+    }
+    ids.add(id);
+    if (ids.size > 5000) ids.delete(ids.values().next().value as string);
+  }
 }
 
 export function sendText(target: ReplyTarget, text: string): Promise<void> {

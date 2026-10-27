@@ -12,9 +12,10 @@ import { addXp } from "../../lib/postgres.js";
 import { rollXp } from "../../lib/xp.js";
 import { findCommand } from "./commands/index.js";
 import { maybeHandlePlayReply } from "./commands/play.js";
-import { runToggle } from "./commands/toggle.js";
-import { writeLog } from "../../lib/runtime.js";
-import { replyTo, sendText } from "./reply.js";
+import { runOwnerToggle, runToggle } from "./commands/toggle.js";
+import { normalizeMessageContent } from "@whiskeysockets/baileys";
+import { runtimeOptions, writeLog } from "../../lib/runtime.js";
+import { replyTo, sendText, wasSentByBot } from "./reply.js";
 import type { IncomingMessage } from "./types.js";
 
 interface ParsedCommand {
@@ -123,6 +124,16 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   // Group admins gain the admin role for command gating.
   const role = resolveRole(message.phone, groupAdmin);
 
+  if (parsed.prefix === getOwnerPrefix() && parsed.name === "toggle") {
+    await runOwnerToggle(message, parsed.args, role);
+    return;
+  }
+
+  if (parsed.prefix === getCommandPrefix() && parsed.name === "d") {
+    await deleteRepliedMessage(message, parsed.args);
+    return;
+  }
+
   if (isDatabaseReady()) {
     try {
       recordWaIncoming({
@@ -226,4 +237,73 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   }
 
   if (!quotaFree && role !== "owner") consumeQuota("whatsapp", message.userId);
+}
+
+function normalizeJid(jid: string): string {
+  const [user, server] = jid.split("@");
+  return `${user?.split(":")[0] ?? ""}@${server ?? ""}`;
+}
+
+async function isWhatsAppBotGroupAdmin(message: IncomingMessage): Promise<boolean> {
+  if (!message.isGroup) return false;
+  try {
+    const botIds = [message.sock.user?.id, message.sock.user?.lid]
+      .filter((id): id is string => typeof id === "string")
+      .map(normalizeJid);
+    const metadata = await message.sock.groupMetadata(message.chatId);
+    return metadata.participants.some((participant) => {
+      const ids = [participant.id, participant.phoneNumber, participant.lid]
+        .filter((id): id is string => typeof id === "string")
+        .map(normalizeJid);
+      return ids.some((id) => botIds.includes(id)) &&
+        (participant.admin === "admin" || participant.admin === "superadmin");
+    });
+  } catch {
+    return false;
+  }
+}
+
+async function deleteRepliedMessage(message: IncomingMessage, args: string): Promise<void> {
+  const reply = replyTo(message);
+  if (args) {
+    await sendText(reply, "Format: balas pesan dengan .d tanpa argumen.");
+    return;
+  }
+  if (!isCommandEnabled("d")) {
+    await sendText(reply, "Perintah ini sedang dinonaktifkan.");
+    return;
+  }
+
+  const target = message.quoted;
+  if (!target?.key.id) {
+    await sendText(reply, "Balas pesan yang ingin dihapus dengan .d.");
+    return;
+  }
+
+  const isBotMessage = target.key.fromMe === true || wasSentByBot(message.chatId, target.key.id);
+  const content = normalizeMessageContent(target.message);
+  const hasMedia = Boolean(
+    content?.imageMessage || content?.videoMessage || content?.audioMessage ||
+      content?.documentMessage || content?.stickerMessage || content?.ptvMessage,
+  );
+  if (isBotMessage && hasMedia && runtimeOptions().saveMedia) {
+    await sendText(reply, "Pesan media bot disimpan karena opsi -S aktif.");
+    return;
+  }
+
+  if (!isBotMessage) {
+    if (!message.isGroup) {
+      await sendText(reply, "Perintah ini hanya bisa menghapus pesan bot di chat pribadi.");
+      return;
+    }
+    if (!(await isWhatsAppBotGroupAdmin(message))) {
+      await sendText(reply, "Jadikan bot ini sebagai admin grup untuk menghapus pesan anggota.");
+      return;
+    }
+  }
+
+  await message.sock.sendMessage(message.chatId, {
+    delete: { ...target.key, fromMe: isBotMessage },
+  });
+  writeLog("COMMAND", `whatsapp .d deleted_message_id=${target.key.id} bot_message=${isBotMessage}`);
 }

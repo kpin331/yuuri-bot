@@ -24,6 +24,7 @@ function sections(): Section[] {
       items: [
         { name: "menu", label: `${p}menu — Tampilkan menu ini` },
         { name: "userinfo", label: `${p}userinfo — Tampilkan statistik dan kuota` },
+        { name: "d", label: `${p}d — Hapus pesan yang dibalas` },
         { name: "ping", label: "!ping — Cek respons bot (admin grup)" },
         { name: "groupinfo", label: "!groupinfo — Tampilkan info grup (admin grup)" },
         { name: "quota", label: `${p}quota — Tampilkan sisa kuota harian` },
