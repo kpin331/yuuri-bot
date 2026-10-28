@@ -13,3 +13,4 @@ auth/
 secrets/*
 !secrets/.gitkeep
 *.creds.json
+Media/
