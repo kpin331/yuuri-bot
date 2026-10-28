@@ -4,6 +4,16 @@ import { buildMenu, registerCommands } from "../src/handlers/commands.js";
 import { createTestBot } from "./helpers.js";
 
 describe("Telegram menu photo", () => {
+  it("answers Jarvis case-insensitively and sends the menu", async () => {
+    const t = createTestBot();
+    registerCommands(t.bot);
+
+    await t.bot.handleUpdate(t.textUpdate("JARVIS"));
+
+    assert.equal(t.replies()[0], "siap,pak");
+    assert.ok(t.replies().some((reply) => reply.includes("Daftar perintah yang tersedia")));
+  });
+
   it("sends a long menu as text after the profile photo", async () => {
     const t = createTestBot({
       getUserProfilePhotos: {

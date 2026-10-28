@@ -5,15 +5,24 @@ import type { IncomingMessage } from "../src/platform/whatsapp/types.js";
 
 interface SockMock {
   sent: number;
-  sendMessage: () => Promise<object>;
+  contents: Array<{ text?: string; caption?: string }>;
+  sendMessage: (_jid: string, content: { text?: string; caption?: string }) => Promise<object>;
   groupMetadata: () => Promise<{ participants: never[] }>;
 }
 
-function makeMessage(chatId: string, phone: string | null, userId: string): [IncomingMessage, SockMock] {
+function makeMessage(
+  chatId: string,
+  phone: string | null,
+  userId: string,
+  text = ".menu",
+  isGroup = true,
+): [IncomingMessage, SockMock] {
   const sock: SockMock = {
     sent: 0,
-    sendMessage: async () => {
+    contents: [],
+    sendMessage: async (_jid, content) => {
       sock.sent += 1;
+      sock.contents.push(content);
       return {};
     },
     groupMetadata: async () => ({ participants: [] }),
@@ -21,13 +30,13 @@ function makeMessage(chatId: string, phone: string | null, userId: string): [Inc
   const message = {
     sock,
     chatId,
-    isGroup: true,
+    isGroup,
     senderJid: `${userId}@s.whatsapp.net`,
     senderAlt: null,
     userId,
     phone,
     name: "Tester",
-    text: ".menu",
+    text,
     message: {},
     quoted: null,
   } as unknown as IncomingMessage;
@@ -83,5 +92,38 @@ describe("whatsapp group allowlist", () => {
     const [message, sock] = makeMessage("whatever@g.us", "628997", "wa-group-open");
     await handleIncoming(message);
     assert.ok(sock.sent > 0);
+  });
+
+  it("answers Jarvis in any letter case and sends the menu", async () => {
+    const [message, sock] = makeMessage("group@g.us", "628997", "wa-jarvis", "Hey JARVIS");
+    await handleIncoming(message);
+
+    assert.equal(sock.contents[0]?.text, "siap,pak");
+    assert.ok(sock.contents.some((content) => content.text?.includes("Yuuri Bot V1.0")));
+  });
+
+  it("keeps group-only commands private-only unless the owner uses the $ override", async () => {
+    for (const name of ["rank", "leaderboard"]) {
+      const [regular, regularSock] = makeMessage(
+        "628222@s.whatsapp.net",
+        "628222",
+        `wa-private-${name}`,
+        `.${name}`,
+        false,
+      );
+      await handleIncoming(regular);
+      assert.ok(regularSock.contents.some((content) => content.text?.includes("Fitur ini hanya untuk grup")), name);
+
+      process.env.OWNER_NUMBER = "628111";
+      const [override, overrideSock] = makeMessage(
+        "628111@s.whatsapp.net",
+        "628111",
+        `wa-owner-${name}`,
+        `$${name}`,
+        false,
+      );
+      await handleIncoming(override);
+      assert.ok(!overrideSock.contents.some((content) => content.text?.includes("Fitur ini hanya untuk grup")), name);
+    }
   });
 });

@@ -14,9 +14,10 @@ export const rankCommands: WaCommand[] = [
   {
     name: "rank",
     free: true,
-    run: async ({ message }) => {
+    groupOnly: true,
+    run: async ({ message, ownerOverride }) => {
       const reply = replyTo(message);
-      if (!message.isGroup) {
+      if (!message.isGroup && !ownerOverride) {
         await sendText(reply, GROUP_ONLY);
         return;
       }
@@ -38,9 +39,10 @@ export const rankCommands: WaCommand[] = [
   {
     name: "leaderboard",
     free: true,
-    run: async ({ message }) => {
+    groupOnly: true,
+    run: async ({ message, ownerOverride }) => {
       const reply = replyTo(message);
-      if (!message.isGroup) {
+      if (!message.isGroup && !ownerOverride) {
         await sendText(reply, GROUP_ONLY);
         return;
       }

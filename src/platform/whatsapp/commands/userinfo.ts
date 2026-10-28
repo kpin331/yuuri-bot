@@ -43,6 +43,29 @@ export const userinfoCommand: WaCommand = {
       lines.push(`Terakhir terlihat: ${formatDate(stats.lastSeen)}`);
     }
 
-    await sendText(replyTo(message), lines.join("\n"));
+    const caption = lines.join("\n");
+    const profileIds = [message.senderJid, message.senderAlt].filter(
+      (jid): jid is string => typeof jid === "string",
+    );
+
+    for (const jid of profileIds) {
+      try {
+        const url = await message.sock.profilePictureUrl(jid, "image");
+        if (!url) continue;
+        const response = await fetch(url);
+        if (!response.ok) continue;
+
+        await message.sock.sendMessage(
+          message.chatId,
+          { image: Buffer.from(await response.arrayBuffer()), caption },
+          { quoted: message.message },
+        );
+        return;
+      } catch {
+        // Try the alternate WhatsApp identity before falling back to text.
+      }
+    }
+
+    await sendText(replyTo(message), caption);
   },
 };

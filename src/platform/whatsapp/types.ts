@@ -31,6 +31,8 @@ export interface CommandContext {
   /** The text after the command name (e.g. the search query). */
   args: string;
   role: Role;
+  /** True when the owner uses "$" to run a group-only command in private. */
+  ownerOverride?: boolean;
 }
 
 export interface WaCommand {
@@ -38,6 +40,7 @@ export interface WaCommand {
   aliases?: string[];
   /** Only the owner may run it (also reachable with the "$" prefix). */
   ownerOnly?: boolean;
+  groupOnly?: boolean;
   /** Admins and the owner may run it. */
   adminOnly?: boolean;
   /** Informational commands are not counted against the daily quota. */

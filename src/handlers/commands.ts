@@ -160,6 +160,14 @@ export function registerCommands(bot: Bot): void {
     await ctx.reply(caption, { parse_mode: "HTML" });
   };
 
+  bot.on("message", async (ctx, next) => {
+    const text = ctx.message.text ?? ctx.message.caption ?? "";
+    if (!/\bjarvis\b/i.test(text)) return next();
+
+    await ctx.reply("siap,pak");
+    await showMenu(ctx);
+  });
+
   registerCommand(bot, "start", showMenu);
   registerCommand(bot, "menu", showMenu);
 }

@@ -11,6 +11,7 @@ import { isCommandEnabled, isDatabaseReady, isWaBanned, recordWaIncoming } from 
 import { addXp } from "../../lib/postgres.js";
 import { rollXp } from "../../lib/xp.js";
 import { findCommand } from "./commands/index.js";
+import { menuCommand } from "./commands/menu.js";
 import { maybeHandlePlayReply } from "./commands/play.js";
 import { runOwnerToggle, runToggle } from "./commands/toggle.js";
 import { normalizeMessageContent } from "@whiskeysockets/baileys";
@@ -121,6 +122,16 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   // Banned members are ignored silently; admins and the owner are never blocked.
   if (baseRole === "member" && isWaBanned(message.userId)) return;
 
+  if (/\bjarvis\b/i.test(message.text)) {
+    if (!isEveryoneAllowed() && baseRole === "member") {
+      await sendText(reply, "🚫 Bot ini bersifat privat. Hanya pemilik yang dapat menggunakannya.");
+      return;
+    }
+    await sendText(reply, "siap,pak");
+    await menuCommand.run({ message, args: "", role: baseRole });
+    return;
+  }
+
   // Let an in-progress ".play" consume a plain number/format reply first.
   if (await maybeHandlePlayReply(message)) return;
 
@@ -192,7 +203,7 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
 
   // "$command" — explicit owner-only invocation.
   if (parsed.prefix === getOwnerPrefix()) {
-    if (!command || !command.ownerOnly) {
+    if (!command || (!command.ownerOnly && !command.groupOnly)) {
       await sendText(reply, "Perintah tidak dikenal.");
       return;
     }
@@ -213,6 +224,11 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   }
   if (command.adminOnly && role === "member") {
     await sendText(reply, "🚫 Hanya admin dan pemilik bot yang dapat menggunakan perintah ini.");
+    return;
+  }
+
+  if (command.groupOnly && !message.isGroup && !(parsed.prefix === getOwnerPrefix() && role === "owner")) {
+    await sendText(reply, "Fitur ini hanya untuk grup.");
     return;
   }
 
@@ -238,7 +254,12 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
 
   try {
     writeLog("COMMAND", `whatsapp ${parsed.prefix}${parsed.name} started`);
-    await command.run({ message, args: parsed.args, role });
+    await command.run({
+      message,
+      args: parsed.args,
+      role,
+      ownerOverride: parsed.prefix === getOwnerPrefix() && role === "owner" && command.groupOnly === true,
+    });
     await addXp({
       platform: "whatsapp",
       chatId: message.chatId,

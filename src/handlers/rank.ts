@@ -1,11 +1,11 @@
 import { type Bot, type Context } from "grammy";
-import { registerCommand } from "../lib/command.js";
+import { registerCommand, registerOwnerCommand } from "../lib/command.js";
 import { escapeHtml } from "../lib/info.js";
-import { getLeaderboard, getXp, isPostgresReady } from "../lib/postgres.js";
+import { getLeaderboard, getXp, isXpStorageReady } from "../lib/xp-storage.js";
 import { levelProgress } from "../lib/xp.js";
 
 const NOT_CONFIGURED =
-  "⚙️ Fitur level dan peringkat belum dikonfigurasi. Atur POSTGRES_URL di environment bot lalu mulai ulang.";
+  "⚙️ Penyimpanan level dan peringkat belum siap. Pastikan database lokal dapat dibuka lalu mulai ulang bot.";
 
 function bar(percent: number): string {
   const filled = Math.round(percent / 10);
@@ -17,12 +17,14 @@ function displayNameOf(row: { displayName: string | null; userId: string }): str
 }
 
 export function registerRank(bot: Bot): void {
-  registerCommand(bot, "rank", async (ctx: Context) => {
-    if (ctx.chat?.type !== "group" && ctx.chat?.type !== "supergroup") {
+  const showRank = async (ctx: Context, ownerOverride = false): Promise<void> => {
+    if (!ownerOverride && ctx.chat?.type !== "group" && ctx.chat?.type !== "supergroup") {
       await ctx.reply("Fitur ini hanya untuk grup.");
       return;
     }
-    if (!isPostgresReady()) {
+    const chat = ctx.chat;
+    if (!chat) return;
+    if (!isXpStorageReady()) {
       await ctx.reply(NOT_CONFIGURED);
       return;
     }
@@ -30,7 +32,7 @@ export function registerRank(bot: Bot): void {
     const userId = ctx.from?.id;
     if (userId === undefined) return;
 
-    const groupId = String(ctx.chat.id);
+    const groupId = String(chat.id);
     const xp = await getXp("telegram", groupId, String(userId));
     const progress = levelProgress(xp);
     const name =
@@ -46,19 +48,23 @@ export function registerRank(bot: Bot): void {
       `Menuju tingkat ${progress.level + 1}: <b>${progress.intoLevel}</b> / ${progress.neededForLevel} XP`,
     ];
     await ctx.reply(lines.join("\n"), { parse_mode: "HTML" });
-  });
+  };
+  registerCommand(bot, "rank", (ctx) => showRank(ctx));
+  registerOwnerCommand(bot, "rank", (ctx) => showRank(ctx, true));
 
-  registerCommand(bot, "leaderboard", async (ctx: Context) => {
-    if (ctx.chat?.type !== "group" && ctx.chat?.type !== "supergroup") {
+  const showLeaderboard = async (ctx: Context, ownerOverride = false): Promise<void> => {
+    if (!ownerOverride && ctx.chat?.type !== "group" && ctx.chat?.type !== "supergroup") {
       await ctx.reply("Fitur ini hanya untuk grup.");
       return;
     }
-    if (!isPostgresReady()) {
+    const chat = ctx.chat;
+    if (!chat) return;
+    if (!isXpStorageReady()) {
       await ctx.reply(NOT_CONFIGURED);
       return;
     }
 
-    const rows = await getLeaderboard("telegram", String(ctx.chat.id), 10);
+    const rows = await getLeaderboard("telegram", String(chat.id), 10);
     if (rows.length === 0) {
       await ctx.reply("Belum ada yang mendapat XP. Pakai perintah apa saja untuk mulai naik level!");
       return;
@@ -75,5 +81,7 @@ export function registerRank(bot: Bot): void {
     });
 
     await ctx.reply(lines.join("\n"), { parse_mode: "HTML" });
-  });
+  };
+  registerCommand(bot, "leaderboard", (ctx) => showLeaderboard(ctx));
+  registerOwnerCommand(bot, "leaderboard", (ctx) => showLeaderboard(ctx, true));
 }
