@@ -56,6 +56,13 @@ function sections(): Section[] {
       ],
     },
     {
+      title: "Keuangan virtual",
+      items: [
+        { name: "tukar", label: `${p}tukar [jumlah Point 1-50] - Tukar Point menjadi saldo wallet` },
+        { name: "bank", label: `${p}bank [deposit|tarik jumlah] - Kelola saldo bank virtual` },
+      ],
+    },
+    {
       title: "Pengunduh",
       items: [
         { name: "dl", label: `${p}dl — Unduh media dari tautan yang didukung` },

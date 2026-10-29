@@ -52,6 +52,8 @@ describe("whatsapp menu", () => {
     const menu = sent[0]?.content.caption ?? "";
     assert.ok(menu.includes("POWERSHELL:"));
     assert.ok(menu.includes("$purge"));
+    assert.ok(menu.includes(".tukar [jumlah Point 1-50]"));
+    assert.ok(menu.includes(".bank [deposit|tarik jumlah]"));
     assert.ok(menu.includes("<Umum>"));
     assert.ok(menu.includes("================"));
     assert.ok(menu.split("\n").some((line) => line.startsWith("- .menu")));

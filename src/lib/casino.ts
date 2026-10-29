@@ -1,7 +1,7 @@
 import { changeBalance, clearBlackjack, getBlackjack, getWallet, saveBlackjack, type BlackjackState } from "./casino-storage.js";
 
 export type CasinoGame = "slot" | "coin" | "roulette" | "blackjack";
-const BET = /^[1-9]\d{0,7}$/;
+const BET = /^[1-9]\d*$/;
 const FACE = (n: number): number => n === 1 ? 11 : n > 10 ? 10 : n;
 function total(hand: number[]): number {
   let sum = hand.reduce((n, card) => n + FACE(card), 0);
@@ -23,7 +23,13 @@ export function validateCasino(game: CasinoGame, args: string, userId: string): 
   const parts = args.trim().split(/\s+/);
   if (!BET.test(parts[0] ?? "")) return `Format: .${game} <taruhan>${game === "coin" ? " cara|angka" : game === "roulette" ? " merah|hitam|0-36" : ""}`;
   const bet = Number(parts[0]);
+  if (!Number.isSafeInteger(bet)) return "Taruhan harus berupa angka yang masih aman untuk dihitung.";
   if (bet > wallet.balance) return `Saldo tidak cukup. Saldo saat ini ${money(wallet.balance)}.`;
+  const maxMultiplier = game === "roulette" ? 36 : game === "blackjack" ? 2.5 : game === "slot" ? 5 : 2;
+  const maxPayout = Math.floor(bet * maxMultiplier);
+  if (!Number.isSafeInteger(maxPayout) || !Number.isSafeInteger(wallet.balance - bet + maxPayout)) {
+    return "Nominal taruhan terlalu besar untuk diproses dengan aman.";
+  }
   if (game === "coin" && !/^(cara|angka)$/i.test(parts[1] ?? "")) return "Pilih sisi: cara atau angka.";
   if (game === "coin" && parts.length !== 2) return "Format: .coinflip <taruhan> cara|angka.";
   if (game === "roulette" && !/^(merah|hitam|[0-9]|[1-2][0-9]|3[0-6])$/i.test(parts[1] ?? "")) return "Pilih merah, hitam, atau angka 0–36.";
@@ -41,7 +47,7 @@ export function playCasino(game: CasinoGame, args: string, userId: string): stri
   changeBalance(userId, -bet);
   if (game === "slot") {
     const reels = Array.from({ length: 3 }, () => 1 + Math.floor(Math.random() * 5));
-    const win = reels.every((x) => x === reels[0]) ? bet * 5 : reels[0] === reels[1] || reels[1] === reels[2] ? bet : 0;
+    const win = reels.every((x) => x === reels[0]) ? bet * 5 : reels[0] === reels[1] || reels[1] === reels[2] ? bet * 2 : 0;
     if (win) changeBalance(userId, win);
     return `🎰 ${reels.map((x) => ["🍒", "🍋", "🔔", "⭐", "💎"][x - 1]).join(" | ")}\n${win ? `Menang ${money(win)}!` : "Belum menang."} Saldo: ${money(getWallet(userId)?.balance ?? 0)}.`;
   }

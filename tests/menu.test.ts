@@ -15,6 +15,8 @@ describe("Telegram menu photo", () => {
     const menu = buildMenu();
     assert.ok(menu.includes("POWERSHELL:"));
     assert.ok(menu.includes("$purge"));
+    assert.ok(menu.includes("/tukar [jumlah Point 1-50]"));
+    assert.ok(menu.includes("/bank [deposit|tarik jumlah]"));
     assert.ok(menu.includes("<b>&lt;Umum&gt;</b>"));
     assert.ok(menu.includes("================"));
     assert.ok(menu.split("\n").filter((line) => /^- (\/|!|\$|POWERSHELL:)/.test(line)).length > 0);

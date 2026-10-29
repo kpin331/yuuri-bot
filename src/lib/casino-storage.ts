@@ -1,25 +1,105 @@
 import { getDb } from "./db.js";
 
-export interface Wallet { balance: number; points: number }
+export interface Wallet { balance: number; points: number; bankBalance: number }
 export interface BlackjackState { bet: number; hand: number[]; dealer: number[] }
+
+export type WalletOperationResult =
+  | { ok: true; wallet: Wallet }
+  | { ok: false; reason: "not-ready" | "invalid" | "insufficient" | "limit" };
 
 export function getWallet(userId: string): Wallet | null {
   const db = getDb();
   if (!db) return null;
   db.prepare("INSERT INTO casino_wallets(user_id, updated_at) VALUES (?, ?) ON CONFLICT(user_id) DO NOTHING")
     .run(userId, Date.now());
-  const row = db.prepare("SELECT balance, points FROM casino_wallets WHERE user_id = ?").get(userId);
-  return row ? { balance: Number(row.balance), points: Number(row.points) } : null;
+  const row = db.prepare("SELECT balance, points, bank_balance FROM casino_wallets WHERE user_id = ?").get(userId);
+  return row
+    ? { balance: Number(row.balance), points: Number(row.points), bankBalance: Number(row.bank_balance) }
+    : null;
 }
 
 export function changeBalance(userId: string, delta: number): Wallet | null {
   const db = getDb();
   if (!db || !Number.isSafeInteger(delta)) return null;
   const wallet = getWallet(userId);
-  if (!wallet || wallet.balance + delta < 0) return null;
+  const nextBalance = wallet ? wallet.balance + delta : NaN;
+  if (!wallet || !Number.isSafeInteger(nextBalance) || nextBalance < 0) return null;
   db.prepare("UPDATE casino_wallets SET balance = balance + ?, updated_at = ? WHERE user_id = ?")
     .run(delta, Date.now(), userId);
   return getWallet(userId);
+}
+
+export function exchangePoints(userId: string, points: number): WalletOperationResult {
+  const db = getDb();
+  if (!db) return { ok: false, reason: "not-ready" };
+  if (!Number.isSafeInteger(points) || points < 1 || points > 50) return { ok: false, reason: "invalid" };
+
+  const cash = points * 10_000;
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const wallet = getWallet(userId);
+    if (!wallet) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "not-ready" };
+    }
+    if (wallet.points < points) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "insufficient" };
+    }
+    if (!Number.isSafeInteger(wallet.balance + cash)) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "limit" };
+    }
+
+    db.prepare("UPDATE casino_wallets SET points=points-?, balance=balance+?, updated_at=? WHERE user_id=? AND points>=?")
+      .run(points, cash, Date.now(), userId, points);
+    const updated = getWallet(userId);
+    if (!updated) throw new Error("Wallet tidak tersedia setelah penukaran Point.");
+    db.exec("COMMIT");
+    return { ok: true, wallet: updated };
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+export function transferBank(userId: string, action: "deposit" | "withdraw", amount: number): WalletOperationResult {
+  const db = getDb();
+  if (!db) return { ok: false, reason: "not-ready" };
+  if (!Number.isSafeInteger(amount) || amount < 1) return { ok: false, reason: "invalid" };
+
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const wallet = getWallet(userId);
+    if (!wallet) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "not-ready" };
+    }
+    if (action === "deposit" && wallet.balance < amount) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "insufficient" };
+    }
+    if (action === "withdraw" && wallet.bankBalance < amount) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "insufficient" };
+    }
+
+    const balance = action === "deposit" ? wallet.balance - amount : wallet.balance + amount;
+    const bankBalance = action === "deposit" ? wallet.bankBalance + amount : wallet.bankBalance - amount;
+    if (!Number.isSafeInteger(balance) || !Number.isSafeInteger(bankBalance)) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "limit" };
+    }
+    db.prepare("UPDATE casino_wallets SET balance=?, bank_balance=?, updated_at=? WHERE user_id=?")
+      .run(balance, bankBalance, Date.now(), userId);
+    const updated = getWallet(userId);
+    if (!updated) throw new Error("Wallet tidak tersedia setelah transaksi bank.");
+    db.exec("COMMIT");
+    return { ok: true, wallet: updated };
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 export function getBlackjack(userId: string): BlackjackState | null {

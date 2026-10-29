@@ -163,6 +163,7 @@ export function initDatabase(path: string = getDbPath()): void {
       user_id TEXT PRIMARY KEY,
       balance INTEGER NOT NULL DEFAULT 100000 CHECK(balance >= 0),
       points INTEGER NOT NULL DEFAULT 0 CHECK(points >= 0),
+      bank_balance INTEGER NOT NULL DEFAULT 0 CHECK(bank_balance >= 0),
       updated_at INTEGER NOT NULL
     );
 
@@ -182,6 +183,11 @@ export function initDatabase(path: string = getDbPath()): void {
       PRIMARY KEY(platform, chat_id, user_id)
     );
   `);
+
+  const walletColumns = database.prepare("PRAGMA table_info(casino_wallets)").all() as Array<{ name: string }>;
+  if (!walletColumns.some((column) => column.name === "bank_balance")) {
+    database.exec("ALTER TABLE casino_wallets ADD COLUMN bank_balance INTEGER NOT NULL DEFAULT 0 CHECK(bank_balance >= 0)");
+  }
 
   db = database;
 }

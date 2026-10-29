@@ -22,6 +22,12 @@ describe("command help", () => {
     assert.match(formatCommandHelp("purge", "whatsapp"), /\$purge[\s\S]*khusus pemilik/i);
   });
 
+  it("documents Point exchange packages and bank deposit/withdraw usage", () => {
+    assert.match(formatCommandHelp("tukar", "whatsapp"), /maksimal 50 Point/);
+    assert.match(formatCommandHelp("bank", "telegram"), /deposit <jumlah>/);
+    assert.match(formatCommandHelp("bank", "telegram"), /tarik <jumlah>/);
+  });
+
   it("offers a command list for an empty query and handles unknown commands", () => {
     assert.match(formatCommandHelp("", "whatsapp"), /Command yang tersedia:.*pin/);
     assert.match(formatCommandHelp("does-not-exist", "telegram"), /belum tersedia/);
