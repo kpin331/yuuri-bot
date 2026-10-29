@@ -76,4 +76,10 @@ describe("WhatsApp admin group commands", () => {
     await handleIncoming(toggle.message);
     assert.ok(toggle.sent.length > 0);
   });
+
+  it("restricts $purge to the owner", async () => {
+    const member = createMessage("$purge", "628999", false);
+    await handleIncoming(member.message);
+    assert.match(member.sent[0]?.text ?? "", /hanya dapat digunakan pemilik bot/);
+  });
 });

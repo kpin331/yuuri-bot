@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, it } from "node:test";
@@ -8,6 +8,7 @@ import {
   flushRuntimeLogs,
   logRuntimeEnvironment,
   parseRuntimeArgs,
+  purgeSavedMedia,
   runtimeOptions,
   saveMediaFile,
   writeLog,
@@ -69,6 +70,34 @@ describe("runtime options", () => {
       assert.equal(saved.length, 1);
       assert.match(saved[0] ?? "", /^source-[0-9a-f-]+\.jpg$/i);
       assert.equal((await readFile(join(mediaDirectory, saved[0]!))).toString(), "image");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("purges only regular files directly inside the Media folder", async () => {
+    const root = await mkdtemp(join(tmpdir(), "yuuri-purge-"));
+    const mediaDirectory = join(root, "Media");
+    try {
+      const nested = join(mediaDirectory, "keep");
+      await mkdir(nested, { recursive: true });
+      await writeFile(join(mediaDirectory, "saved.jpg"), "media");
+      await writeFile(join(nested, "nested.txt"), "keep");
+      configureRuntime({ saveMedia: false, mediaDirectory, log: false });
+
+      assert.equal(await purgeSavedMedia(), 1);
+      assert.deepEqual(await readdir(mediaDirectory), ["keep"]);
+      assert.deepEqual(await readdir(nested), ["nested.txt"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses to purge a directory not named Media", async () => {
+    const root = await mkdtemp(join(tmpdir(), "yuuri-purge-"));
+    try {
+      configureRuntime({ saveMedia: false, mediaDirectory: root, log: false });
+      await assert.rejects(purgeSavedMedia(), /tidak aman/);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

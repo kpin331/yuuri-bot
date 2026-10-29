@@ -94,6 +94,7 @@ export function buildMenu(): string {
     "",
     "================",
     "<Sistem>",
+    "- $purge - Hapus file media di folder Media (khusus pemilik)",
     "- $sys — Tampilkan info sistem (khusus pemilik)",
     "- POWERSHELL: {perintah} - Jalankan di sesi baru (khusus pemilik)",
     "- !<perintah> on|off — Aktifkan atau nonaktifkan perintah (admin)",

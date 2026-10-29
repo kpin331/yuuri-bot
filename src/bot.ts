@@ -11,6 +11,7 @@ import { registerFallback } from "./handlers/fallback.js";
 import { registerPinterest } from "./handlers/pinterest.js";
 import { registerPixiv } from "./handlers/pixiv.js";
 import { registerPlay } from "./handlers/play.js";
+import { registerPurge } from "./handlers/purge.js";
 import { registerQr } from "./handlers/qr.js";
 import { registerQuotaReset } from "./handlers/quotareset.js";
 import { registerRank } from "./handlers/rank.js";
@@ -82,6 +83,7 @@ export function createBot(token: string): Bot {
   registerPixiv(bot);
   registerDownloader(bot);
   registerPlay(bot);
+  registerPurge(bot);
   registerQr(bot);
   registerRank(bot);
   registerToimg(bot);

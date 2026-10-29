@@ -86,6 +86,7 @@ const SECTIONS: MenuSection[] = [
 ];
 
 const FOOTER: string[] = [
+  "- $purge - Hapus file media di folder Media (khusus pemilik)",
   "- $sys — Tampilkan informasi sistem (khusus pemilik bot)",
   "- POWERSHELL: {perintah} - Jalankan di sesi baru (khusus pemilik bot)",
   "- !&lt;perintah&gt; on|off — Aktifkan atau nonaktifkan perintah (admin)",

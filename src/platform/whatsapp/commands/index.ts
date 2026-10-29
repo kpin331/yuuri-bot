@@ -16,6 +16,7 @@ import { sysCommand } from "./sys.js";
 import { toimgCommand } from "./toimg.js";
 import { userinfoCommand } from "./userinfo.js";
 import { casinoCommands } from "./casino.js";
+import { purgeCommand } from "./purge.js";
 
 // Every WhatsApp command, in menu order. Command names match the Telegram ones
 // so the shared enable/disable state applies to both platforms.
@@ -37,6 +38,7 @@ const ALL: WaCommand[] = [
   pixivCommand,
   ...banCommands,
   sysCommand,
+  purgeCommand,
 ];
 
 const byName = new Map<string, WaCommand>();

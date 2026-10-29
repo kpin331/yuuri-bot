@@ -37,6 +37,7 @@ const ENTRIES: HelpEntry[] = [
   { name: "ban", telegram: ["/ban <@username|ID> [-d<hari>|-h<jam>|<detik>] (atau balas pesan)"], whatsapp: ["{{p}}ban <nomor> [-d<hari>|-h<jam>|<detik>] (atau balas pesan)"], description: "Memblokir pengguna selama durasi yang dipilih. Durasi bawaan 3 hari; hanya admin atau pemilik.", example: "{{p}}ban 6281234567890 -d7" },
   { name: "unban", telegram: ["/unban <@username|ID> (atau balas pesan)"], whatsapp: ["{{p}}unban <nomor> (atau balas pesan)"], description: "Membuka blokir pengguna. Hanya admin atau pemilik.", example: "{{p}}unban 6281234567890" },
   { name: "sys", telegram: ["$sys"], whatsapp: ["$sys"], description: "Menampilkan laporan sistem. Khusus pemilik bot." },
+  { name: "purge", telegram: ["$purge"], whatsapp: ["$purge"], description: "Menghapus semua file media biasa yang tersimpan langsung di folder Media. Folder dan subfolder tetap ada. Khusus pemilik bot." },
   { name: "database", telegram: ["/database"], description: "Membuka penjelajah database. Pilih tabel, saring baris, dan ekspor Excel. Khusus pemilik bot." },
   { name: "quota-reset", telegram: ["/quota-reset"], description: "Mereset kuota harian semua pengguna. Khusus pemilik bot." },
   { name: "toggle", telegram: ["!<command> on|off", "$toggle <command> on|off (pemilik)"], whatsapp: ["!<command> on|off", "$toggle <command> on|off (pemilik)"], description: "Mengaktifkan atau menonaktifkan command. Admin memakai !; pemilik dapat memakai $toggle." , example: "!pin off" },

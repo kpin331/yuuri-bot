@@ -17,6 +17,11 @@ describe("command help", () => {
     assert.match(formatCommandHelp("database", "whatsapp"), /hanya tersedia di Telegram/);
   });
 
+  it("documents the owner-only media purge command", () => {
+    assert.match(formatCommandHelp("purge", "telegram"), /\$purge[\s\S]*khusus pemilik/i);
+    assert.match(formatCommandHelp("purge", "whatsapp"), /\$purge[\s\S]*khusus pemilik/i);
+  });
+
   it("offers a command list for an empty query and handles unknown commands", () => {
     assert.match(formatCommandHelp("", "whatsapp"), /Command yang tersedia:.*pin/);
     assert.match(formatCommandHelp("does-not-exist", "telegram"), /belum tersedia/);

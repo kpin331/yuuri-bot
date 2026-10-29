@@ -1,4 +1,4 @@
-import { appendFile, copyFile, mkdir, open, writeFile } from "node:fs/promises";
+import { appendFile, copyFile, lstat, mkdir, open, readdir, unlink, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { lookup } from "node:dns/promises";
@@ -267,5 +267,33 @@ export async function flushRuntimeMedia(): Promise<void> {
   while (pendingMediaWrites.size > 0) {
     await Promise.allSettled([...pendingMediaWrites]);
   }
+}
+
+export async function purgeSavedMedia(): Promise<number> {
+  await flushRuntimeMedia();
+  const directory = resolve(options.mediaDirectory);
+  if (basename(directory).toLowerCase() !== "media") {
+    throw new Error("Lokasi arsip media tidak aman untuk dibersihkan.");
+  }
+
+  let directoryInfo: Awaited<ReturnType<typeof lstat>>;
+  try {
+    directoryInfo = await lstat(directory);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return 0;
+    throw error;
+  }
+  if (!directoryInfo.isDirectory()) {
+    throw new Error("Lokasi arsip media bukan folder biasa.");
+  }
+
+  const entries = await readdir(directory, { withFileTypes: true });
+  let removed = 0;
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    await unlink(join(directory, entry.name));
+    removed += 1;
+  }
+  return removed;
 }
 
