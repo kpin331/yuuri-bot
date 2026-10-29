@@ -148,6 +148,39 @@ export function initDatabase(path: string = getDbPath()): void {
       expires_at  INTEGER NOT NULL,
       reason      TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS xp (
+      platform     TEXT NOT NULL,
+      chat_id      TEXT NOT NULL,
+      user_id      TEXT NOT NULL,
+      display_name TEXT,
+      xp           INTEGER NOT NULL DEFAULT 0,
+      updated_at   INTEGER NOT NULL,
+      PRIMARY KEY (platform, chat_id, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS casino_wallets (
+      user_id TEXT PRIMARY KEY,
+      balance INTEGER NOT NULL DEFAULT 100000 CHECK(balance >= 0),
+      points INTEGER NOT NULL DEFAULT 0 CHECK(points >= 0),
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS casino_blackjack (
+      user_id TEXT PRIMARY KEY,
+      bet INTEGER NOT NULL CHECK(bet > 0),
+      hand TEXT NOT NULL,
+      dealer TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS level_points (
+      platform TEXT NOT NULL,
+      chat_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      awarded_level INTEGER NOT NULL DEFAULT 1,
+      PRIMARY KEY(platform, chat_id, user_id)
+    );
   `);
 
   db = database;

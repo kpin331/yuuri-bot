@@ -1,4 +1,4 @@
-// Pure level math for the XP system. Storage lives in lib/postgres.ts; this
+// Pure level math for the XP system. Storage lives in lib/xp-storage.ts; this
 // file stays dependency-free so the curve can be unit tested without a database.
 
 export const MIN_XP_GAIN = 1;

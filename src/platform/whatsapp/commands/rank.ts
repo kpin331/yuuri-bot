@@ -1,9 +1,9 @@
-import { getLeaderboard, getXp, isPostgresReady } from "../../../lib/postgres.js";
+import { getLeaderboard, getXp, isXpStorageReady } from "../../../lib/xp-storage.js";
 import { levelProgress } from "../../../lib/xp.js";
 import { replyTo, sendText } from "../reply.js";
 import type { WaCommand } from "../types.js";
 
-const NOT_CONFIGURED = "Fitur level dan peringkat belum dikonfigurasi. Atur POSTGRES_URL lalu mulai ulang bot.";
+const NOT_CONFIGURED = "Penyimpanan level dan peringkat belum siap. Pastikan database lokal dapat dibuka lalu mulai ulang bot.";
 const GROUP_ONLY = "Fitur ini hanya untuk grup.";
 
 function displayNameOf(row: { displayName: string | null; userId: string }): string {
@@ -21,7 +21,7 @@ export const rankCommands: WaCommand[] = [
         await sendText(reply, GROUP_ONLY);
         return;
       }
-      if (!isPostgresReady()) {
+      if (!isXpStorageReady()) {
         await sendText(reply, NOT_CONFIGURED);
         return;
       }
@@ -46,7 +46,7 @@ export const rankCommands: WaCommand[] = [
         await sendText(reply, GROUP_ONLY);
         return;
       }
-      if (!isPostgresReady()) {
+      if (!isXpStorageReady()) {
         await sendText(reply, NOT_CONFIGURED);
         return;
       }

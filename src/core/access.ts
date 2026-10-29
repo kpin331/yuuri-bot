@@ -87,15 +87,16 @@ export function getQuota(
   return { quotaLeft, total: limit, unlimited: false, resetInSeconds, role };
 }
 
-// Spends 1 quota for a real command run. Never drops below zero.
-export function consumeQuota(platform: string, userId: string): void {
+// Spends quota for a real command run. Never drops below zero.
+export function consumeQuota(platform: string, userId: string, amount: number = 1): void {
   if (!isDatabaseReady()) return;
   const row = getQuotaRow(platform, userId);
   if (!row || row.quotaLeft <= 0) return;
+  const cost = Number.isSafeInteger(amount) && amount > 0 ? amount : 1;
   setQuotaRow({
     platform,
     userId,
-    quotaLeft: row.quotaLeft - 1,
+    quotaLeft: Math.max(0, row.quotaLeft - cost),
     lastReset: row.lastReset,
     displayName: row.displayName,
     at: Date.now(),

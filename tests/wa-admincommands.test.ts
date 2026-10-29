@@ -58,7 +58,9 @@ describe("WhatsApp admin group commands", () => {
   it("allows a group admin to use !ping and groupinfo", async () => {
     const ping = createMessage("!ping");
     await handleIncoming(ping.message);
-    assert.match(ping.sent[0]?.text ?? "", /^Pong! Respons dalam \d+ ms\.$/);
+    assert.match(ping.sent[0]?.text ?? "", /^Waktu respons: \d+ ms/);
+    assert.ok(ping.sent.some((message) => message.text?.includes("Node.js memakai memori:")));
+    assert.doesNotMatch(ping.sent.map((message) => message.text).join("\n"), /Task manager|PID \| proses/);
 
     const groupinfo = createMessage("!groupinfo");
     await handleIncoming(groupinfo.message);

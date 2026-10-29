@@ -6,6 +6,7 @@ import { setRemainingQuotaForKnownUsers } from "../core/access.js";
 import { getAdminQuota, getDefaultQuota, isOwner } from "../lib/config.js";
 import { exec } from "../lib/exec.js";
 import { writeLog } from "../lib/runtime.js";
+import { splitStatusMessage } from "../lib/system-status.js";
 
 export type ShellPlatform = "telegram" | "whatsapp";
 
@@ -31,6 +32,9 @@ type PendingAction = {
 );
 
 const ACTION_TIMEOUT_MS = 5 * 60 * 1000;
+const POWERSHELL_TIMEOUT_MS = 120_000;
+const POWERSHELL_OUTPUT_LIMIT = 512 * 1024;
+const POWERSHELL_REPLY_LIMIT = 16_000;
 const ALLOWED_PHOTO_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"]);
 let paused = false;
 let pending: PendingAction | null = null;
@@ -72,8 +76,49 @@ export function registerShell(bot: Bot): void {
 export async function handleShellMessage(context: ShellMessageContext): Promise<boolean> {
   const text = context.text.trim();
   const shellCommand = /^\$SHELL\s+-E(?:\s+([\s\S]*))?$/i.exec(text);
+  const powershellCommand = /^POWERSHELL\s*:\s*([\s\S]*)$/i.exec(text);
 
   if (pending && pending.expiresAt <= Date.now()) pending = null;
+
+  if (powershellCommand) {
+    if (!context.isOwner) {
+      await context.reply("Hanya pemilik bot yang dapat menjalankan PowerShell.");
+      return true;
+    }
+    let command = (powershellCommand[1] ?? "").trim();
+    if (command.startsWith("{") && command.endsWith("}")) command = command.slice(1, -1).trim();
+    if (!command) {
+      await context.reply("Format: POWERSHELL: {perintah PowerShell}");
+      return true;
+    }
+    if (process.platform !== "win32") {
+      await context.reply("PowerShell hanya tersedia di server Windows.");
+      return true;
+    }
+
+    await context.reply("running...");
+    try {
+      const result = await exec("powershell.exe", ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", command], {
+        timeoutMs: POWERSHELL_TIMEOUT_MS,
+        maxOutputBytes: POWERSHELL_OUTPUT_LIMIT,
+      });
+      const output = [result.stdout.trimEnd(), result.stderr.trimEnd()].filter(Boolean).join("\n");
+      const clipped = output.length > POWERSHELL_REPLY_LIMIT
+        ? `${output.slice(0, POWERSHELL_REPLY_LIMIT)}\n… output dipotong.`
+        : output;
+      const response = `Selesai (exit code ${result.code}).${clipped ? `\n${clipped}` : "\nPerintah selesai tanpa output."}`;
+      for (const chunk of splitStatusMessage(response)) await context.reply(chunk);
+      writeLog("SHELL", `action=powershell status=finished exit_code=${result.code} output_chars=${output.length}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      const timeout = message.includes("batas waktu");
+      writeLog("SHELL", `action=powershell status=${timeout ? "timeout" : "failed"}`);
+      await context.reply(timeout
+        ? "Sesi PowerShell dihentikan karena melewati batas waktu 120 detik."
+        : "Sesi PowerShell gagal dijalankan atau keluarannya melewati batas.");
+    }
+    return true;
+  }
 
   if (shellCommand) {
     if (!context.isOwner) {

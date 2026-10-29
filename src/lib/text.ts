@@ -19,6 +19,8 @@ export function htmlToWhatsApp(input: string): string {
       // Unescape the entities last, so unescaped "<" never looks like a tag.
       .replace(/&lt;/g, "<")
       .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
       .replace(/&amp;/g, "&")
   );
 }

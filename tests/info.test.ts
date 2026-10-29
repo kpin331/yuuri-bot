@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { escapeHtml, formatInfo } from "../src/lib/info.js";
+import { escapeHtml, formatInfo, formatPinterestInfo, parseInfo } from "../src/lib/info.js";
 
 describe("escapeHtml", () => {
   it("escapes every character Telegram's HTML mode needs, quotes included", () => {
@@ -21,5 +21,26 @@ describe("formatInfo", () => {
     assert.ok(out);
     assert.ok(out.includes('href="https://example.com/x&quot;&gt;&lt;b&gt;hi&lt;/b&gt;"'));
     assert.ok(!out.includes('"><b>'));
+  });
+});
+
+describe("Pinterest info", () => {
+  it("parses comment totals and formats the requested fields safely", () => {
+    const info = parseInfo({
+      title: "A <title>",
+      pinner: { full_name: "Artist" },
+      like_count: 12,
+      view_count: 345,
+      comment_count: 6,
+      id: "123",
+    });
+    const caption = formatPinterestInfo(info);
+    assert.equal(info.comments, 6);
+    assert.match(caption, /Judul:.*A &lt;title&gt;/);
+    assert.match(caption, /Artis:.*Artist/);
+    assert.match(caption, /Like:.*12/);
+    assert.match(caption, /View:.*345/);
+    assert.match(caption, /Komentar:.*6/);
+    assert.match(caption, /pinterest\.com\/pin\/123/);
   });
 });

@@ -30,6 +30,8 @@ function sections(): Section[] {
         { name: "quota", label: `${p}quota — Tampilkan sisa kuota harian` },
         { name: "rank", label: `${p}rank — Tampilkan tingkat dan XP di grup ini` },
         { name: "leaderboard", label: `${p}leaderboard — Tampilkan peringkat XP grup ini` },
+        { name: "wallet", label: `${p}wallet — Tampilkan saldo virtual dan Point` },
+        { name: "cara-pakai", label: `${p}cara-pakai <command> - Cari cara kerja dan cara pakai command` },
       ],
     },
     {
@@ -43,6 +45,15 @@ function sections(): Section[] {
     {
       title: "Multimedia",
       items: [{ name: "play", label: `${p}play — Cari di YouTube lalu kirim audio atau video` }],
+    },
+    {
+      title: "Kasino virtual",
+      items: [
+        { name: "slot", label: `${p}slot <taruhan> — Main slot virtual` },
+        { name: "coin", label: `${p}coin <taruhan> cara|angka — Lempar koin` },
+        { name: "roulette", label: `${p}roulette <taruhan> merah|hitam|0-36 — Roulette` },
+        { name: "blackjack", label: `${p}blackjack <taruhan> — Mulai; lanjutkan hit atau stand` },
+      ],
     },
     {
       title: "Pengunduh",
@@ -72,18 +83,21 @@ function sections(): Section[] {
 
 export function buildMenu(): string {
   const lines = [`*${TITLE}*`, `_${SUBTITLE}_`];
-  for (const section of sections()) {
-    lines.push("", `*${section.title}*`);
+  for (const [index, section] of sections().entries()) {
+    lines.push("", ...(index > 0 ? ["================"] : []), `<${section.title}>`);
     for (const item of section.items) {
       // Informational only. Real enforcement happens in the router.
-      lines.push(isCommandEnabled(item.name) ? item.label : `${item.label} (NONAKTIF)`);
+      lines.push(`- ${isCommandEnabled(item.name) ? item.label : `${item.label} (NONAKTIF)`}`);
     }
   }
   lines.push(
     "",
-    "*Sistem*",
-    "$sys — Tampilkan info sistem (khusus pemilik)",
-    "!<perintah> on|off — Aktifkan atau nonaktifkan perintah (admin)",
+    "================",
+    "<Sistem>",
+    "- $sys — Tampilkan info sistem (khusus pemilik)",
+    "- POWERSHELL: {perintah} - Jalankan di sesi baru (khusus pemilik)",
+    "- !<perintah> on|off — Aktifkan atau nonaktifkan perintah (admin)",
+    "- $toggle <perintah> on|off — Ubah status command (khusus pemilik)",
   );
   return lines.join("\n");
 }

@@ -5,6 +5,7 @@ export interface MediaInfo {
   date?: string;
   likes?: number;
   views?: number;
+  comments?: number;
   source?: string;
 }
 
@@ -88,6 +89,7 @@ export function parseInfo(raw: unknown): MediaInfo {
     data.like_count ?? data.favorites ?? data.likes ?? data.favorite_count ?? data.reaction_counts,
   );
   info.views = asNumber(data.view_count) ?? asNumber(data.views) ?? asNumber(data.play_count);
+  info.comments = asNumber(data.comment_count) ?? asNumber(data.comments_count) ?? asNumber(data.comments);
   info.date = parseDate(data.upload_date ?? data.created_at ?? data.date);
 
   const pinnedId = asString(data.id);
@@ -111,6 +113,7 @@ export function formatInfo(info: MediaInfo): string | undefined {
   if (info.views !== undefined) stats.push(`👁 ${formatCount(info.views)}`);
   if (info.likes !== undefined) stats.push(`❤️ ${formatCount(info.likes)}`);
   if (stats.length > 0) lines.push(stats.join("    "));
+  if (info.comments !== undefined) lines.push(`💬 ${formatCount(info.comments)}`);
 
   if (info.caption) lines.push("", escapeHtml(info.caption));
   if (info.source) lines.push("", `🔗 <a href="${escapeHtml(info.source)}">Sumber</a>`);
@@ -118,5 +121,25 @@ export function formatInfo(info: MediaInfo): string | undefined {
   if (lines.length === 0) return undefined;
 
   const text = lines.join("\n");
+  return text.length > MAX_CAPTION_LENGTH ? `${text.slice(0, MAX_CAPTION_LENGTH - 1)}…` : text;
+}
+
+export function formatPinterestInfo(info: MediaInfo): string {
+  const title = info.title ? escapeHtml(info.title) : "Tidak tersedia";
+  const artist = info.author ? escapeHtml(info.author) : "Tidak tersedia";
+  const likes = info.likes === undefined ? "Tidak tersedia" : formatCount(info.likes);
+  const views = info.views === undefined ? "Tidak tersedia" : formatCount(info.views);
+  const comments = info.comments === undefined ? "Tidak tersedia" : formatCount(info.comments);
+  const source = info.source
+    ? `<a href="${escapeHtml(info.source)}">Sumber</a>`
+    : "Tidak tersedia";
+  const text = [
+    `<b>Judul:</b> ${title}`,
+    `<b>Artis:</b> ${artist}`,
+    `<b>Like:</b> ${likes}`,
+    `<b>View:</b> ${views}`,
+    `<b>Komentar:</b> ${comments}`,
+    `<b>Sumber:</b> ${source}`,
+  ].join("\n");
   return text.length > MAX_CAPTION_LENGTH ? `${text.slice(0, MAX_CAPTION_LENGTH - 1)}…` : text;
 }

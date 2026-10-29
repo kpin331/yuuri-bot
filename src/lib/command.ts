@@ -1,7 +1,7 @@
 import type { Bot, Context } from "grammy";
 import { isCommandEnabled } from "./db.js";
 import { isOwner } from "./config.js";
-import { addXp } from "./postgres.js";
+import { addXp } from "./xp-storage.js";
 import { rollXp } from "./xp.js";
 import { writeLog } from "./runtime.js";
 

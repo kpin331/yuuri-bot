@@ -45,5 +45,7 @@ export interface WaCommand {
   adminOnly?: boolean;
   /** Informational commands are not counted against the daily quota. */
   free?: boolean;
+  quotaCost?: number;
+  validate?: (args: string, userId: string) => string | null;
   run: (ctx: CommandContext) => Promise<void>;
 }

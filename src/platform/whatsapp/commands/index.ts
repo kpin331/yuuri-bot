@@ -2,6 +2,7 @@ import { registerKnownCommand } from "../../../lib/command.js";
 import type { WaCommand } from "../types.js";
 import { banCommands } from "./ban.js";
 import { groupinfoCommand, pingCommand } from "./admin.js";
+import { commandHelpCommand } from "./help.js";
 import { downloadCommands } from "./download.js";
 import { menuCommand } from "./menu.js";
 import { pinCommand } from "./pinterest.js";
@@ -14,15 +15,18 @@ import { stickerCommand } from "./sticker.js";
 import { sysCommand } from "./sys.js";
 import { toimgCommand } from "./toimg.js";
 import { userinfoCommand } from "./userinfo.js";
+import { casinoCommands } from "./casino.js";
 
 // Every WhatsApp command, in menu order. Command names match the Telegram ones
 // so the shared enable/disable state applies to both platforms.
 const ALL: WaCommand[] = [
   menuCommand,
+  commandHelpCommand,
   pingCommand,
   groupinfoCommand,
   userinfoCommand,
   quotaCommand,
+  ...casinoCommands,
   ...rankCommands,
   stickerCommand,
   smemeCommand,

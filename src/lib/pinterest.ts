@@ -55,3 +55,22 @@ export function bestImageUrl(pin: Record<string, unknown>): string | undefined {
   }
   return best?.url;
 }
+
+export interface DownloadedPin {
+  pin: Record<string, unknown>;
+  buffer: Buffer;
+}
+
+export function topPins(pins: Record<string, unknown>[], count = 4): Record<string, unknown>[] {
+  return pins.filter((pin) => bestImageUrl(pin)).slice(0, count);
+}
+
+export async function downloadPin(pin: Record<string, unknown>): Promise<DownloadedPin> {
+  const imageUrl = bestImageUrl(pin);
+  if (!imageUrl) throw new Error("Pin tidak memiliki gambar yang dapat diunduh.");
+  const response = await fetch(imageUrl);
+  if (!response.ok) throw new Error(`Gagal mengunduh gambar (status ${response.status})`);
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (buffer.length > 10 * 1024 * 1024) throw new Error("Ukuran gambar melebihi batas 10 MB.");
+  return { pin, buffer };
+}

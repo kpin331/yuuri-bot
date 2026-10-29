@@ -1,6 +1,8 @@
 import { Bot, GrammyError, HttpError } from "grammy";
 import { registerBan, registerBanGuard } from "./handlers/ban.js";
+import { registerCasino } from "./handlers/casino.js";
 import { registerCommandControl } from "./handlers/commandcontrol.js";
+import { registerCommandHelp } from "./handlers/commandhelp.js";
 import { registerCommands } from "./handlers/commands.js";
 import { registerDatabase } from "./handlers/database.js";
 import { registerDelete } from "./handlers/delete.js";
@@ -72,6 +74,8 @@ export function createBot(token: string): Bot {
   registerBanGuard(bot);
   registerTracking(bot);
   registerCommands(bot);
+  registerCommandHelp(bot);
+  registerCasino(bot);
   registerSticker(bot);
   registerSmeme(bot);
   registerPinterest(bot);

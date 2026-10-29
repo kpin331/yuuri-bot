@@ -2,7 +2,6 @@ import { config } from "dotenv";
 import { createBot } from "./bot.js";
 import { closeDatabase, initDatabase } from "./lib/db.js";
 import { checkRequiredTools, TOOLS } from "./lib/tools.js";
-import { closePostgres, initPostgres } from "./lib/postgres.js";
 import { startWhatsApp } from "./whatsapp.js";
 import { configureRuntime, flushRuntimeLogs, flushRuntimeMedia, logRuntimeEnvironment, parseRuntimeArgs, runtimeOptions, writeLog } from "./lib/runtime.js";
 
@@ -46,8 +45,6 @@ try {
   console.warn(`Peringatan: basis data penyimpanan tidak dapat dibuka (${reason}). Statistik pengguna tidak tersedia.`);
 }
 
-await initPostgres();
-
 const bot = createBot(token);
 
 await bot.init();
@@ -63,7 +60,6 @@ const shutdown = async (): Promise<void> => {
   await Promise.allSettled([bot.stop(), whatsapp?.close()]);
   await flushRuntimeMedia();
   closeDatabase();
-  await closePostgres();
   await flushRuntimeLogs();
 };
 

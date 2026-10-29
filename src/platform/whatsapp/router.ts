@@ -8,7 +8,7 @@ import {
   isGroupAllowed,
 } from "../../lib/config.js";
 import { isCommandEnabled, isDatabaseReady, isWaBanned, recordWaIncoming } from "../../lib/db.js";
-import { addXp } from "../../lib/postgres.js";
+import { addXp } from "../../lib/xp-storage.js";
 import { rollXp } from "../../lib/xp.js";
 import { findCommand } from "./commands/index.js";
 import { menuCommand } from "./commands/menu.js";
@@ -36,7 +36,7 @@ function parseCommand(text: string): ParsedCommand | null {
   if (!prefixes.includes(first)) return null;
 
   const rest = trimmed.slice(1).trim();
-  const match = /^([A-Za-z0-9_]+)(?:\s+([\s\S]*))?$/.exec(rest);
+  const match = /^([A-Za-z0-9_-]+)(?:\s+([\s\S]*))?$/.exec(rest);
   if (!match) return null;
 
   return { prefix: first, name: (match[1] ?? "").toLowerCase(), args: (match[2] ?? "").trim() };
@@ -122,7 +122,7 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   // Banned members are ignored silently; admins and the owner are never blocked.
   if (baseRole === "member" && isWaBanned(message.userId)) return;
 
-  if (/\bjarvis\b/i.test(message.text)) {
+  if (message.text.trim().toLowerCase() === "jarvis") {
     if (!isEveryoneAllowed() && baseRole === "member") {
       await sendText(reply, "🚫 Bot ini bersifat privat. Hanya pemilik yang dapat menggunakannya.");
       return;
@@ -237,6 +237,22 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
     return;
   }
 
+  if (command.validate) {
+    const validationError = command.validate(parsed.args, message.userId);
+    if (validationError) {
+      await sendText(reply, validationError);
+      return;
+    }
+  }
+
+  if (command.quotaCost && role !== "owner") {
+    const quota = getQuota("whatsapp", message.userId, role, message.name);
+    if (quota.quotaLeft < command.quotaCost) {
+      await sendText(reply, `Kuota harian tidak cukup. Kasino memakai ${command.quotaCost} kuota per aksi.`);
+      return;
+    }
+  }
+
   const rate = checkRateLimit("whatsapp", message.userId);
   if (!rate.allowed) {
     await sendText(reply, `⏳ Terlalu banyak permintaan. Coba lagi dalam ${formatWait(rate.retryAfterSeconds)}.`);
@@ -244,9 +260,9 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   }
 
   const quotaFree = command.free === true;
-  if (!quotaFree && role !== "owner") {
+  if (!quotaFree && !command.quotaCost && role !== "owner") {
     const quota = getQuota("whatsapp", message.userId, role, message.name);
-    if (quota.quotaLeft <= 0) {
+    if (quota.quotaLeft < (command.quotaCost ?? 1)) {
       await sendText(reply, `🚫 Kuota harian habis. Diatur ulang dalam ${formatWait(quota.resetInSeconds)}.`);
       return;
     }
@@ -254,6 +270,7 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
 
   try {
     writeLog("COMMAND", `whatsapp ${parsed.prefix}${parsed.name} started`);
+    if (command.quotaCost && role !== "owner") consumeQuota("whatsapp", message.userId, command.quotaCost);
     await command.run({
       message,
       args: parsed.args,
@@ -277,7 +294,7 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
     ).catch(() => undefined);
   }
 
-  if (!quotaFree && role !== "owner") consumeQuota("whatsapp", message.userId);
+  if (!quotaFree && !command.quotaCost && role !== "owner") consumeQuota("whatsapp", message.userId);
 }
 
 function normalizeJid(jid: string): string {
@@ -322,15 +339,6 @@ async function deleteRepliedMessage(message: IncomingMessage, args: string): Pro
   }
 
   const isBotMessage = target.key.fromMe === true || wasSentByBot(message.chatId, target.key.id);
-  const content = normalizeMessageContent(target.message);
-  const hasMedia = Boolean(
-    content?.imageMessage || content?.videoMessage || content?.audioMessage ||
-      content?.documentMessage || content?.stickerMessage || content?.ptvMessage,
-  );
-  if (isBotMessage && hasMedia && runtimeOptions().saveMedia) {
-    await sendText(reply, "Pesan media bot disimpan karena opsi -S aktif.");
-    return;
-  }
 
   if (!isBotMessage) {
     if (!message.isGroup) {
@@ -338,7 +346,7 @@ async function deleteRepliedMessage(message: IncomingMessage, args: string): Pro
       return;
     }
     if (!(await isWhatsAppBotGroupAdmin(message))) {
-      await sendText(reply, "Jadikan bot ini sebagai admin grup untuk menghapus pesan anggota.");
+      await sendText(reply, "Bot ini hanya bisa hapus pesan yang dikirim bot, untuk hapus pesan anggota, jadikan bot ini sebagai admin");
       return;
     }
   }

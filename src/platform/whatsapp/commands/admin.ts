@@ -1,5 +1,6 @@
 import { replyTo, sendText } from "../reply.js";
 import type { WaCommand } from "../types.js";
+import { formatSystemDiagnostics, getSystemDiagnostics, splitStatusMessage } from "../../../lib/system-status.js";
 
 export const pingCommand: WaCommand = {
   name: "ping",
@@ -9,7 +10,11 @@ export const pingCommand: WaCommand = {
     const sentAt = Date.now();
     const timestamp = Number(message.message.messageTimestamp ?? Math.floor(sentAt / 1000));
     const elapsed = Math.max(0, sentAt - timestamp * 1000);
-    await sendText(replyTo(message), `Pong! Respons dalam ${elapsed} ms.`);
+    const reply = replyTo(message);
+    const diagnostics = await getSystemDiagnostics();
+    for (const chunk of splitStatusMessage(formatSystemDiagnostics(elapsed, diagnostics))) {
+      await sendText(reply, chunk);
+    }
   },
 };
 

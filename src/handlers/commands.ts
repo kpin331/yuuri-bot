@@ -31,6 +31,8 @@ const SECTIONS: MenuSection[] = [
       { command: "groupinfo", label: "!groupinfo — Tampilkan info grup (admin grup)" },
       { command: "rank", label: "/rank — Tampilkan level dan XP-mu di grup ini" },
       { command: "leaderboard", label: "/leaderboard — Tampilkan peringkat XP grup ini" },
+      { command: "wallet", label: "/wallet — Tampilkan saldo virtual dan Point" },
+      { command: "cara_pakai", label: "/cara_pakai <command> — Cari cara kerja dan cara pakai command" },
     ],
   },
   {
@@ -48,6 +50,15 @@ const SECTIONS: MenuSection[] = [
   {
     title: "Multimedia",
     items: [{ command: "play", label: "/play — Cari lagu atau video dan unduh dari YouTube" }],
+  },
+  {
+    title: "Kasino virtual",
+    items: [
+      { command: "slot", label: "/slot <taruhan> — Main slot virtual" },
+      { command: "coinflip", label: "/coinflip <taruhan> cara|angka — Lempar koin" },
+      { command: "roulette", label: "/roulette <taruhan> merah|hitam|0-36 — Roulette" },
+      { command: "blackjack", label: "/blackjack <taruhan> — Mulai blackjack; lanjutkan hit atau stand" },
+    ],
   },
   {
     title: "Pengunduh",
@@ -75,22 +86,23 @@ const SECTIONS: MenuSection[] = [
 ];
 
 const FOOTER: string[] = [
-  "<b>Sistem</b>",
-  "$sys — Tampilkan informasi sistem (khusus pemilik bot)",
-  "!&lt;perintah&gt; on|off — Aktifkan atau nonaktifkan perintah (admin)",
+  "- $sys — Tampilkan informasi sistem (khusus pemilik bot)",
+  "- POWERSHELL: {perintah} - Jalankan di sesi baru (khusus pemilik bot)",
+  "- !&lt;perintah&gt; on|off — Aktifkan atau nonaktifkan perintah (admin)",
+  "- $toggle &lt;perintah&gt; on|off — Ubah status command (khusus pemilik)",
 ];
 
 function renderItem(item: MenuItem): string {
   // Informational only. The real enforcement happens in the command dispatch.
-  return isCommandEnabled(item.command) ? item.label : `${item.label} (NONAKTIF)`;
+  return `- ${isCommandEnabled(item.command) ? item.label : `${item.label} (NONAKTIF)`}`;
 }
 
 export function buildMenu(): string {
   const lines = [`<b>${TITLE}</b>`, `<i>${SUBTITLE}</i>`];
-  for (const section of SECTIONS) {
-    lines.push("", `<b>${section.title}</b>`, ...section.items.map(renderItem));
+  for (const [index, section] of SECTIONS.entries()) {
+    lines.push("", ...(index > 0 ? ["================"] : []), `<b>&lt;${section.title}&gt;</b>`, ...section.items.map(renderItem));
   }
-  lines.push("", ...FOOTER);
+  lines.push("", "================", "<b>&lt;Sistem&gt;</b>", ...FOOTER);
   return lines.join("\n");
 }
 
@@ -162,7 +174,7 @@ export function registerCommands(bot: Bot): void {
 
   bot.on("message", async (ctx, next) => {
     const text = ctx.message.text ?? ctx.message.caption ?? "";
-    if (!/\bjarvis\b/i.test(text)) return next();
+    if (text.trim().toLowerCase() !== "jarvis") return next();
 
     await ctx.reply("siap,pak");
     await showMenu(ctx);

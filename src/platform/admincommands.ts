@@ -3,6 +3,7 @@ import { isOwner } from "../lib/config.js";
 import { writeLog } from "../lib/runtime.js";
 import { registerKnownCommand } from "../lib/command.js";
 import { isCommandEnabled } from "../lib/db.js";
+import { formatSystemDiagnostics, getSystemDiagnostics, splitStatusMessage } from "../lib/system-status.js";
 
 function isGroup(chatType: string | undefined): boolean {
   return chatType === "group" || chatType === "supergroup";
@@ -45,7 +46,10 @@ export async function registerAdminCommandText(ctx: Context, text: string): Prom
 
   if (name === "ping") {
     const elapsedMs = Math.max(0, Date.now() - (ctx.message?.date ?? Math.floor(Date.now() / 1000)) * 1000);
-    await ctx.reply(`Pong! Respons dalam ${elapsedMs} ms.`);
+    const diagnostics = await getSystemDiagnostics();
+    for (const chunk of splitStatusMessage(formatSystemDiagnostics(elapsedMs, diagnostics))) {
+      await ctx.reply(chunk);
+    }
     writeLog("COMMAND", `telegram ping status=success`);
     return true;
   }

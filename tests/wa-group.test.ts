@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { handleIncoming } from "../src/platform/whatsapp/router.js";
 import type { IncomingMessage } from "../src/platform/whatsapp/types.js";
+import { closeDatabase, initDatabase, setCommandState } from "../src/lib/db.js";
 
 interface SockMock {
   sent: number;
@@ -94,12 +95,30 @@ describe("whatsapp group allowlist", () => {
     assert.ok(sock.sent > 0);
   });
 
-  it("answers Jarvis in any letter case and sends the menu", async () => {
-    const [message, sock] = makeMessage("group@g.us", "628997", "wa-jarvis", "Hey JARVIS");
+  it("answers only when the full trimmed message is Jarvis", async () => {
+    const [message, sock] = makeMessage("group@g.us", "628997", "wa-jarvis", "  JARVIS  ");
     await handleIncoming(message);
 
     assert.equal(sock.contents[0]?.text, "siap,pak");
     assert.ok(sock.contents.some((content) => content.text?.includes("Yuuri Bot V1.0")));
+  });
+
+  it("does not take over a sentence containing Jarvis", async () => {
+    const [message, sock] = makeMessage("group@g.us", "628997", "wa-jarvis-sentence", "Hey JARVIS");
+    await handleIncoming(message);
+    assert.equal(sock.contents.some((content) => content.text === "siap,pak"), false);
+  });
+
+  it("lets a pin command argument containing Jarvis reach normal command checks", async () => {
+    closeDatabase();
+    initDatabase(":memory:");
+    setCommandState("pin", false, null);
+    try {
+      const [message, sock] = makeMessage("group@g.us", "628997", "wa-jarvis-pin-arg", ".pin jarvis");
+      await handleIncoming(message);
+      assert.equal(sock.contents.some((content) => content.text === "siap,pak"), false);
+      assert.ok(sock.contents.some((content) => content.text?.includes("Perintah ini sedang dinonaktifkan")));
+    } finally { closeDatabase(); }
   });
 
   it("keeps group-only commands private-only unless the owner uses the $ override", async () => {

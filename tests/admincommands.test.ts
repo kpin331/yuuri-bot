@@ -17,7 +17,9 @@ describe("Telegram admin group commands", () => {
 
     await t.bot.handleUpdate(t.textUpdate("!ping", { chatType: "supergroup" }));
 
-    assert.match(t.replies()[0] ?? "", /^Pong! Respons dalam \d+ ms\.$/);
+    assert.match(t.replies()[0] ?? "", /^Waktu respons: \d+ ms/);
+    assert.ok(t.replies().some((reply) => reply.includes("Node.js memakai memori:")));
+    assert.doesNotMatch(t.replies().join("\n"), /Task manager|PID \| proses/);
   });
 
   it("denies a non-admin and lets the owner ping privately", async () => {
@@ -29,7 +31,7 @@ describe("Telegram admin group commands", () => {
 
     process.env.OWNER_ID = "222";
     await t.bot.handleUpdate(t.textUpdate("!ping", { fromId: 222 }));
-    assert.match(t.replies()[1] ?? "", /^Pong!/);
+    assert.match(t.replies()[1] ?? "", /^Waktu respons: \d+ ms/);
   });
 
   it("returns group metadata only in a group", async () => {

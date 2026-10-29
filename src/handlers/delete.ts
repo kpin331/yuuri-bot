@@ -1,23 +1,7 @@
 import type { Bot, Context } from "grammy";
 import { registerKnownCommand } from "../lib/command.js";
 import { isCommandEnabled } from "../lib/db.js";
-import { runtimeOptions, writeLog } from "../lib/runtime.js";
-
-function hasMedia(message: {
-  animation?: unknown;
-  audio?: unknown;
-  document?: unknown;
-  photo?: unknown;
-  sticker?: unknown;
-  video?: unknown;
-  video_note?: unknown;
-  voice?: unknown;
-}): boolean {
-  return Boolean(
-    message.animation || message.audio || message.document || message.photo || message.sticker ||
-      message.video || message.video_note || message.voice,
-  );
-}
+import { writeLog } from "../lib/runtime.js";
 
 export function registerDelete(bot: Bot): void {
   registerKnownCommand("d");
@@ -36,10 +20,6 @@ export function registerDelete(bot: Bot): void {
     }
 
     const isBotMessage = target.from?.id === ctx.me.id;
-    if (isBotMessage && hasMedia(target) && runtimeOptions().saveMedia) {
-      await ctx.reply("Pesan media bot disimpan karena opsi -S aktif.");
-      return;
-    }
 
     if (!isBotMessage) {
       if (chat.type !== "group" && chat.type !== "supergroup") {
@@ -48,7 +28,7 @@ export function registerDelete(bot: Bot): void {
       }
       const member = await ctx.api.getChatMember(chat.id, ctx.me.id).catch(() => undefined);
       if (member?.status !== "administrator" && member?.status !== "creator") {
-        await ctx.reply("Jadikan bot ini sebagai admin grup untuk menghapus pesan anggota.");
+        await ctx.reply("Bot ini hanya bisa hapus pesan yang dikirim bot, untuk hapus pesan anggota, jadikan bot ini sebagai admin");
         return;
       }
     }

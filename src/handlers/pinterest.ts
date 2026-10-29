@@ -1,11 +1,8 @@
-import { writeFile } from "node:fs/promises";
-import { extname, join } from "node:path";
 import { InputFile, type Bot } from "grammy";
 import { registerCommand } from "../lib/command.js";
-import { formatInfo, parseInfo } from "../lib/info.js";
-import { bestImageUrl, buildSearchUrl, searchPins } from "../lib/pinterest.js";
-import { makeTempDir, removeDir } from "../lib/temp.js";
-import { archiveMediaFile } from "../lib/runtime.js";
+import { formatPinterestInfo, parseInfo } from "../lib/info.js";
+import { buildSearchUrl, downloadPin, searchPins, topPins } from "../lib/pinterest.js";
+import { archiveMediaBuffer } from "../lib/runtime.js";
 
 export function registerPinterest(bot: Bot): void {
   registerCommand(bot, "pin", async (ctx) => {
@@ -20,62 +17,46 @@ export function registerPinterest(bot: Bot): void {
       return;
     }
 
-    const status = await ctx.reply("Sedang mencari di Pinterest…");
-    const dir = await makeTempDir("pin");
-
+    const status = await ctx.reply("Sedang mencari 4 gambar teratas di Pinterest…");
     try {
       await ctx.replyWithChatAction("upload_photo");
-      const pins = await searchPins(buildSearchUrl(query));
-
+      const pins = topPins(await searchPins(buildSearchUrl(query)));
       if (pins.length === 0) {
-        await ctx.api.editMessageText(
-          status.chat.id,
-          status.message_id,
-          "Gambar Pinterest tidak ditemukan.",
-        );
+        await ctx.api.editMessageText(status.chat.id, status.message_id, "Gambar Pinterest tidak ditemukan.");
         return;
       }
 
-      const pin = pins[0]!;
-      const imageUrl = bestImageUrl(pin);
-      if (!imageUrl) {
-        await ctx.api.editMessageText(
-          status.chat.id,
-          status.message_id,
-          "Pin ditemukan, tetapi gambarnya tidak dapat diunduh.",
-        );
-        return;
-      }
+      const downloads = await Promise.allSettled(pins.map(downloadPin));
+      const images = downloads.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
+      if (images.length === 0) throw new Error("Gambar Pinterest teratas gagal diunduh.");
 
-      const response = await fetch(imageUrl);
-      if (!response.ok) {
-        throw new Error(`Gagal mengunduh gambar (status ${response.status})`);
-      }
-      const buffer = Buffer.from(await response.arrayBuffer());
-      const ext = extname(new URL(imageUrl).pathname) || ".jpg";
-      const path = join(dir, `pin${ext}`);
-      await writeFile(path, buffer);
-
-      const pinId = typeof pin.id === "string" ? pin.id : undefined;
-      const info = parseInfo(pin);
-      const caption = formatInfo({
-        ...info,
-        source: pinId ? `https://www.pinterest.com/pin/${pinId}/` : info.source,
+      const media = images.map(({ pin, buffer }, index) => {
+        void archiveMediaBuffer(buffer, `pinterest-${index + 1}.jpg`);
+        const pinId = typeof pin.id === "string" ? pin.id : undefined;
+        const info = parseInfo(pin);
+        return {
+          type: "photo" as const,
+          media: new InputFile(buffer, `pin-${index + 1}.jpg`),
+          caption: formatPinterestInfo({
+            ...info,
+            source: pinId ? `https://www.pinterest.com/pin/${pinId}/` : info.source,
+          }),
+          parse_mode: "HTML" as const,
+        };
       });
 
       await ctx.api.deleteMessage(status.chat.id, status.message_id).catch(() => undefined);
-      await archiveMediaFile(path);
-      await ctx.replyWithPhoto(
-        new InputFile(path),
-        caption ? { caption, parse_mode: "HTML" } : {},
-      );
+      if (media.length === 1) {
+        const first = media[0]!;
+        await ctx.replyWithPhoto(first.media, { caption: first.caption, parse_mode: first.parse_mode });
+      } else {
+        await ctx.api.sendMediaGroup(status.chat.id, media);
+      }
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       await ctx.api
         .editMessageText(status.chat.id, status.message_id, `Pencarian Pinterest gagal: ${reason}`)
         .catch(() => undefined);
-    } finally {
-      await removeDir(dir);
     }
   });
 }

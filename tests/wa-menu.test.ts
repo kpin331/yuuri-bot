@@ -49,6 +49,11 @@ describe("whatsapp menu", () => {
     assert.equal(sent.length, 1);
     assert.ok(Buffer.isBuffer(sent[0]?.content.image), "expected an image message");
     assert.ok(sent[0]?.content.caption?.includes("Yuuri Bot V1.0"));
+    const menu = sent[0]?.content.caption ?? "";
+    assert.ok(menu.includes("POWERSHELL:"));
+    assert.ok(menu.includes("<Umum>"));
+    assert.ok(menu.includes("================"));
+    assert.ok(menu.split("\n").some((line) => line.startsWith("- .menu")));
   });
 
   it("falls back to a text menu when no profile picture is available", async () => {

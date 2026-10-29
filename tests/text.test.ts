@@ -15,6 +15,7 @@ describe("whatsapp text conversion", () => {
 
   it("unescapes entities after stripping tags", () => {
     assert.equal(htmlToWhatsApp("&lt;b&gt; &amp; &lt;i&gt;"), "<b> & <i>");
+    assert.equal(htmlToWhatsApp("&quot;judul&#39;s&quot;"), '"judul\'s"');
   });
 
   it("escapes WhatsApp control characters", () => {

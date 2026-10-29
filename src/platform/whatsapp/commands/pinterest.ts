@@ -1,9 +1,9 @@
 import { getCommandPrefix } from "../../../lib/config.js";
-import { formatInfo, parseInfo } from "../../../lib/info.js";
-import { bestImageUrl, buildSearchUrl, searchPins } from "../../../lib/pinterest.js";
+import { formatPinterestInfo, parseInfo } from "../../../lib/info.js";
+import { buildSearchUrl, downloadPin, searchPins, topPins } from "../../../lib/pinterest.js";
 import { htmlToWhatsApp } from "../../../lib/text.js";
 import { extractText } from "../message.js";
-import { replyTo, sendImage, sendText } from "../reply.js";
+import { replyTo, sendImageAlbum, sendText } from "../reply.js";
 import type { WaCommand } from "../types.js";
 
 export const pinCommand: WaCommand = {
@@ -17,33 +17,32 @@ export const pinCommand: WaCommand = {
       return;
     }
 
-    await sendText(reply, "Sedang mencari di Pinterest…");
+    await sendText(reply, "Sedang mencari 4 gambar teratas di Pinterest…");
     try {
-      const pins = await searchPins(buildSearchUrl(query));
+      const pins = topPins(await searchPins(buildSearchUrl(query)));
       if (pins.length === 0) {
         await sendText(reply, "Gambar Pinterest tidak ditemukan untuk kata kunci tersebut.");
         return;
       }
 
-      const pin = pins[0]!;
-      const imageUrl = bestImageUrl(pin);
-      if (!imageUrl) {
-        await sendText(reply, "Pin ditemukan, tetapi gambarnya tidak dapat diunduh.");
-        return;
-      }
+      const downloads = await Promise.allSettled(pins.map(downloadPin));
+      const images = downloads.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
+      if (images.length === 0) throw new Error("Gambar Pinterest teratas gagal diunduh.");
 
-      const response = await fetch(imageUrl);
-      if (!response.ok) throw new Error(`Gagal mengunduh gambar (status ${response.status})`);
-      const buffer = Buffer.from(await response.arrayBuffer());
-
-      const pinId = typeof pin.id === "string" ? pin.id : undefined;
-      const info = parseInfo(pin);
-      const caption = formatInfo({
-        ...info,
-        source: pinId ? `https://www.pinterest.com/pin/${pinId}/` : info.source,
+      const album = images.map(({ pin, buffer }, index) => {
+        const pinId = typeof pin.id === "string" ? pin.id : undefined;
+        const info = parseInfo(pin);
+        const caption = formatPinterestInfo({
+          ...info,
+          source: pinId ? `https://www.pinterest.com/pin/${pinId}/` : info.source,
+        });
+        return {
+          image: buffer,
+          caption: htmlToWhatsApp(caption),
+          fileName: `pinterest-${pinId ?? index + 1}.jpg`,
+        };
       });
-
-      await sendImage(reply, buffer, caption ? htmlToWhatsApp(caption) : undefined);
+      await sendImageAlbum(reply, album);
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       await sendText(reply, `Pencarian Pinterest gagal: ${reason}`);

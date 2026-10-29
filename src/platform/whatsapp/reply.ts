@@ -30,16 +30,18 @@ async function send(target: ReplyTarget, content: AnyMessageContent): Promise<vo
     content,
     target.quoted ? { quoted: target.quoted } : {},
   );
-  const id = result?.key.id;
-  if (id) {
-    let ids = sentMessageIds.get(target.jid);
-    if (!ids) {
-      ids = new Set();
-      sentMessageIds.set(target.jid, ids);
-    }
-    ids.add(id);
-    if (ids.size > 5000) ids.delete(ids.values().next().value as string);
+  rememberSentMessage(target.jid, result?.key?.id);
+}
+
+function rememberSentMessage(chatId: string, id: string | null | undefined): void {
+  if (!id) return;
+  let ids = sentMessageIds.get(chatId);
+  if (!ids) {
+    ids = new Set();
+    sentMessageIds.set(chatId, ids);
   }
+  ids.add(id);
+  if (ids.size > 5000) ids.delete(ids.values().next().value as string);
 }
 
 export function sendText(target: ReplyTarget, text: string): Promise<void> {
@@ -53,6 +55,36 @@ export function sendImage(
   fileName = "image.jpg",
 ): Promise<void> {
   return archiveMediaBuffer(image, fileName).then(() => send(target, caption ? { image, caption } : { image }));
+}
+
+export async function sendImageAlbum(
+  target: ReplyTarget,
+  images: Array<{ image: Buffer; caption?: string; fileName?: string }>,
+): Promise<void> {
+  if (images.length === 0) return;
+  if (images.length === 1) {
+    const image = images[0]!;
+    await sendImage(target, image.image, image.caption, image.fileName);
+    return;
+  }
+
+  await Promise.all(images.map((item) => archiveMediaBuffer(item.image, item.fileName ?? "image.jpg")));
+  const parent = await target.sock.sendMessage(
+    target.jid,
+    { album: { expectedImageCount: images.length } },
+    target.quoted ? { quoted: target.quoted } : {},
+  );
+  if (!parent?.key) throw new Error("Tidak dapat membuat album WhatsApp.");
+  rememberSentMessage(target.jid, parent.key.id);
+
+  for (const item of images) {
+    const result = await target.sock.sendMessage(target.jid, {
+      image: item.image,
+      ...(item.caption ? { caption: item.caption } : {}),
+      albumParentKey: parent.key,
+    });
+    rememberSentMessage(target.jid, result?.key?.id);
+  }
 }
 
 export function sendVideo(
