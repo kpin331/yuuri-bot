@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { stickerToPng } from "../../../lib/stickers.js";
 import { makeTempDir, removeDir } from "../../../lib/temp.js";
 import { downloadMedia, isStickerMessage, mediaSourceOf } from "../message.js";
-import { replyTo, sendDocument, sendText } from "../reply.js";
+import { replyTo, sendImage, sendText } from "../reply.js";
 import type { WaCommand } from "../types.js";
 
 export const toimgCommand: WaCommand = {
@@ -26,7 +26,7 @@ export const toimgCommand: WaCommand = {
       await writeFile(input, await downloadMedia(source, message.sock));
       await stickerToPng(input, output);
 
-      await sendDocument(reply, await readFile(output), "sticker.png");
+      await sendImage(reply, await readFile(output), undefined, "sticker.png");
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       await sendText(reply, `Stiker tidak dapat dikonversi: ${reason}`);

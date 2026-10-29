@@ -54,7 +54,7 @@ export function registerToimg(bot: Bot): void {
       await stickerToPng(input, output);
 
       await archiveMediaFile(output, "sticker.png");
-      await ctx.replyWithDocument(new InputFile(output, "sticker.png"));
+      await ctx.replyWithPhoto(new InputFile(output, "sticker.png"));
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       await ctx.reply(`Stiker gagal dikonversi: ${reason}`);

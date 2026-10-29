@@ -283,3 +283,26 @@ export async function stickerToPng(input: string, output: string): Promise<void>
     throw new Error(`Gagal mengonversi stiker dengan ffmpeg: ${stderr.trim()}`);
   }
 }
+
+// Converts a still or animated sticker to an MP4 WhatsApp can render inline.
+export async function stickerToMp4(input: string, output: string): Promise<void> {
+  const { code, stderr } = await exec(TOOLS.ffmpeg, [
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-y",
+    "-i",
+    input,
+    "-an",
+    "-vf",
+    "scale=trunc(iw/2)*2:trunc(ih/2)*2,format=yuv420p",
+    "-c:v",
+    "libx264",
+    "-movflags",
+    "+faststart",
+    output,
+  ], { timeoutMs: 30_000 });
+  if (code !== 0) {
+    throw new Error(`Gagal mengonversi stiker dengan ffmpeg: ${stderr.trim()}`);
+  }
+}

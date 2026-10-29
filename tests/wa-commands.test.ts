@@ -19,6 +19,8 @@ describe("whatsapp command registry", () => {
     assert.equal(findCommand("START")?.name, "menu");
     assert.equal(findCommand("s")?.name, "s");
     assert.equal(findCommand("dl")?.name, "dl");
+    assert.equal(findCommand("tovid")?.name, "tovid");
+    assert.equal(findCommand("qr")?.name, "qr");
     assert.equal(findCommand("nope"), undefined);
   });
 

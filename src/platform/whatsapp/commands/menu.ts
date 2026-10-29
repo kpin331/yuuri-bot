@@ -40,11 +40,15 @@ function sections(): Section[] {
         { name: "s", label: `${p}s — Balas gambar atau video untuk membuat stiker` },
         { name: "smeme", label: `${p}smeme — Ubah gambar atau stiker menjadi meme (atas | bawah)` },
         { name: "toimg", label: `${p}toimg — Balas stiker untuk mengubahnya menjadi PNG` },
+        { name: "tovid", label: `${p}tovid — Balas stiker untuk mengubahnya menjadi video MP4` },
       ],
     },
     {
       title: "Multimedia",
-      items: [{ name: "play", label: `${p}play — Cari di YouTube lalu kirim audio atau video` }],
+      items: [
+        { name: "play", label: `${p}play — Cari di YouTube lalu kirim audio atau video` },
+        { name: "qr", label: `${p}qr — Buat QR atau baca QR dari gambar` },
+      ],
     },
     {
       title: "Kasino virtual",

@@ -14,6 +14,8 @@ import { smemeCommand } from "./smeme.js";
 import { stickerCommand } from "./sticker.js";
 import { sysCommand } from "./sys.js";
 import { toimgCommand } from "./toimg.js";
+import { tovidCommand } from "./tovid.js";
+import { qrCommand } from "./qr.js";
 import { userinfoCommand } from "./userinfo.js";
 import { casinoCommands } from "./casino.js";
 import { purgeCommand } from "./purge.js";
@@ -34,6 +36,8 @@ const ALL: WaCommand[] = [
   stickerCommand,
   smemeCommand,
   toimgCommand,
+  tovidCommand,
+  qrCommand,
   playCommand,
   ...downloadCommands,
   pinCommand,
