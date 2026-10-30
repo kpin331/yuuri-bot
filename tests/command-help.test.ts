@@ -42,6 +42,8 @@ describe("command help", () => {
     assert.match(formatCommandHelp("tf", "whatsapp"), /@mention\|nama\|ID/);
     assert.match(formatCommandHelp("transfer", "telegram"), /balas pesan target/);
     assert.match(formatCommandHelp("pinjam", "telegram"), /bunga flat 10%/);
+    assert.match(formatCommandHelp("lunas", "telegram"), /Cara pakai: \/lunas/);
+    assert.match(formatCommandHelp("lunas", "whatsapp"), /Cara pakai: \.lunas/);
     assert.match(formatCommandHelp("addmoney", "whatsapp"), /khusus pemilik/i);
     assert.match(formatCommandHelp("broadcast", "telegram"), /hanya di chat pribadi/);
     assert.match(formatCommandHelp("#git", "whatsapp"), /chat mana pun/);

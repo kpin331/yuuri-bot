@@ -1,5 +1,5 @@
 import type { Bot, Context } from "grammy";
-import { addMoneyMessage, bankMessage, exchangePointsMessage, loanMessage, parseMoneyAmount, transferMessage } from "../lib/economy.js";
+import { addMoneyMessage, bankMessage, exchangePointsMessage, loanMessage, parseMoneyAmount, payOffAllLoansMessage, transferMessage } from "../lib/economy.js";
 import { findUserByUsername, findUsersByName, hasTelegramUser } from "../lib/db.js";
 import { registerCommand, registerOwnerCommand } from "../lib/command.js";
 
@@ -50,5 +50,8 @@ export function registerEconomy(bot: Bot): void {
   registerOwnerCommand(bot, "addmoney", (ctx) => runTransfer(ctx, String(ctx.match ?? ""), true));
   registerCommand(bot, "pinjam", async (ctx: Context) => {
     await ctx.reply(loanMessage("telegram", String(ctx.from?.id ?? ""), String(ctx.match ?? ""), "/"));
+  });
+  registerCommand(bot, "lunas", async (ctx: Context) => {
+    await ctx.reply(payOffAllLoansMessage("telegram", String(ctx.from?.id ?? "")));
   });
 }

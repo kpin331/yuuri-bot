@@ -172,6 +172,19 @@ export function getAllowedGroups(): string[] {
   return [...new Set(groups)];
 }
 
+// Telegram group chat ids are negative numeric ids, unlike WhatsApp group JIDs.
+export function getAllowedTelegramGroupIds(): number[] {
+  const raw = process.env.ALLOWED_GROUPS;
+  if (!raw) return [];
+  const ids = raw
+    .split(/[,;\n]+/)
+    .map((part) => part.trim())
+    .filter((part) => /^-\d+$/.test(part))
+    .map(Number)
+    .filter((id) => Number.isSafeInteger(id) && id < 0);
+  return [...new Set(ids)];
+}
+
 // Whether the given group chat id may use the bot. Always true when GROUP_ONLY
 // is off; with it on, only listed groups pass and an empty list allows none.
 export function isGroupAllowed(chatId: string | null | undefined): boolean {

@@ -26,6 +26,7 @@ describe("whatsapp command registry", () => {
     assert.equal(findCommand("transfer")?.name, "tf");
     assert.equal(findCommand("addmoney")?.ownerOnly, true);
     assert.equal(findCommand("pinjam")?.name, "pinjam");
+    assert.equal(findCommand("lunas")?.name, "lunas");
     assert.equal(findCommand("bc")?.ownerOnly, true);
     assert.equal(findCommand("broadcast")?.name, "bc");
     assert.equal(findCommand("nope"), undefined);

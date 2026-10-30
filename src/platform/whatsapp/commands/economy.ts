@@ -1,6 +1,6 @@
 import { normalizeMessageContent } from "@whiskeysockets/baileys";
 import { canonicalUserId } from "../identity.js";
-import { addMoneyMessage, bankMessage, exchangePointsMessage, loanMessage, parseMoneyAmount, transferMessage } from "../../../lib/economy.js";
+import { addMoneyMessage, bankMessage, exchangePointsMessage, loanMessage, parseMoneyAmount, payOffAllLoansMessage, transferMessage } from "../../../lib/economy.js";
 import { findWaUsersByName, hasWaUser } from "../../../lib/db.js";
 import { getCommandPrefix, getOwnerPrefix } from "../../../lib/config.js";
 import { replyTo, sendText } from "../reply.js";
@@ -69,6 +69,13 @@ export const economyCommands: WaCommand[] = [
     free: true,
     run: async ({ message, args }) => {
       await sendText(replyTo(message), loanMessage("whatsapp", message.userId, args, getCommandPrefix()));
+    },
+  },
+  {
+    name: "lunas",
+    free: true,
+    run: async ({ message }) => {
+      await sendText(replyTo(message), payOffAllLoansMessage("whatsapp", message.userId));
     },
   },
 ];

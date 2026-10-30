@@ -8,12 +8,14 @@ import { createTestBot } from "./helpers.js";
 describe("owner broadcast", () => {
   const savedOwner = process.env.OWNER_ID;
   const savedEveryone = process.env.EVERYONE;
+  const savedAllowedGroups = process.env.ALLOWED_GROUPS;
 
   beforeEach(() => {
     closeDatabase();
     initDatabase(":memory:");
     process.env.OWNER_ID = "222";
     process.env.EVERYONE = "true";
+    process.env.ALLOWED_GROUPS = "-1001234567890, -1009876543210, 120363012345678901@g.us";
     recordIncoming({ user: { id: 333, firstName: "Recipient" } });
   });
 
@@ -23,21 +25,25 @@ describe("owner broadcast", () => {
     else process.env.OWNER_ID = savedOwner;
     if (savedEveryone === undefined) delete process.env.EVERYONE;
     else process.env.EVERYONE = savedEveryone;
+    if (savedAllowedGroups === undefined) delete process.env.ALLOWED_GROUPS;
+    else process.env.ALLOWED_GROUPS = savedAllowedGroups;
   });
 
-  it("broadcasts text to users on Telegram and keeps the command private-only", async () => {
+  it("broadcasts only to Telegram groups in ALLOWED_GROUPS and keeps the command private-only", async () => {
     const test = createTestBot();
     registerBroadcast(test.bot);
     await test.bot.handleUpdate(test.textUpdate("$bc Halo semua", { fromId: 222 }));
-    const recipientMessage = test.calls.find((call) => call.method === "sendMessage" && call.body.chat_id === 333);
-    assert.equal(recipientMessage?.body.text, "Halo semua");
-    assert.match(test.replies().at(-1) ?? "", /terkirim: 1; gagal: 0/i);
+    const recipientMessages = test.calls.filter((call) => call.method === "sendMessage" && call.body.text === "Halo semua");
+    assert.deepEqual(recipientMessages.map((call) => call.body.chat_id), [-1001234567890, -1009876543210]);
+    assert.ok(recipientMessages.every((call) => call.body.text === "Halo semua"));
+    assert.equal(recipientMessages.some((call) => call.body.chat_id === 333), false);
+    assert.match(test.replies().at(-1) ?? "", /terkirim: 2; gagal: 0/i);
 
     const group = createTestBot();
     registerBroadcast(group.bot);
     await group.bot.handleUpdate(group.textUpdate("$bc jangan kirim", { fromId: 222, chatType: "group" }));
     assert.match(group.replies()[0] ?? "", /chat pribadi/i);
-    assert.equal(group.calls.some((call) => call.body.chat_id === 333), false);
+    assert.equal(group.calls.some((call) => call.body.chat_id === -1001234567890), false);
   });
 
   it("forwards an owner message and registers the WhatsApp alias", async () => {
@@ -52,7 +58,7 @@ describe("owner broadcast", () => {
     } as never;
     await test.bot.handleUpdate(test.textUpdate("$broadcast", { fromId: 222, replyTo }));
     const forwarded = test.calls.find((call) => call.method === "forwardMessage");
-    assert.equal(forwarded?.body.chat_id, 333);
+    assert.equal(forwarded?.body.chat_id, -1001234567890);
     assert.equal(forwarded?.body.message_id, 88);
     assert.equal(findCommand("bc")?.ownerOnly, true);
     assert.equal(findCommand("broadcast")?.name, "bc");

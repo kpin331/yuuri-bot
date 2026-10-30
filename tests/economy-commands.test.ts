@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { closeDatabase, initDatabase, recordIncoming } from "../src/lib/db.js";
 import { getWallet } from "../src/lib/casino-storage.js";
+import { borrowLoan, getActiveLoans } from "../src/lib/loans.js";
 import { registerEconomy } from "../src/handlers/economy.js";
 import { createTestBot } from "./helpers.js";
 
@@ -51,5 +52,16 @@ describe("Telegram wallet transfer commands", () => {
     await test.bot.handleUpdate(test.textUpdate("$addmoney 333 10.000", { fromId: 444 }));
     assert.match(test.replies().at(-1) ?? "", /hanya untuk pemilik/i);
     assert.equal(getWallet("333")?.balance, 110_000);
+  });
+
+  it("registers /lunas to repay all Telegram loans", async () => {
+    const test = createTestBot();
+    registerEconomy(test.bot);
+    const now = Date.now();
+    assert.equal(borrowLoan("telegram", "222", 10_000, now, now + 60_000).ok, true);
+    await test.bot.handleUpdate(test.textUpdate("/lunas", { fromId: 222 }));
+    assert.match(test.replies()[0] ?? "", /Semua pinjaman lunas/);
+    assert.equal(getActiveLoans("telegram", "222").length, 0);
+    assert.equal(getWallet("222")?.balance, 99_000);
   });
 });

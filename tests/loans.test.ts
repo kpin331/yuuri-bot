@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { closeDatabase, initDatabase } from "../src/lib/db.js";
 import { changeBalance, getWallet, isBalanceFrozen, transferBank } from "../src/lib/casino-storage.js";
-import { borrowLoan, freezeDueLoan, getActiveLoans, getDueLoanReminders, markLoanWarned, repayLoan } from "../src/lib/loans.js";
+import { borrowLoan, freezeDueLoan, getActiveLoans, getDueLoanReminders, markLoanWarned, repayAllLoans, repayLoan } from "../src/lib/loans.js";
 
 describe("virtual loans", () => {
   beforeEach(() => {
@@ -66,5 +66,22 @@ describe("virtual loans", () => {
     assert.equal(partial.ok && partial.frozen, true);
     assert.equal(partial.ok && partial.loans[0]?.remaining, 6_000);
     assert.equal(isBalanceFrozen("partial"), true);
+  });
+
+  it("pays every active loan atomically and reports insufficient funds without changing debt", () => {
+    const start = Date.UTC(2026, 0, 1);
+    borrowLoan("telegram", "lunas-user", 10_000, start, start + 20 * 60_000);
+    borrowLoan("telegram", "lunas-user", 5_000, start, start + 21 * 60_000);
+    const paid = repayAllLoans("telegram", "lunas-user", start + 1);
+    assert.equal(paid.ok, true);
+    assert.equal(paid.ok && paid.walletBalance, 98_500);
+    assert.equal(getActiveLoans("telegram", "lunas-user").length, 0);
+
+    borrowLoan("telegram", "short-user", 10_000, start, start + 20 * 60_000);
+    changeBalance("short-user", -100_000);
+    const insufficient = repayAllLoans("telegram", "short-user", start + 1);
+    assert.equal(insufficient.ok, false);
+    if (!insufficient.ok) assert.equal(insufficient.reason, "insufficient");
+    assert.equal(getActiveLoans("telegram", "short-user")[0]?.remaining, 11_000);
   });
 });

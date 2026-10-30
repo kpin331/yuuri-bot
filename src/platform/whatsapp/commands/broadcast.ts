@@ -1,4 +1,4 @@
-import { listWaUserIds } from "../../../lib/db.js";
+import { getAllowedGroups } from "../../../lib/config.js";
 import { canonicalUserId } from "../identity.js";
 import { replyTo, sendText } from "../reply.js";
 import type { WaCommand } from "../types.js";
@@ -33,12 +33,11 @@ export const broadcastCommand: WaCommand = {
       return;
     }
 
-    const targets = listWaUserIds().filter((id) => id !== message.userId);
-    await sendText(reply, `Broadcast dimulai ke ${targets.length} pengguna WhatsApp.`);
+    const targets = getAllowedGroups().filter((jid) => !jid.startsWith("-"));
+    await sendText(reply, `Broadcast dimulai ke ${targets.length} grup WhatsApp dari ALLOWED_GROUPS.`);
     let sent = 0;
     let failed = 0;
-    for (const id of targets) {
-      const jid = id.startsWith("lid:") ? `${id.slice(4)}@lid` : `${id}@s.whatsapp.net`;
+    for (const jid of targets) {
       try {
         await message.sock.sendMessage(jid, quoted ? { forward: quoted, force: true } : { text });
         sent += 1;
@@ -47,6 +46,6 @@ export const broadcastCommand: WaCommand = {
       }
       await wait(400);
     }
-    await sendText(reply, `Broadcast WhatsApp selesai. Terkirim: ${sent}; gagal: ${failed}.`);
+    await sendText(reply, `Broadcast ke grup WhatsApp selesai. Terkirim: ${sent}; gagal: ${failed}.`);
   },
 };

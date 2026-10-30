@@ -1,5 +1,5 @@
 import { addWalletMoney, exchangePoints, getWallet, isBalanceFrozen, transferBank, transferWallet } from "./casino-storage.js";
-import { borrowLoan, getActiveLoans, MAX_ACTIVE_LOANS, MAX_LOAN_AMOUNT, repayLoan, totalDebt } from "./loans.js";
+import { borrowLoan, getActiveLoans, MAX_ACTIVE_LOANS, MAX_LOAN_AMOUNT, repayAllLoans, repayLoan, totalDebt } from "./loans.js";
 
 const money = (amount: number): string => `Rp${amount.toLocaleString("id-ID")}`;
 const packages = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
@@ -110,6 +110,7 @@ export function loanMessage(platform: string, userId: string, args: string, pref
     if (loans.length) lines.push(`Pinjaman aktif: ${loans.length}/${MAX_ACTIVE_LOANS}`);
     lines.push(`Pinjam: ${prefix}pinjam <jumlah> (maks. ${money(MAX_LOAN_AMOUNT)}, bunga flat 10%)`);
     lines.push(`Bayar: ${prefix}pinjam bayar <jumlah>`);
+    lines.push(`Lunasi semua: ${prefix}lunas`);
     return lines.join("\n");
   }
 
@@ -140,4 +141,21 @@ export function loanMessage(platform: string, userId: string, args: string, pref
   const repay = loan?.remaining ?? amount + Math.ceil(amount / 10);
   const minutes = loan ? Math.round((loan.dueAt - at) / 60_000) : 30;
   return `Pinjaman ${money(amount)} berhasil. Bunga 10%: total pelunasan ${money(repay)}. Jatuh tempo sekitar ${minutes} menit. Saldo wallet: ${money(result.walletBalance)}.`;
+}
+
+export function payOffAllLoansMessage(platform: string, userId: string, at: number = Date.now()): string {
+  const wallet = getWallet(userId);
+  if (!wallet) return "Penyimpanan kasino belum siap.";
+  const debt = totalDebt(platform, userId);
+  if (debt === 0) return "Kamu tidak memiliki pinjaman aktif di platform ini.";
+
+  const result = repayAllLoans(platform, userId, at);
+  if (!result.ok) {
+    if (result.reason === "insufficient") {
+      return `Saldo wallet tidak cukup untuk melunasi ${money(debt)}. Saldo: ${money(wallet.balance)}. Kamu bisa membayar sebagian dengan pinjam bayar <jumlah>.`;
+    }
+    return "Pelunasan gagal. Periksa saldo lalu coba lagi.";
+  }
+  const remaining = totalDebt(platform, userId);
+  return `Semua pinjaman lunas. Dibayar ${money(debt)}. Saldo wallet: ${money(result.walletBalance)}.${result.frozen || remaining > 0 ? " Saldo masih dibekukan karena ada pinjaman jatuh tempo lainnya." : " Saldo tidak lagi dibekukan."}`;
 }

@@ -97,29 +97,30 @@ export function borrowLoan(
   }
 }
 
-export function repayLoan(platform: string, userId: string, amount: number, at: number = Date.now()): LoanResult {
+function repay(platform: string, userId: string, amount: number | null, at: number): LoanResult {
   const db = getDb();
   if (!db) return { ok: false, reason: "not-ready" };
-  if (!Number.isSafeInteger(amount) || amount < 1) return { ok: false, reason: "invalid" };
+  if (amount !== null && (!Number.isSafeInteger(amount) || amount < 1)) return { ok: false, reason: "invalid" };
   db.exec("BEGIN IMMEDIATE");
   try {
     const wallet = getWallet(userId);
     const loans = getActiveLoans(platform, userId);
     const debt = loans.reduce((sum, loan) => sum + loan.remaining, 0);
+    const payment = amount ?? debt;
     if (!wallet) {
       db.exec("ROLLBACK");
       return { ok: false, reason: "not-ready" };
     }
-    if (debt === 0 || amount > debt) {
+    if (debt === 0 || payment === 0 || payment > debt) {
       db.exec("ROLLBACK");
       return { ok: false, reason: "invalid" };
     }
-    if (wallet.balance < amount) {
+    if (wallet.balance < payment) {
       db.exec("ROLLBACK");
       return { ok: false, reason: "insufficient" };
     }
 
-    let left = amount;
+    let left = payment;
     for (const loan of loans) {
       if (left === 0) break;
       const payment = Math.min(left, loan.remaining);
@@ -129,7 +130,7 @@ export function repayLoan(platform: string, userId: string, amount: number, at: 
       left -= payment;
     }
     db.prepare("UPDATE casino_wallets SET balance=balance-?, updated_at=? WHERE user_id=? AND balance>=?")
-      .run(amount, at, userId, amount);
+      .run(payment, at, userId, payment);
     const overdue = Number(db.prepare(`SELECT COUNT(*) AS count FROM casino_loans
       WHERE user_id=? AND settled_at IS NULL AND due_at<=?`).get(userId, at)?.count ?? 0) > 0;
     db.prepare("UPDATE casino_wallets SET balance_frozen=?, updated_at=? WHERE user_id=?")
@@ -142,6 +143,14 @@ export function repayLoan(platform: string, userId: string, amount: number, at: 
     db.exec("ROLLBACK");
     throw error;
   }
+}
+
+export function repayLoan(platform: string, userId: string, amount: number, at: number = Date.now()): LoanResult {
+  return repay(platform, userId, amount, at);
+}
+
+export function repayAllLoans(platform: string, userId: string, at: number = Date.now()): LoanResult {
+  return repay(platform, userId, null, at);
 }
 
 export function getDueLoanReminders(now: number = Date.now()): DueLoanReminder[] {

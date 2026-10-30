@@ -1,6 +1,6 @@
 import type { Bot, Context } from "grammy";
 import { registerOwnerCommand } from "../lib/command.js";
-import { listTelegramUserIds } from "../lib/db.js";
+import { getAllowedTelegramGroupIds } from "../lib/config.js";
 
 const wait = (milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
@@ -20,8 +20,8 @@ async function broadcast(ctx: Context): Promise<void> {
     return;
   }
 
-  const targets = listTelegramUserIds().filter((id) => id !== String(ctx.from?.id));
-  await ctx.reply(`Broadcast dimulai ke ${targets.length} pengguna Telegram.`);
+  const targets = getAllowedTelegramGroupIds();
+  await ctx.reply(`Broadcast dimulai ke ${targets.length} grup Telegram dari ALLOWED_GROUPS.`);
   let sent = 0;
   let failed = 0;
   for (const target of targets) {
@@ -37,7 +37,7 @@ async function broadcast(ctx: Context): Promise<void> {
     }
     await wait(40);
   }
-  await ctx.reply(`Broadcast Telegram selesai. Terkirim: ${sent}; gagal: ${failed}.`);
+  await ctx.reply(`Broadcast ke grup Telegram selesai. Terkirim: ${sent}; gagal: ${failed}.`);
 }
 
 export function registerBroadcast(bot: Bot): void {
