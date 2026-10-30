@@ -22,6 +22,12 @@ describe("whatsapp command registry", () => {
     assert.equal(findCommand("tt")?.name, "tt");
     assert.equal(findCommand("tovid")?.name, "tovid");
     assert.equal(findCommand("qr")?.name, "qr");
+    assert.equal(findCommand("tf")?.name, "tf");
+    assert.equal(findCommand("transfer")?.name, "tf");
+    assert.equal(findCommand("addmoney")?.ownerOnly, true);
+    assert.equal(findCommand("pinjam")?.name, "pinjam");
+    assert.equal(findCommand("bc")?.ownerOnly, true);
+    assert.equal(findCommand("broadcast")?.name, "bc");
     assert.equal(findCommand("nope"), undefined);
   });
 

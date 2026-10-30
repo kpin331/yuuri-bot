@@ -3,6 +3,8 @@ import { createBot } from "./bot.js";
 import { closeDatabase, initDatabase } from "./lib/db.js";
 import { checkRequiredTools, TOOLS } from "./lib/tools.js";
 import { startWhatsApp } from "./whatsapp.js";
+import type { WASocket } from "@whiskeysockets/baileys";
+import { startLoanReminderScheduler } from "./lib/loans.js";
 import { configureRuntime, flushRuntimeLogs, flushRuntimeMedia, logRuntimeEnvironment, parseRuntimeArgs, runtimeOptions, writeLog } from "./lib/runtime.js";
 
 config();
@@ -50,13 +52,23 @@ const bot = createBot(token);
 await bot.init();
 console.log(`Bot berjalan sebagai @${bot.botInfo.username}`);
 
-const whatsapp = startWhatsApp();
+let whatsappSocket: WASocket | null = null;
+const stopLoanReminders = startLoanReminderScheduler({
+  telegram: async (userId, text) => { await bot.api.sendMessage(Number(userId), text); },
+  whatsapp: async (userId, text) => {
+    if (!whatsappSocket) throw new Error("WhatsApp belum tersambung.");
+    const jid = userId.startsWith("lid:") ? `${userId.slice(4)}@lid` : `${userId}@s.whatsapp.net`;
+    await whatsappSocket.sendMessage(jid, { text });
+  },
+});
+const whatsapp = startWhatsApp((socket) => { whatsappSocket = socket; });
 
 let shuttingDown = false;
 const shutdown = async (): Promise<void> => {
   if (shuttingDown) return;
   shuttingDown = true;
   writeLog("SHUTDOWN", "bot stopping");
+  stopLoanReminders();
   await Promise.allSettled([bot.stop(), whatsapp?.close()]);
   await flushRuntimeMedia();
   closeDatabase();

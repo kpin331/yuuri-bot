@@ -49,6 +49,7 @@ export function quotaPurchaseMessage(
     today,
   );
   if (!result.ok) {
+    if (result.reason === "frozen") return "Saldo wallet dibekukan karena ada pinjaman jatuh tempo. Lunasi pinjaman terlebih dahulu.";
     if (result.reason === "insufficient") return `Saldo wallet tidak cukup. Saldo saat ini: ${money(wallet.balance)}.`;
     if (result.reason === "limit") return "Jumlah kuota melewati batas angka yang aman.";
     return "Pembelian kuota gagal karena penyimpanan belum siap. Coba lagi.";

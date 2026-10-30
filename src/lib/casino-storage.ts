@@ -6,11 +6,16 @@ export const DAILY_QUOTA_PRICE = 5_000;
 
 export type WalletOperationResult =
   | { ok: true; wallet: Wallet }
-  | { ok: false; reason: "not-ready" | "invalid" | "insufficient" | "limit" };
+  | { ok: false; reason: "not-ready" | "invalid" | "insufficient" | "limit" | "frozen" };
 
 export type QuotaPurchaseResult =
   | { ok: true; wallet: Wallet; quotaLeft: number; dailyBonus: number; permanentBonus: number }
-  | { ok: false; reason: "not-ready" | "invalid" | "insufficient" | "limit" };
+  | { ok: false; reason: "not-ready" | "invalid" | "insufficient" | "limit" | "frozen" };
+
+export function isBalanceFrozen(userId: string): boolean {
+  const row = getDb()?.prepare("SELECT balance_frozen FROM casino_wallets WHERE user_id=?").get(userId);
+  return row ? Number(row.balance_frozen) !== 0 : false;
+}
 
 export function purchaseQuota(
   platform: string,
@@ -34,6 +39,10 @@ export function purchaseQuota(
     if (!wallet || !quota || quota.lastReset !== today) {
       db.exec("ROLLBACK");
       return { ok: false, reason: "not-ready" };
+    }
+    if (isBalanceFrozen(userId)) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "frozen" };
     }
     if (wallet.balance < cost) {
       db.exec("ROLLBACK");
@@ -84,12 +93,28 @@ export function getWallet(userId: string): Wallet | null {
 export function changeBalance(userId: string, delta: number): Wallet | null {
   const db = getDb();
   if (!db || !Number.isSafeInteger(delta)) return null;
-  const wallet = getWallet(userId);
-  const nextBalance = wallet ? wallet.balance + delta : NaN;
-  if (!wallet || !Number.isSafeInteger(nextBalance) || nextBalance < 0) return null;
-  db.prepare("UPDATE casino_wallets SET balance = balance + ?, updated_at = ? WHERE user_id = ?")
-    .run(delta, Date.now(), userId);
-  return getWallet(userId);
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const wallet = getWallet(userId);
+    if (delta < 0 && isBalanceFrozen(userId)) {
+      db.exec("ROLLBACK");
+      return null;
+    }
+    const nextBalance = wallet ? wallet.balance + delta : NaN;
+    if (!wallet || !Number.isSafeInteger(nextBalance) || nextBalance < 0) {
+      db.exec("ROLLBACK");
+      return null;
+    }
+    db.prepare("UPDATE casino_wallets SET balance = balance + ?, updated_at = ? WHERE user_id = ?")
+      .run(delta, Date.now(), userId);
+    const updated = getWallet(userId);
+    if (!updated) throw new Error("Wallet tidak tersedia setelah perubahan saldo.");
+    db.exec("COMMIT");
+    return updated;
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
 }
 
 export function exchangePoints(userId: string, points: number): WalletOperationResult {
@@ -100,6 +125,10 @@ export function exchangePoints(userId: string, points: number): WalletOperationR
   const cash = points * 10_000;
   db.exec("BEGIN IMMEDIATE");
   try {
+    if (isBalanceFrozen(userId)) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "frozen" };
+    }
     const wallet = getWallet(userId);
     if (!wallet) {
       db.exec("ROLLBACK");
@@ -133,6 +162,10 @@ export function transferBank(userId: string, action: "deposit" | "withdraw", amo
 
   db.exec("BEGIN IMMEDIATE");
   try {
+    if (isBalanceFrozen(userId)) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "frozen" };
+    }
     const wallet = getWallet(userId);
     if (!wallet) {
       db.exec("ROLLBACK");
@@ -157,6 +190,77 @@ export function transferBank(userId: string, action: "deposit" | "withdraw", amo
       .run(balance, bankBalance, Date.now(), userId);
     const updated = getWallet(userId);
     if (!updated) throw new Error("Wallet tidak tersedia setelah transaksi bank.");
+    db.exec("COMMIT");
+    return { ok: true, wallet: updated };
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+export type TransferResult =
+  | { ok: true; sender: Wallet; recipient: Wallet }
+  | { ok: false; reason: "not-ready" | "invalid" | "insufficient" | "limit" | "frozen" };
+
+export function transferWallet(senderId: string, recipientId: string, amount: number): TransferResult {
+  const db = getDb();
+  if (!db) return { ok: false, reason: "not-ready" };
+  if (!Number.isSafeInteger(amount) || amount < 1 || senderId === recipientId) return { ok: false, reason: "invalid" };
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const sender = getWallet(senderId);
+    const recipient = getWallet(recipientId);
+    if (!sender || !recipient) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "not-ready" };
+    }
+    if (isBalanceFrozen(senderId)) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "frozen" };
+    }
+    if (sender.balance < amount) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "insufficient" };
+    }
+    if (!Number.isSafeInteger(recipient.balance + amount)) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "limit" };
+    }
+    const at = Date.now();
+    db.prepare("UPDATE casino_wallets SET balance=balance-?, updated_at=? WHERE user_id=? AND balance>=?")
+      .run(amount, at, senderId, amount);
+    db.prepare("UPDATE casino_wallets SET balance=balance+?, updated_at=? WHERE user_id=?")
+      .run(amount, at, recipientId);
+    const updatedSender = getWallet(senderId);
+    const updatedRecipient = getWallet(recipientId);
+    if (!updatedSender || !updatedRecipient) throw new Error("Wallet tidak tersedia setelah transfer.");
+    db.exec("COMMIT");
+    return { ok: true, sender: updatedSender, recipient: updatedRecipient };
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+export function addWalletMoney(userId: string, amount: number): WalletOperationResult {
+  const db = getDb();
+  if (!db) return { ok: false, reason: "not-ready" };
+  if (!Number.isSafeInteger(amount) || amount < 1) return { ok: false, reason: "invalid" };
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const wallet = getWallet(userId);
+    if (!wallet) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "not-ready" };
+    }
+    if (!Number.isSafeInteger(wallet.balance + amount)) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "limit" };
+    }
+    db.prepare("UPDATE casino_wallets SET balance=balance+?, updated_at=? WHERE user_id=?")
+      .run(amount, Date.now(), userId);
+    const updated = getWallet(userId);
+    if (!updated) throw new Error("Wallet tidak tersedia setelah penambahan saldo.");
     db.exec("COMMIT");
     return { ok: true, wallet: updated };
   } catch (error) {

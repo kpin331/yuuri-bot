@@ -45,3 +45,24 @@ describe("owner PowerShell command", () => {
     assert.ok(replies.some((reply) => reply.includes("POWERSHELL_TEST_OK")));
   });
 });
+
+describe("owner #git command", () => {
+  it("allows the owner to start Git review from a group chat", async () => {
+    const replies: string[] = [];
+    const group = { ...context("#git", true, replies), isPrivate: false };
+    assert.equal(await handleShellMessage(group), true);
+    assert.ok(replies.length > 0);
+    assert.equal(replies.some((reply) => /chat pribadi/i.test(reply)), false);
+  });
+
+  it("rejects non-owners and removes Git from $SHELL -E", async () => {
+    const denied: string[] = [];
+    assert.equal(await handleShellMessage(context("#git", false, denied)), true);
+    assert.match(denied[0] ?? "", /Hanya pemilik/);
+
+    const oldForm: string[] = [];
+    assert.equal(await handleShellMessage(context("$SHELL -E git", true, oldForm)), true);
+    assert.ok(oldForm.some((reply) => /SetQuota/.test(reply)));
+    assert.ok(oldForm.every((reply) => !/`\$SHELL -E git`/.test(reply)));
+  });
+});

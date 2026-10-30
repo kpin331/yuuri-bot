@@ -16,7 +16,7 @@ import type { IncomingMessage } from "./types.js";
 export interface ConnectionOptions {
   onIncoming: (message: IncomingMessage) => Promise<void>;
   /** Called every time the socket reaches the "open" state (login complete). */
-  onOpen?: () => void;
+  onOpen?: (socket: WASocket) => void;
 }
 
 export interface WhatsAppConnection {
@@ -110,7 +110,7 @@ export function connectWhatsApp(options: ConnectionOptions): WhatsAppConnection 
         }
         if (update.connection === "open") {
           console.log("WhatsApp terhubung.");
-          options.onOpen?.();
+          options.onOpen?.(sock);
         }
         if (update.connection === "close") {
           const statusCode = (update.lastDisconnect?.error as { output?: { statusCode?: number } })

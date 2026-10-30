@@ -164,6 +164,7 @@ export function initDatabase(path: string = getDbPath()): void {
     CREATE TABLE IF NOT EXISTS casino_wallets (
       user_id TEXT PRIMARY KEY,
       balance INTEGER NOT NULL DEFAULT 100000 CHECK(balance >= 0),
+      balance_frozen INTEGER NOT NULL DEFAULT 0 CHECK(balance_frozen IN (0, 1)),
       points INTEGER NOT NULL DEFAULT 0 CHECK(points >= 0),
       bank_balance INTEGER NOT NULL DEFAULT 0 CHECK(bank_balance >= 0),
       updated_at INTEGER NOT NULL
@@ -177,6 +178,20 @@ export function initDatabase(path: string = getDbPath()): void {
       updated_at INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS casino_loans (
+      loan_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      platform TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      principal INTEGER NOT NULL CHECK(principal > 0),
+      remaining INTEGER NOT NULL CHECK(remaining >= 0),
+      created_at INTEGER NOT NULL,
+      due_at INTEGER NOT NULL,
+      warned_at INTEGER,
+      settled_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_casino_loans_due ON casino_loans(settled_at, due_at, warned_at);
+    CREATE INDEX IF NOT EXISTS idx_casino_loans_user ON casino_loans(platform, user_id, settled_at);
+
     CREATE TABLE IF NOT EXISTS level_points (
       platform TEXT NOT NULL,
       chat_id TEXT NOT NULL,
@@ -187,6 +202,9 @@ export function initDatabase(path: string = getDbPath()): void {
   `);
 
   const walletColumns = database.prepare("PRAGMA table_info(casino_wallets)").all() as Array<{ name: string }>;
+  if (!walletColumns.some((column) => column.name === "balance_frozen")) {
+    database.exec("ALTER TABLE casino_wallets ADD COLUMN balance_frozen INTEGER NOT NULL DEFAULT 0 CHECK(balance_frozen IN (0, 1))");
+  }
   if (!walletColumns.some((column) => column.name === "bank_balance")) {
     database.exec("ALTER TABLE casino_wallets ADD COLUMN bank_balance INTEGER NOT NULL DEFAULT 0 CHECK(bank_balance >= 0)");
   }
@@ -312,6 +330,27 @@ export function findUserByUsername(username: string): UserRecord | null {
   if (normalized.length === 0) return null;
   const row = db.prepare("SELECT * FROM users WHERE username = ?").get(normalized);
   return row ? toRecord(row as Record<string, unknown>) : null;
+}
+
+export function findUsersByName(name: string): UserRecord[] {
+  if (!db) return [];
+  const normalized = name.trim().toLowerCase();
+  if (!normalized) return [];
+  return db.prepare(`SELECT * FROM users WHERE lower(trim(COALESCE(first_name, '') || ' ' || COALESCE(last_name, ''))) = ?
+    OR lower(COALESCE(username, '')) = ? ORDER BY user_id LIMIT 10`)
+    .all(normalized, normalized.replace(/^@/, ""))
+    .map((row) => toRecord(row as Record<string, unknown>));
+}
+
+export function hasTelegramUser(userId: string): boolean {
+  if (!db || !/^\d+$/.test(userId)) return false;
+  return db.prepare("SELECT 1 AS found FROM users WHERE user_id=?").get(Number(userId)) !== undefined;
+}
+
+export function listTelegramUserIds(): string[] {
+  if (!db) return [];
+  return db.prepare("SELECT user_id FROM users ORDER BY user_id")
+    .all().map((row) => String(row.user_id));
 }
 
 // === Command enable/disable state ===
@@ -554,6 +593,24 @@ export function recordWaIncoming(activity: WaIncomingActivity): void {
     db.exec("ROLLBACK");
     throw error;
   }
+}
+
+export function findWaUsersByName(name: string): string[] {
+  if (!db) return [];
+  const normalized = name.trim().toLowerCase();
+  if (!normalized) return [];
+  return db.prepare("SELECT user_id FROM wa_users WHERE lower(trim(display_name)) = ? ORDER BY user_id LIMIT 10")
+    .all(normalized).map((row) => String(row.user_id));
+}
+
+export function hasWaUser(userId: string): boolean {
+  return db?.prepare("SELECT 1 AS found FROM wa_users WHERE user_id=?").get(userId) !== undefined;
+}
+
+export function listWaUserIds(): string[] {
+  if (!db) return [];
+  return db.prepare("SELECT user_id FROM wa_users ORDER BY user_id")
+    .all().map((row) => String(row.user_id));
 }
 
 export function getWaStats(userId: string): WaUserStats | null {

@@ -77,6 +77,7 @@ export async function handleShellMessage(context: ShellMessageContext): Promise<
   const text = context.text.trim();
   const shellCommand = /^\$SHELL\s+-E(?:\s+([\s\S]*))?$/i.exec(text);
   const powershellCommand = /^POWERSHELL\s*:\s*([\s\S]*)$/i.exec(text);
+  const gitCommand = /^#git$/i.test(text);
 
   if (pending && pending.expiresAt <= Date.now()) pending = null;
 
@@ -117,6 +118,19 @@ export async function handleShellMessage(context: ShellMessageContext): Promise<
         ? "Sesi PowerShell dihentikan karena melewati batas waktu 120 detik."
         : "Sesi PowerShell gagal dijalankan atau keluarannya melewati batas.");
     }
+    return true;
+  }
+
+  if (gitCommand) {
+    if (!context.isOwner) {
+      await context.reply("Hanya pemilik bot yang dapat menggunakan #git.");
+      return true;
+    }
+    if (pending && sameContext(pending, context)) {
+      pending = null;
+      await context.reply("Proses sebelumnya dibatalkan.");
+    }
+    await startGitCommit(context);
     return true;
   }
 
@@ -194,19 +208,6 @@ async function runShellAction(context: ShellMessageContext, input: string): Prom
     return;
   }
 
-  if (name === "git") {
-    if (args.length > 0) {
-      await context.reply("Format: `$SHELL -E git`.");
-      return;
-    }
-    if (!context.isPrivate) {
-      await context.reply("Gunakan perintah git di chat pribadi dengan bot.");
-      return;
-    }
-    await startGitCommit(context);
-    return;
-  }
-
   if (name === "secret") {
     if (args.length > 0) {
       await context.reply("Format: `$SHELL -E secret`.");
@@ -222,7 +223,7 @@ async function runShellAction(context: ShellMessageContext, input: string): Prom
   }
 
   await context.reply(
-    "Perintah tersedia: `$SHELL -E SetQuota <angka>`, `$SHELL -E pause`, `$SHELL -E resume`, `$SHELL -E git`, `$SHELL -E secret`.",
+    "Perintah tersedia: `$SHELL -E SetQuota <angka>`, `$SHELL -E pause`, `$SHELL -E resume`, `$SHELL -E secret`.",
   );
 }
 
@@ -272,7 +273,7 @@ async function handlePendingAction(context: ShellMessageContext, action: Pending
   const current = await gitStatus();
   if (!current.ok || current.status !== action.status) {
     pending = null;
-    await context.reply("Daftar perubahan repo berubah. Jalankan `$SHELL -E git` lagi untuk meninjau ulang.");
+    await context.reply("Daftar perubahan repo berubah. Jalankan #git lagi untuk meninjau ulang.");
     return;
   }
 

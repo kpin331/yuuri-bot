@@ -3,7 +3,7 @@ import { checkRateLimit, consumeQuota, getQuota } from "../core/access.js";
 import { formatWait } from "../core/time.js";
 import { isAdmin, isOwner } from "../lib/config.js";
 import { playCasino, validateCasino, type CasinoGame } from "../lib/casino.js";
-import { getWallet } from "../lib/casino-storage.js";
+import { getWallet, isBalanceFrozen } from "../lib/casino-storage.js";
 import { registerCommand } from "../lib/command.js";
 
 async function run(ctx: Context, game: CasinoGame): Promise<void> {
@@ -13,6 +13,7 @@ async function run(ctx: Context, game: CasinoGame): Promise<void> {
   const args = String(ctx.match ?? "").trim();
   const wallet = getWallet(userId);
   if (!wallet) { await ctx.reply("Penyimpanan kasino belum siap."); return; }
+  if (isBalanceFrozen(userId)) { await ctx.reply("Saldo wallet dibekukan karena ada pinjaman jatuh tempo. Lunasi pinjaman terlebih dahulu."); return; }
   const validation = validateCasino(game, args, userId);
   if (validation) { await ctx.reply(validation); return; }
   const owner = isOwner(user.id);

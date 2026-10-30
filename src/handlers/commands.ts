@@ -32,6 +32,8 @@ const SECTIONS: MenuSection[] = [
       { command: "rank", label: "/rank — Tampilkan level dan XP-mu di grup ini" },
       { command: "leaderboard", label: "/leaderboard — Tampilkan peringkat XP grup ini" },
       { command: "wallet", label: "/wallet — Tampilkan saldo virtual dan Point" },
+      { command: "tf", label: "/tf <target> <jumlah> — Transfer saldo wallet" },
+      { command: "pinjam", label: "/pinjam <jumlah> — Pinjaman saldo virtual" },
       { command: "quota", label: "/quota — Lihat, beli kuota, atau upgrade batas harian" },
       { command: "cara_pakai", label: "/cara_pakai <command> — Cari cara kerja dan cara pakai command" },
     ],
@@ -95,6 +97,9 @@ const SECTIONS: MenuSection[] = [
 
 const FOOTER: string[] = [
   "- $purge - Hapus file media di folder Media (khusus pemilik)",
+    "- $addmoney <target> <jumlah> - Tambah saldo wallet (khusus pemilik)",
+    "- $bc <pesan> - Siarkan ke pengguna Telegram (khusus pemilik, chat pribadi)",
+    "- #git - Tinjau perubahan, lalu commit dan push (khusus pemilik)",
   "- $sys — Tampilkan informasi sistem (khusus pemilik bot)",
   "- POWERSHELL: {perintah} - Jalankan di sesi baru (khusus pemilik bot)",
   "- !&lt;perintah&gt; on|off — Aktifkan atau nonaktifkan perintah (admin)",

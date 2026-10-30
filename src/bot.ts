@@ -25,6 +25,7 @@ import { registerToimg } from "./handlers/toimg.js";
 import { registerTracking } from "./handlers/tracking.js";
 import { registerUserinfo } from "./handlers/userinfo.js";
 import { registerAdminCommands } from "./platform/admincommands.js";
+import { registerBroadcast } from "./handlers/broadcast.js";
 import { isAuthorized, isEveryoneAllowed, isOwner } from "./lib/config.js";
 import { writeLog } from "./lib/runtime.js";
 
@@ -80,6 +81,7 @@ export function createBot(token: string): Bot {
   registerCommandHelp(bot);
   registerCasino(bot);
   registerEconomy(bot);
+  registerBroadcast(bot);
   registerQuota(bot);
   registerSticker(bot);
   registerSmeme(bot);

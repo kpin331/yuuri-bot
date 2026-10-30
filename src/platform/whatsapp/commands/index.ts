@@ -20,6 +20,7 @@ import { userinfoCommand } from "./userinfo.js";
 import { casinoCommands } from "./casino.js";
 import { purgeCommand } from "./purge.js";
 import { economyCommands } from "./economy.js";
+import { broadcastCommand } from "./broadcast.js";
 
 // Every WhatsApp command, in menu order. Command names match the Telegram ones
 // so the shared enable/disable state applies to both platforms.
@@ -32,6 +33,7 @@ const ALL: WaCommand[] = [
   quotaCommand,
   ...casinoCommands,
   ...economyCommands,
+  broadcastCommand,
   ...rankCommands,
   stickerCommand,
   smemeCommand,

@@ -9,6 +9,7 @@ import {
 } from "../../lib/config.js";
 import { isCommandEnabled, isDatabaseReady, isWaBanned, recordWaIncoming } from "../../lib/db.js";
 import { addXp } from "../../lib/xp-storage.js";
+import { isBalanceFrozen } from "../../lib/casino-storage.js";
 import { rollXp } from "../../lib/xp.js";
 import { findCommand } from "./commands/index.js";
 import { menuCommand } from "./commands/menu.js";
@@ -243,6 +244,11 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
       await sendText(reply, validationError);
       return;
     }
+  }
+
+  if (command.quotaCost && isBalanceFrozen(message.userId)) {
+    await sendText(reply, "Saldo wallet dibekukan karena ada pinjaman jatuh tempo. Lunasi pinjaman terlebih dahulu.");
+    return;
   }
 
   if (command.quotaCost && role !== "owner") {

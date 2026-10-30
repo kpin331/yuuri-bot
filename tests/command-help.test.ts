@@ -38,6 +38,16 @@ describe("command help", () => {
     assert.match(formatCommandHelp("tt", "whatsapp"), /\.tt <tautan TikTok>/);
   });
 
+  it("documents transfers, loans, owner grants, broadcasts, and #git", () => {
+    assert.match(formatCommandHelp("tf", "whatsapp"), /@mention\|nama\|ID/);
+    assert.match(formatCommandHelp("transfer", "telegram"), /balas pesan target/);
+    assert.match(formatCommandHelp("pinjam", "telegram"), /bunga flat 10%/);
+    assert.match(formatCommandHelp("addmoney", "whatsapp"), /khusus pemilik/i);
+    assert.match(formatCommandHelp("broadcast", "telegram"), /hanya di chat pribadi/);
+    assert.match(formatCommandHelp("#git", "whatsapp"), /chat mana pun/);
+    assert.doesNotMatch(formatCommandHelp("$SHELL", "telegram"), /SHELL -E git/);
+  });
+
   it("offers a command list for an empty query and handles unknown commands", () => {
     assert.match(formatCommandHelp("", "whatsapp"), /Command yang tersedia:.*pin/);
     assert.match(formatCommandHelp("does-not-exist", "telegram"), /belum tersedia/);
