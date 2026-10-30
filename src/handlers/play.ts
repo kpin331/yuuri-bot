@@ -19,6 +19,7 @@ import {
   type PlaySession,
 } from "../lib/play.js";
 import { parsePlayLink, resolvePlayInput } from "../lib/playlink.js";
+import { fetchPlayThumbnail } from "../lib/play-thumbnail.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
 import { downloadAudio, downloadVideo, probeMeta, searchYouTube } from "../lib/youtube.js";
 import { archiveMediaFile } from "../lib/runtime.js";
@@ -51,6 +52,45 @@ function formatPrompt(meta: PlayMeta, note?: string): string {
   if (note) lines.push("", `ℹ️ ${escapeHtml(note)}`);
   lines.push("", "Pilih format:");
   return lines.join("\n");
+}
+
+async function showFormatPrompt(
+  ctx: Context,
+  meta: PlayMeta,
+  note: string | undefined,
+  chatId: number,
+  messageId: number,
+): Promise<void> {
+  const caption = formatPrompt(meta, note);
+  if (meta.thumbnail) {
+    const thumbnail = await fetchPlayThumbnail(meta.thumbnail);
+    if (thumbnail) {
+      try {
+        await ctx.api.sendPhoto(chatId, new InputFile(thumbnail.data, thumbnail.fileName), {
+          caption,
+          parse_mode: "HTML",
+          reply_markup: formatKeyboard(),
+        });
+        await ctx.api.deleteMessage(chatId, messageId).catch(() => undefined);
+        return;
+      } catch {
+        // If the thumbnail cannot be sent, keep the existing text prompt.
+      }
+    }
+  }
+  await ctx.api.editMessageText(chatId, messageId, caption, {
+    parse_mode: "HTML",
+    reply_markup: formatKeyboard(),
+  }).catch(() => undefined);
+}
+
+async function updateFormatProgress(ctx: Context, text: string): Promise<void> {
+  const message = ctx.callbackQuery?.message;
+  if (message && "photo" in message) {
+    await ctx.api.editMessageCaption(message.chat.id, message.message_id, { caption: text }).catch(() => undefined);
+    return;
+  }
+  await ctx.editMessageText(text).catch(() => undefined);
 }
 
 async function sendMedia(
@@ -164,10 +204,7 @@ async function handlePlay(ctx: Context): Promise<void> {
     note,
   });
 
-  await ctx.api.editMessageText(status.chat.id, status.message_id, formatPrompt(value.meta, note), {
-    parse_mode: "HTML",
-    reply_markup: formatKeyboard(),
-  });
+  await showFormatPrompt(ctx, value.meta, note, status.chat.id, status.message_id);
 }
 
 async function handlePick(ctx: Context, session: PlaySession, index: number): Promise<void> {
@@ -180,25 +217,24 @@ async function handlePick(ctx: Context, session: PlaySession, index: number): Pr
   await ctx.answerCallbackQuery().catch(() => undefined);
   await ctx.editMessageText("Memuat…").catch(() => undefined);
 
-  const meta = await probeMeta(result.url);
-  if (!meta) {
-    session.stage = "choose";
-    await ctx
-      .editMessageText(formatSearchList(session.results), {
-        parse_mode: "HTML",
-        reply_markup: chooseKeyboard(session),
-      })
-      .catch(() => undefined);
-    return;
-  }
+  const probed = await probeMeta(result.url);
+  const meta = probed
+    ? { ...probed, thumbnail: probed.thumbnail ?? result.thumbnail }
+    : {
+      id: result.id,
+      title: result.title,
+      uploader: result.uploader,
+      duration: result.duration,
+      webpageUrl: result.url,
+      thumbnail: result.thumbnail,
+    };
 
   session.selected = result;
   session.meta = meta;
   session.stage = "format";
 
-  await ctx
-    .editMessageText(formatPrompt(meta), { parse_mode: "HTML", reply_markup: formatKeyboard() })
-    .catch(() => undefined);
+  const message = ctx.callbackQuery?.message;
+  if (message) await showFormatPrompt(ctx, meta, undefined, message.chat.id, message.message_id);
 }
 
 async function handleFormat(ctx: Context, session: PlaySession, kind: PlayKind): Promise<void> {
@@ -209,25 +245,25 @@ async function handleFormat(ctx: Context, session: PlaySession, kind: PlayKind):
   sessions.delete(session.chatId, session.userId);
 
   const label = kind === "audio" ? "audio" : "video";
-  await ctx.editMessageText(`Sedang mengunduh ${label}…`).catch(() => undefined);
+  await updateFormatProgress(ctx, `Sedang mengunduh ${label}…`);
   await ctx.replyWithChatAction(kind === "audio" ? "upload_voice" : "upload_video");
 
   const dir = await makeTempDir("play");
   try {
     if (!(await hasFreeSpace(dir, MAX_UPLOAD_BYTES))) {
-      await ctx.editMessageText("Ruang penyimpanan tidak cukup untuk mengunduh dengan aman.").catch(() => undefined);
+      await updateFormatProgress(ctx, "Ruang penyimpanan tidak cukup untuk mengunduh dengan aman.");
       return;
     }
 
     const download = kind === "audio" ? await downloadAudio(dir, url) : await downloadVideo(dir, url);
     if (!download) {
-      await ctx.editMessageText(`Tidak dapat mengunduh ${label}.`).catch(() => undefined);
+      await updateFormatProgress(ctx, `Tidak dapat mengunduh ${label}.`);
       return;
     }
 
     const size = (await stat(download.path)).size;
     if (exceedsUploadLimit(size)) {
-      await ctx.editMessageText(uploadLimitError(size)).catch(() => undefined);
+      await updateFormatProgress(ctx, uploadLimitError(size));
       return;
     }
 
@@ -236,7 +272,7 @@ async function handleFormat(ctx: Context, session: PlaySession, kind: PlayKind):
     await ctx.deleteMessage().catch(() => undefined);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    await ctx.editMessageText(`Pengunduhan gagal: ${reason}`).catch(() => undefined);
+    await updateFormatProgress(ctx, `Pengunduhan gagal: ${reason}`);
   } finally {
     await removeDir(dir);
   }

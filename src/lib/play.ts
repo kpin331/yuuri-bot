@@ -15,6 +15,7 @@ export interface SearchResult {
   url: string;
   duration?: number;
   uploader?: string;
+  thumbnail?: string;
 }
 
 export interface PlayMeta {
@@ -23,6 +24,7 @@ export interface PlayMeta {
   uploader?: string;
   duration?: number;
   webpageUrl?: string;
+  thumbnail?: string;
   isLive?: boolean;
 }
 
@@ -77,6 +79,27 @@ function entryUrl(entry: Record<string, unknown>, id: string | undefined): strin
   return id ? `https://www.youtube.com/watch?v=${id}` : undefined;
 }
 
+function entryThumbnail(entry: Record<string, unknown>, id: string | undefined, url: string): string | undefined {
+  const values = [entry.thumbnail, ...(Array.isArray(entry.thumbnails) ? entry.thumbnails.map((item) => asRecord(item)?.url) : [])];
+  const thumbnail = values.find((value) => typeof value === "string" && /^https?:\/\//i.test(value));
+  if (typeof thumbnail === "string") return thumbnail;
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    if (id && (
+      host === "youtu.be"
+      || host === "youtube.com"
+      || host.endsWith(".youtube.com")
+      || host === "youtube-nocookie.com"
+      || host.endsWith(".youtube-nocookie.com")
+    )) {
+      return `https://i.ytimg.com/vi/${encodeURIComponent(id)}/hqdefault.jpg`;
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
+}
+
 export function parseSearchEntries(raw: unknown, count: number = SEARCH_COUNT): SearchResult[] {
   const root = asRecord(raw);
   if (!root || !Array.isArray(root.entries)) return [];
@@ -106,6 +129,7 @@ export function parseSearchEntries(raw: unknown, count: number = SEARCH_COUNT): 
       url,
       duration: typeof entry.duration === "number" ? entry.duration : undefined,
       uploader,
+      thumbnail: entryThumbnail(entry, id, url),
     });
 
     if (results.length >= count) break;
@@ -121,6 +145,14 @@ export function extractPlayMeta(raw: unknown): PlayMeta | null {
   const title = typeof data.title === "string" ? data.title.trim() : "";
   if (!title) return null;
 
+  const webpageUrl =
+    typeof data.webpage_url === "string"
+      ? data.webpage_url
+      : typeof data.original_url === "string"
+        ? data.original_url
+        : undefined;
+  const thumbnail = entryThumbnail(data, typeof data.id === "string" ? data.id : undefined, webpageUrl ?? "");
+
   return {
     id: typeof data.id === "string" ? data.id : undefined,
     title,
@@ -131,12 +163,8 @@ export function extractPlayMeta(raw: unknown): PlayMeta | null {
           ? data.channel
           : undefined,
     duration: typeof data.duration === "number" ? data.duration : undefined,
-    webpageUrl:
-      typeof data.webpage_url === "string"
-        ? data.webpage_url
-        : typeof data.original_url === "string"
-          ? data.original_url
-          : undefined,
+    webpageUrl,
+    ...(thumbnail ? { thumbnail } : {}),
     isLive: data.is_live === true,
   };
 }

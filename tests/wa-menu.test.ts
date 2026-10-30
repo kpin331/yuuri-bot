@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
+import { configureRuntime, runtimeOptions } from "../src/lib/runtime.js";
 import { menuCommand } from "../src/platform/whatsapp/commands/menu.js";
 import type { IncomingMessage } from "../src/platform/whatsapp/types.js";
 
@@ -25,9 +26,14 @@ function makeMessage(sock: object): IncomingMessage {
 }
 
 const originalFetch = globalThis.fetch;
+const originalRuntime = runtimeOptions();
+const originalAllowedGroups = process.env.ALLOWED_GROUPS;
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  configureRuntime(originalRuntime);
+  if (originalAllowedGroups === undefined) delete process.env.ALLOWED_GROUPS;
+  else process.env.ALLOWED_GROUPS = originalAllowedGroups;
 });
 
 describe("whatsapp menu", () => {
@@ -56,8 +62,13 @@ describe("whatsapp menu", () => {
     assert.ok(menu.includes(".bank [deposit|tarik jumlah]"));
     assert.ok(menu.includes(".quota — Lihat, beli kuota, atau upgrade batas harian"));
     assert.ok(menu.includes(".tt — Unduh dari TikTok"));
-    assert.ok(menu.includes(".tf <target> <jumlah> — Transfer saldo wallet"));
-    assert.ok(menu.includes(".pinjam <jumlah> — Pinjaman virtual, bunga 10%"));
+    const financeStart = menu.indexOf("<Keuangan virtual>");
+    const financeEnd = menu.indexOf("<Pengunduh>", financeStart);
+    const financeMenu = menu.slice(financeStart, financeEnd);
+    assert.match(financeMenu, /\.tf <target> <jumlah> .*Transfer saldo wallet/);
+    assert.match(financeMenu, /\.pinjam <jumlah> .*Pinjaman virtual, bunga 10%/);
+    assert.ok(financeMenu.includes(".lunas - Lunasi semua pinjaman aktif"));
+    assert.doesNotMatch(menu.slice(0, financeStart), /\.tf |\.pinjam |\.lunas/);
     assert.ok(menu.includes("$addmoney <target> <jumlah>"));
     assert.ok(menu.includes("$bc <pesan>"));
     assert.ok(menu.includes("#git"));
@@ -82,5 +93,44 @@ describe("whatsapp menu", () => {
     assert.equal(sent.length, 1);
     assert.ok(sent[0]?.content.text?.includes("Yuuri Bot V1.0"));
     assert.equal(sent[0]?.content.image, undefined);
+  });
+
+  it("sends CHANGELOG.txt to allowlisted WhatsApp groups when the owner opens the menu with the flag", async () => {
+    process.env.ALLOWED_GROUPS = "12345@g.us, -100987654321";
+    configureRuntime({ ...originalRuntime, changelog: true });
+    const sent: Sent[] = [];
+    const sock = {
+      user: { id: "6285297384286:15@s.whatsapp.net" },
+      profilePictureUrl: async () => undefined,
+      sendMessage: async (jid: string, content: Sent["content"]) => {
+        sent.push({ jid, content });
+        return {};
+      },
+    };
+
+    await menuCommand.run({ message: makeMessage(sock), args: "", role: "owner" });
+
+    const changelog = sent.find((item) => item.jid === "12345@g.us");
+    assert.match(changelog?.content.text ?? "", /^changelog\r?\nubah:/i);
+    assert.equal(sent.some((item) => item.jid === "-100987654321@g.us"), false);
+    assert.ok(sent.some((item) => item.jid === "111@s.whatsapp.net"), "the owner still receives the menu");
+  });
+
+  it("does not broadcast the changelog when a non-owner opens the menu", async () => {
+    process.env.ALLOWED_GROUPS = "12345@g.us";
+    configureRuntime({ ...originalRuntime, changelog: true });
+    const sent: Sent[] = [];
+    const sock = {
+      user: { id: "6285297384286:15@s.whatsapp.net" },
+      profilePictureUrl: async () => undefined,
+      sendMessage: async (jid: string, content: Sent["content"]) => {
+        sent.push({ jid, content });
+        return {};
+      },
+    };
+
+    await menuCommand.run({ message: makeMessage(sock), args: "", role: "member" });
+
+    assert.equal(sent.some((item) => item.jid === "12345@g.us"), false);
   });
 });

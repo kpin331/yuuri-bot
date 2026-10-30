@@ -8,10 +8,11 @@ import {
   type PlayMeta,
 } from "../../../lib/play.js";
 import { parsePlayLink, resolvePlayInput } from "../../../lib/playlink.js";
+import { fetchPlayThumbnail } from "../../../lib/play-thumbnail.js";
 import { makeTempDir, removeDir } from "../../../lib/temp.js";
 import { htmlToWhatsApp } from "../../../lib/text.js";
 import { downloadAudio, downloadVideo, probeMeta, searchYouTube } from "../../../lib/youtube.js";
-import { replyTo, sendAudio, sendText, sendVideo } from "../reply.js";
+import { replyTo, sendAudio, sendImage, sendText, sendVideo } from "../reply.js";
 import { WaPlaySessionStore, type WaPlaySession } from "../session.js";
 import type { IncomingMessage, WaCommand } from "../types.js";
 
@@ -21,6 +22,29 @@ function formatPrompt(meta: PlayMeta, note?: string): string {
   const caption = htmlToWhatsApp(buildPlayCaption(meta, "video"));
   const noteLine = note ? `\n\nℹ️ ${note}` : "";
   return `${caption}${noteLine}\n\nBalas *1* untuk audio atau *2* untuk video.`;
+}
+
+async function sendFormatPrompt(message: IncomingMessage, meta: PlayMeta, note?: string): Promise<void> {
+  const reply = replyTo(message);
+  if (meta.thumbnail) {
+    const thumbnail = await fetchPlayThumbnail(meta.thumbnail);
+    if (thumbnail) {
+      let imageSent = false;
+      try {
+        const caption = htmlToWhatsApp(buildPlayCaption(meta, "video"));
+        await sendImage(reply, thumbnail.data, caption, thumbnail.fileName);
+        imageSent = true;
+      } catch {
+        // Keep the text prompt available when sending the preview image fails.
+      }
+      if (imageSent) {
+        const noteLine = note ? `\n${note}\n` : "";
+        await sendText(reply, `${noteLine}Balas *1* untuk audio atau *2* untuk video.`);
+        return;
+      }
+    }
+  }
+  await sendText(reply, formatPrompt(meta, note));
 }
 
 async function deliver(message: IncomingMessage, session: WaPlaySession, kind: PlayKind): Promise<void> {
@@ -127,7 +151,7 @@ export const playCommand: WaCommand = {
       meta: value.meta,
       note,
     });
-    await sendText(reply, formatPrompt(value.meta, note));
+    await sendFormatPrompt(message, value.meta, note);
   },
 };
 
@@ -156,17 +180,20 @@ export async function maybeHandlePlayReply(message: IncomingMessage): Promise<bo
     }
 
     const selected = session.results[num - 1]!;
-    const meta =
-      (await probeMeta(selected.url)) ?? {
+    const probed = await probeMeta(selected.url);
+    const meta = probed
+      ? { ...probed, thumbnail: probed.thumbnail ?? selected.thumbnail }
+      : {
         title: selected.title,
         uploader: selected.uploader,
         duration: selected.duration,
         webpageUrl: selected.url,
+        thumbnail: selected.thumbnail,
       };
     session.selected = selected;
     session.meta = meta;
     session.stage = "format";
-    await sendText(reply, formatPrompt(meta));
+    await sendFormatPrompt(message, meta);
     return true;
   }
 

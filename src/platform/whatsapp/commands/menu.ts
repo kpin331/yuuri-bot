@@ -1,5 +1,8 @@
-import { getCommandPrefix } from "../../../lib/config.js";
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { getAllowedGroups, getCommandPrefix } from "../../../lib/config.js";
 import { isCommandEnabled } from "../../../lib/db.js";
+import { runtimeOptions } from "../../../lib/runtime.js";
 import { replyTo, sendImage, sendText } from "../reply.js";
 import type { WaCommand } from "../types.js";
 
@@ -31,8 +34,6 @@ function sections(): Section[] {
         { name: "rank", label: `${p}rank — Tampilkan tingkat dan XP di grup ini` },
         { name: "leaderboard", label: `${p}leaderboard — Tampilkan peringkat XP grup ini` },
         { name: "wallet", label: `${p}wallet — Tampilkan saldo virtual dan Point` },
-        { name: "tf", label: `${p}tf <target> <jumlah> — Transfer saldo wallet` },
-        { name: "pinjam", label: `${p}pinjam <jumlah> — Pinjaman virtual, bunga 10%` },
         { name: "cara-pakai", label: `${p}cara-pakai <command> - Cari cara kerja dan cara pakai command` },
       ],
     },
@@ -66,6 +67,9 @@ function sections(): Section[] {
       items: [
         { name: "tukar", label: `${p}tukar [jumlah Point 1-50] - Tukar Point menjadi saldo wallet` },
         { name: "bank", label: `${p}bank [deposit|tarik jumlah] - Kelola saldo bank virtual` },
+        { name: "tf", label: `${p}tf <target> <jumlah> - Transfer saldo wallet` },
+        { name: "pinjam", label: `${p}pinjam <jumlah> - Pinjaman virtual, bunga 10%` },
+        { name: "lunas", label: `${p}lunas - Lunasi semua pinjaman aktif` },
       ],
     },
     {
@@ -110,7 +114,7 @@ export function buildMenu(): string {
     "<Sistem>",
     "- $purge - Hapus file media di folder Media (khusus pemilik)",
     "- $addmoney <target> <jumlah> - Tambah saldo wallet (khusus pemilik)",
-    "- $bc <pesan> - Siarkan ke pengguna WhatsApp (khusus pemilik, chat pribadi)",
+    "- $bc <pesan> - Siarkan ke grup ALLOWED_GROUPS (khusus pemilik, chat pribadi)",
     "- $sys — Tampilkan info sistem (khusus pemilik)",
     "- POWERSHELL: {perintah} - Jalankan di sesi baru (khusus pemilik)",
     "- #git - Tinjau perubahan, lalu commit dan push (khusus pemilik)",
@@ -124,9 +128,25 @@ export const menuCommand: WaCommand = {
   name: "menu",
   aliases: ["start"],
   free: true,
-  run: async ({ message }) => {
+  run: async ({ message, role }) => {
     const reply = replyTo(message);
     const caption = buildMenu();
+
+    if (role === "owner" && runtimeOptions().changelog) {
+      try {
+        const changelog = (await readFile(resolve(process.cwd(), "CHANGELOG.txt"), "utf8")).trim();
+        const targets = getAllowedGroups().filter((jid) => !jid.startsWith("-"));
+        for (const jid of targets) {
+          try {
+            await message.sock.sendMessage(jid, { text: changelog });
+          } catch {
+            // Continue sending to the remaining allowlisted groups.
+          }
+        }
+      } catch (error) {
+        console.error("Gagal membaca CHANGELOG.txt:", error);
+      }
+    }
 
     // Show the bot's own profile picture as the menu header, like Telegram does,
     // falling back to a plain text menu when no picture is available.

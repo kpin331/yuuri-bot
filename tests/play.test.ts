@@ -54,7 +54,7 @@ describe("formatTime", () => {
 describe("parseSearchEntries", () => {
   const raw = {
     entries: [
-      { id: "v1", title: "First", duration: 125, uploader: "Chan", url: "https://x/1" },
+      { id: "v1", title: "First", duration: 125, uploader: "Chan", url: "https://x/1", thumbnail: "https://img.test/v1.jpg" },
       { id: "v2", title: "Second", duration: 3000, webpage_url: "https://x/2" },
       { id: "v3", title: "Third" },
       { id: "v4" },
@@ -70,12 +70,14 @@ describe("parseSearchEntries", () => {
     assert.equal(results[0]?.id, "v1");
     assert.equal(results[0]?.title, "First");
     assert.equal(results[0]?.url, "https://x/1");
+    assert.equal(results[0]?.thumbnail, "https://img.test/v1.jpg");
 
     assert.equal(results[1]?.index, 2);
     assert.equal(results[1]?.url, "https://x/2");
 
     assert.equal(results[2]?.index, 3);
     assert.equal(results[2]?.url, "https://www.youtube.com/watch?v=v3");
+    assert.equal(results[2]?.thumbnail, "https://i.ytimg.com/vi/v3/hqdefault.jpg");
 
     // A bare id with no title falls back to the id as the title.
     assert.equal(results[3]?.index, 4);
@@ -116,6 +118,20 @@ describe("extractPlayMeta", () => {
       webpageUrl: "https://x/abc",
       isLive: false,
     });
+  });
+
+  it("extracts a thumbnail and infers a YouTube thumbnail when omitted", () => {
+    assert.equal(extractPlayMeta({
+      id: "abc",
+      title: "My Video",
+      webpage_url: "https://www.youtube.com/watch?v=abc",
+      thumbnail: "https://img.test/abc.jpg",
+    })?.thumbnail, "https://img.test/abc.jpg");
+    assert.equal(extractPlayMeta({
+      id: "abc",
+      title: "My Video",
+      webpage_url: "https://www.youtube.com/watch?v=abc",
+    })?.thumbnail, "https://i.ytimg.com/vi/abc/hqdefault.jpg");
   });
 
   it("returns null when there is no title", () => {

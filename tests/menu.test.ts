@@ -17,6 +17,13 @@ describe("Telegram menu photo", () => {
     assert.ok(menu.includes("$purge"));
     assert.ok(menu.includes("/tukar [jumlah Point 1-50]"));
     assert.ok(menu.includes("/bank [deposit|tarik jumlah]"));
+    const financeStart = menu.indexOf("&lt;Keuangan virtual&gt;");
+    const financeEnd = menu.indexOf("&lt;Pengunduh&gt;", financeStart);
+    const financeMenu = menu.slice(financeStart, financeEnd);
+    assert.ok(financeMenu.includes("/tf <target> <jumlah> - Transfer saldo wallet"));
+    assert.ok(financeMenu.includes("/pinjam <jumlah> - Pinjaman saldo virtual"));
+    assert.ok(financeMenu.includes("/lunas - Lunasi semua pinjaman aktif"));
+    assert.doesNotMatch(menu.slice(0, financeStart), /\/tf |\/pinjam |\/lunas/);
     assert.ok(menu.includes("/quota — Lihat, beli kuota, atau upgrade batas harian"));
     assert.ok(menu.includes("<b>&lt;Umum&gt;</b>"));
     assert.ok(menu.includes("================"));

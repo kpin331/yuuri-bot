@@ -9,12 +9,14 @@ export interface RuntimeOptions {
   saveMedia: boolean;
   mediaDirectory: string;
   log: boolean;
+  changelog: boolean;
 }
 
 export function parseRuntimeArgs(args: string[], cwd = process.cwd()): RuntimeOptions {
   let saveMedia = false;
   let mediaDirectory = join(cwd, "Media");
   let log = false;
+  let changelog = false;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -27,18 +29,21 @@ export function parseRuntimeArgs(args: string[], cwd = process.cwd()): RuntimeOp
       }
     } else if (arg === "--log") {
       log = true;
+    } else if (arg === "--changelog") {
+      changelog = true;
     } else {
       throw new Error(`Argumen tidak dikenal: ${arg}`);
     }
   }
 
-  return { saveMedia, mediaDirectory, log };
+  return { saveMedia, mediaDirectory, log, changelog };
 }
 
 let options: RuntimeOptions = {
   saveMedia: false,
   mediaDirectory: join(process.cwd(), "Media"),
   log: false,
+  changelog: false,
 };
 let logReady: Promise<void> = Promise.resolve();
 let consoleWrapped = false;

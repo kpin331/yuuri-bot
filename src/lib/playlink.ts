@@ -291,6 +291,7 @@ async function resolveSpotify(url: string): Promise<PlayResolve> {
     uploader: best.uploader,
     duration: best.duration,
     webpageUrl: best.url,
+    thumbnail: best.thumbnail,
   };
 
   const tooLong = durationLimitError(meta, getMaxDurationMinutes());

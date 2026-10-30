@@ -41,6 +41,7 @@ describe("runtime options", () => {
       saveMedia: false,
       mediaDirectory: join("C:\\bot", "Media"),
       log: false,
+      changelog: false,
     });
   });
 
@@ -49,8 +50,15 @@ describe("runtime options", () => {
       saveMedia: true,
       mediaDirectory: "G:\\Media",
       log: true,
+      changelog: false,
     });
     assert.equal(parseRuntimeArgs(["-S", "--log"], "C:\\bot").mediaDirectory, join("C:\\bot", "Media"));
+    assert.deepEqual(parseRuntimeArgs(["-S", "--log", "--changelog"], "C:\\bot"), {
+      saveMedia: true,
+      mediaDirectory: join("C:\\bot", "Media"),
+      log: true,
+      changelog: true,
+    });
   });
 
   it("rejects unsupported options", () => {
@@ -63,7 +71,7 @@ describe("runtime options", () => {
       const input = join(root, "source.jpg");
       const mediaDirectory = join(root, "Media");
       await writeFile(input, Buffer.from("image"));
-      configureRuntime({ saveMedia: true, mediaDirectory, log: false });
+      configureRuntime({ saveMedia: true, mediaDirectory, log: false, changelog: false });
       await saveMediaFile(input);
 
       const saved = await readdir(mediaDirectory);
@@ -83,7 +91,7 @@ describe("runtime options", () => {
       await mkdir(nested, { recursive: true });
       await writeFile(join(mediaDirectory, "saved.jpg"), "media");
       await writeFile(join(nested, "nested.txt"), "keep");
-      configureRuntime({ saveMedia: false, mediaDirectory, log: false });
+      configureRuntime({ saveMedia: false, mediaDirectory, log: false, changelog: false });
 
       assert.equal(await purgeSavedMedia(), 1);
       assert.deepEqual(await readdir(mediaDirectory), ["keep"]);
@@ -96,7 +104,7 @@ describe("runtime options", () => {
   it("refuses to purge a directory not named Media", async () => {
     const root = await mkdtemp(join(tmpdir(), "yuuri-purge-"));
     try {
-      configureRuntime({ saveMedia: false, mediaDirectory: root, log: false });
+      configureRuntime({ saveMedia: false, mediaDirectory: root, log: false, changelog: false });
       await assert.rejects(purgeSavedMedia(), /tidak aman/);
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -107,7 +115,7 @@ describe("runtime options", () => {
     const root = await mkdtemp(join(tmpdir(), "yuuri-log-"));
     try {
       process.chdir(root);
-      configureRuntime({ saveMedia: false, mediaDirectory: join(root, "Media"), log: true });
+      configureRuntime({ saveMedia: false, mediaDirectory: join(root, "Media"), log: true, changelog: false });
       writeLog("TEST", "token /bot123:secret Bearer hidden");
       await flushRuntimeLogs();
 
@@ -126,7 +134,7 @@ describe("runtime options", () => {
     try {
       process.chdir(root);
       globalThis.fetch = (async () => new Response("data", { headers: { "content-length": "4" } })) as typeof fetch;
-      configureRuntime({ saveMedia: false, mediaDirectory: join(root, "Media"), log: true });
+      configureRuntime({ saveMedia: false, mediaDirectory: join(root, "Media"), log: true, changelog: false });
       await fetch("http://localhost/resource?private=value", { method: "POST", body: "hello" });
       logRuntimeEnvironment({ ffmpeg: true, ytDlp: false });
       await exec(process.execPath, ["-e", "process.stdout.write('ok')"]);
