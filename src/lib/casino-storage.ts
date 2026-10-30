@@ -1,11 +1,74 @@
-import { getDb } from "./db.js";
+import { getDb, getQuotaRow, setQuotaRow } from "./db.js";
 
 export interface Wallet { balance: number; points: number; bankBalance: number }
 export interface BlackjackState { bet: number; hand: number[]; dealer: number[] }
+export const DAILY_QUOTA_PRICE = 5_000;
 
 export type WalletOperationResult =
   | { ok: true; wallet: Wallet }
   | { ok: false; reason: "not-ready" | "invalid" | "insufficient" | "limit" };
+
+export type QuotaPurchaseResult =
+  | { ok: true; wallet: Wallet; quotaLeft: number; dailyBonus: number; permanentBonus: number }
+  | { ok: false; reason: "not-ready" | "invalid" | "insufficient" | "limit" };
+
+export function purchaseQuota(
+  platform: string,
+  userId: string,
+  purchase: { kind: "daily"; amount: number } | { kind: "upgrade" },
+  today: string,
+  at: number = Date.now(),
+): QuotaPurchaseResult {
+  const db = getDb();
+  if (!db) return { ok: false, reason: "not-ready" };
+  if (purchase.kind === "daily" && (!Number.isSafeInteger(purchase.amount) || purchase.amount < 1 || purchase.amount > 25)) {
+    return { ok: false, reason: "invalid" };
+  }
+
+  const units = purchase.kind === "daily" ? purchase.amount : 10;
+  const cost = purchase.kind === "daily" ? units * DAILY_QUOTA_PRICE : 500_000;
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    const wallet = getWallet(userId);
+    const quota = getQuotaRow(platform, userId);
+    if (!wallet || !quota || quota.lastReset !== today) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "not-ready" };
+    }
+    if (wallet.balance < cost) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "insufficient" };
+    }
+
+    const dailyBonus = quota.dailyBonus + (purchase.kind === "daily" ? units : 0);
+    const permanentBonus = quota.permanentBonus + (purchase.kind === "upgrade" ? units : 0);
+    const quotaLeft = quota.quotaLeft + units;
+    if (![dailyBonus, permanentBonus, quotaLeft].every(Number.isSafeInteger)) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "limit" };
+    }
+
+    db.prepare("UPDATE casino_wallets SET balance=balance-?, updated_at=? WHERE user_id=? AND balance>=?")
+      .run(cost, at, userId, cost);
+    setQuotaRow({
+      platform,
+      userId,
+      quotaLeft,
+      dailyBonus,
+      permanentBonus,
+      lastReset: quota.lastReset,
+      displayName: quota.displayName,
+      at,
+    });
+    const updatedWallet = getWallet(userId);
+    if (!updatedWallet) throw new Error("Wallet tidak tersedia setelah pembelian kuota.");
+    db.exec("COMMIT");
+    return { ok: true, wallet: updatedWallet, quotaLeft, dailyBonus, permanentBonus };
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
 
 export function getWallet(userId: string): Wallet | null {
   const db = getDb();

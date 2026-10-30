@@ -164,6 +164,7 @@ export function registerDownloader(bot: Bot): void {
     ig: "ig",
     x: "x",
     fb: "fb",
+    tt: "tt",
     dl: null,
   };
 

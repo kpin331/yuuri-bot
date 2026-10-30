@@ -3,7 +3,7 @@ import { exec } from "./exec.js";
 import { collectMedia, MAX_UPLOAD_BYTES, type MediaFile } from "./media.js";
 import { galleryDlCookieArgs, impersonateArgs, TOOLS, ytDlpCookieArgs } from "./tools.js";
 
-export type Platform = "ig" | "x" | "fb" | "auto";
+export type Platform = "ig" | "x" | "fb" | "tt" | "auto";
 type DownloadTool = "gallery" | "ytdlp";
 
 const URL_PATTERN = /https?:\/\/[^\s<>"']+/i;
@@ -29,6 +29,7 @@ export function detectPlatform(url: string): Platform {
   if (host === "fb.watch" || host === "facebook.com" || host.endsWith(".facebook.com")) {
     return "fb";
   }
+  if (host === "tiktok.com" || host.endsWith(".tiktok.com")) return "tt";
   return "auto";
 }
 
@@ -39,6 +40,8 @@ function strategiesFor(platform: Platform): DownloadTool[] {
       return ["gallery", "ytdlp"];
     case "fb":
     case "auto":
+      return ["ytdlp", "gallery"];
+    case "tt":
       return ["ytdlp", "gallery"];
   }
 }

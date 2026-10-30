@@ -82,4 +82,5 @@ export const downloadCommands: WaCommand[] = [
   makeDownloadCommand("ig", "ig"),
   makeDownloadCommand("x", "x"),
   makeDownloadCommand("fb", "fb"),
+  makeDownloadCommand("tt", "tt"),
 ];

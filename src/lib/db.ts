@@ -112,6 +112,8 @@ export function initDatabase(path: string = getDbPath()): void {
       platform     TEXT NOT NULL,
       user_id      TEXT NOT NULL,
       quota_left   INTEGER NOT NULL,
+      quota_bonus_daily INTEGER NOT NULL DEFAULT 0,
+      quota_bonus_permanent INTEGER NOT NULL DEFAULT 0,
       last_reset   TEXT NOT NULL,
       display_name TEXT,
       first_seen   INTEGER NOT NULL,
@@ -187,6 +189,14 @@ export function initDatabase(path: string = getDbPath()): void {
   const walletColumns = database.prepare("PRAGMA table_info(casino_wallets)").all() as Array<{ name: string }>;
   if (!walletColumns.some((column) => column.name === "bank_balance")) {
     database.exec("ALTER TABLE casino_wallets ADD COLUMN bank_balance INTEGER NOT NULL DEFAULT 0 CHECK(bank_balance >= 0)");
+  }
+
+  const quotaColumns = database.prepare("PRAGMA table_info(platform_quota)").all() as Array<{ name: string }>;
+  if (!quotaColumns.some((column) => column.name === "quota_bonus_daily")) {
+    database.exec("ALTER TABLE platform_quota ADD COLUMN quota_bonus_daily INTEGER NOT NULL DEFAULT 0");
+  }
+  if (!quotaColumns.some((column) => column.name === "quota_bonus_permanent")) {
+    database.exec("ALTER TABLE platform_quota ADD COLUMN quota_bonus_permanent INTEGER NOT NULL DEFAULT 0");
   }
 
   db = database;
@@ -389,6 +399,8 @@ export interface QuotaRow {
   platform: string;
   userId: string;
   quotaLeft: number;
+  dailyBonus: number;
+  permanentBonus: number;
   lastReset: string;
   displayName: string | null;
   firstSeen: number;
@@ -400,6 +412,8 @@ function toQuota(row: Record<string, unknown>): QuotaRow {
     platform: String(row.platform),
     userId: String(row.user_id),
     quotaLeft: Number(row.quota_left),
+    dailyBonus: Number(row.quota_bonus_daily ?? 0),
+    permanentBonus: Number(row.quota_bonus_permanent ?? 0),
     lastReset: String(row.last_reset),
     displayName: (row.display_name as string | null) ?? null,
     firstSeen: Number(row.first_seen),
@@ -428,16 +442,20 @@ export function setQuotaRow(input: {
   platform: string;
   userId: string;
   quotaLeft: number;
+  dailyBonus?: number;
+  permanentBonus?: number;
   lastReset: string;
   displayName: string | null;
   at: number;
 }): void {
   if (!db) return;
   db.prepare(
-    `INSERT INTO platform_quota (platform, user_id, quota_left, last_reset, display_name, first_seen, last_seen)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO platform_quota (platform, user_id, quota_left, quota_bonus_daily, quota_bonus_permanent, last_reset, display_name, first_seen, last_seen)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(platform, user_id) DO UPDATE SET
        quota_left   = excluded.quota_left,
+       quota_bonus_daily = CASE WHEN excluded.last_reset = platform_quota.last_reset THEN excluded.quota_bonus_daily ELSE 0 END,
+       quota_bonus_permanent = MAX(platform_quota.quota_bonus_permanent, excluded.quota_bonus_permanent),
        last_reset   = excluded.last_reset,
        display_name = COALESCE(excluded.display_name, platform_quota.display_name),
        last_seen    = excluded.last_seen`,
@@ -445,6 +463,8 @@ export function setQuotaRow(input: {
     input.platform,
     input.userId,
     input.quotaLeft,
+    input.dailyBonus ?? 0,
+    input.permanentBonus ?? 0,
     input.lastReset,
     input.displayName,
     input.at,

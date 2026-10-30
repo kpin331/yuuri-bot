@@ -27,7 +27,7 @@ function sections(): Section[] {
         { name: "d", label: `${p}d — Hapus pesan yang dibalas` },
         { name: "ping", label: "!ping — Cek respons bot (admin grup)" },
         { name: "groupinfo", label: "!groupinfo — Tampilkan info grup (admin grup)" },
-        { name: "quota", label: `${p}quota — Tampilkan sisa kuota harian` },
+        { name: "quota", label: `${p}quota — Lihat, beli kuota, atau upgrade batas harian` },
         { name: "rank", label: `${p}rank — Tampilkan tingkat dan XP di grup ini` },
         { name: "leaderboard", label: `${p}leaderboard — Tampilkan peringkat XP grup ini` },
         { name: "wallet", label: `${p}wallet — Tampilkan saldo virtual dan Point` },
@@ -73,6 +73,7 @@ function sections(): Section[] {
         { name: "ig", label: `${p}ig — Unduh dari Instagram` },
         { name: "x", label: `${p}x — Unduh dari X (Twitter)` },
         { name: "fb", label: `${p}fb — Unduh dari Facebook` },
+        { name: "tt", label: `${p}tt — Unduh dari TikTok` },
       ],
     },
     {

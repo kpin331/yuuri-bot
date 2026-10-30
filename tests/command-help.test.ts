@@ -28,6 +28,16 @@ describe("command help", () => {
     assert.match(formatCommandHelp("bank", "telegram"), /tarik <jumlah>/);
   });
 
+  it("documents quota purchases on Telegram and WhatsApp", () => {
+    assert.match(formatCommandHelp("quota", "telegram"), /Rp5\.000[\s\S]*Rp500\.000/);
+    assert.match(formatCommandHelp("quota", "whatsapp"), /jumlah 1-25/);
+  });
+
+  it("documents the TikTok downloader on both platforms", () => {
+    assert.match(formatCommandHelp("tt", "telegram"), /\/tt <tautan TikTok>/);
+    assert.match(formatCommandHelp("tt", "whatsapp"), /\.tt <tautan TikTok>/);
+  });
+
   it("offers a command list for an empty query and handles unknown commands", () => {
     assert.match(formatCommandHelp("", "whatsapp"), /Command yang tersedia:.*pin/);
     assert.match(formatCommandHelp("does-not-exist", "telegram"), /belum tersedia/);

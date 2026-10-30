@@ -61,10 +61,10 @@ export function getQuota(
     };
   }
 
-  const limit = roleLimit(role);
+  const baseLimit = roleLimit(role);
 
   if (!isDatabaseReady()) {
-    return { quotaLeft: limit, total: limit, unlimited: false, resetInSeconds, role };
+    return { quotaLeft: baseLimit, total: baseLimit, unlimited: false, resetInSeconds, role };
   }
 
   const row = getQuotaRow(platform, userId);
@@ -72,19 +72,22 @@ export function getQuota(
 
   if (!row) {
     // First time we see this user: start them at their role's limit.
-    quotaLeft = limit;
+    quotaLeft = baseLimit;
     setQuotaRow({ platform, userId, quotaLeft, lastReset: today, displayName, at: now });
   } else if (row.lastReset !== today) {
     // A new day began while the bot may have been offline: reset now.
-    quotaLeft = limit;
-    setQuotaRow({ platform, userId, quotaLeft, lastReset: today, displayName, at: now });
+    quotaLeft = baseLimit + row.permanentBonus;
+    setQuotaRow({ platform, userId, quotaLeft, dailyBonus: 0, permanentBonus: row.permanentBonus, lastReset: today, displayName, at: now });
   } else {
     // Same day: keep the remaining quota, just refresh name/last-seen.
     quotaLeft = row.quotaLeft;
-    setQuotaRow({ platform, userId, quotaLeft, lastReset: row.lastReset, displayName, at: now });
+    setQuotaRow({ platform, userId, quotaLeft, dailyBonus: row.dailyBonus, permanentBonus: row.permanentBonus, lastReset: row.lastReset, displayName, at: now });
   }
 
-  return { quotaLeft, total: limit, unlimited: false, resetInSeconds, role };
+  const current = getQuotaRow(platform, userId);
+  const permanentBonus = current?.permanentBonus ?? 0;
+  const dailyBonus = current?.dailyBonus ?? 0;
+  return { quotaLeft, total: baseLimit + permanentBonus + dailyBonus, unlimited: false, resetInSeconds, role };
 }
 
 // Spends quota for a real command run. Never drops below zero.
@@ -97,6 +100,8 @@ export function consumeQuota(platform: string, userId: string, amount: number = 
     platform,
     userId,
     quotaLeft: Math.max(0, row.quotaLeft - cost),
+    dailyBonus: row.dailyBonus,
+    permanentBonus: row.permanentBonus,
     lastReset: row.lastReset,
     displayName: row.displayName,
     at: Date.now(),
@@ -127,6 +132,13 @@ export function checkRateLimit(
   userId: string,
   now: number = Date.now(),
 ): RateResult {
+  if (platform === "telegram" && /^\d+$/.test(userId) && isOwner(Number(userId))) {
+    return { allowed: true, retryAfterSeconds: 0 };
+  }
+  if (platform === "whatsapp" && getOwnerNumbers().includes(userId)) {
+    return { allowed: true, retryAfterSeconds: 0 };
+  }
+
   const windowMs = getRateWindowSeconds() * 1000;
   const limit = getRateLimit();
   const key = `${platform}:${userId}`;
@@ -196,10 +208,13 @@ export function resetAllQuotas(now: number = Date.now()): QuotaResetEntry[] {
     if (role === "owner") continue;
 
     const limit = roleLimit(role);
+    const dailyBonus = row.lastReset === today ? row.dailyBonus : 0;
     setQuotaRow({
       platform: row.platform,
       userId: row.userId,
-      quotaLeft: limit,
+      quotaLeft: limit + row.permanentBonus + dailyBonus,
+      dailyBonus,
+      permanentBonus: row.permanentBonus,
       lastReset: today,
       displayName: row.displayName,
       at: now,
@@ -211,8 +226,8 @@ export function resetAllQuotas(now: number = Date.now()): QuotaResetEntry[] {
       displayName: row.displayName,
       role,
       before: row.quotaLeft,
-      after: limit,
-      restored: limit - row.quotaLeft,
+      after: limit + row.permanentBonus + dailyBonus,
+      restored: limit + row.permanentBonus + dailyBonus - row.quotaLeft,
     });
   }
 
@@ -233,6 +248,8 @@ export function setRemainingQuotaForKnownUsers(quotaLeft: number, now: number = 
       platform: row.platform,
       userId: row.userId,
       quotaLeft,
+      dailyBonus: row.dailyBonus,
+      permanentBonus: row.permanentBonus,
       lastReset: today,
       displayName: row.displayName,
       at: now,

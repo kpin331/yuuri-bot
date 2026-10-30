@@ -12,6 +12,7 @@ import {
 import { closeDatabase, initDatabase } from "../src/lib/db.js";
 
 const ENV_KEYS = [
+  "OWNER_ID",
   "OWNER_NUMBER",
   "OWNER_NUMBERS",
   "ADMIN_NUMBERS",
@@ -96,6 +97,20 @@ describe("whatsapp access control", () => {
 
     // After the window passes, allowed again.
     assert.equal(checkRateLimit("whatsapp", "u1", now + 61_000).allowed, true);
+  });
+
+  it("does not count or block owner requests on either platform", () => {
+    setEnv("RATE_LIMIT", "1");
+    setEnv("OWNER_ID", "12345");
+    setEnv("OWNER_NUMBER", "+62 811-000");
+    const now = Date.UTC(2026, 0, 1, 0, 0, 0);
+
+    for (let index = 0; index < 5; index += 1) {
+      assert.equal(checkRateLimit("telegram", "12345", now).allowed, true);
+      assert.equal(checkRateLimit("whatsapp", "62811000", now).allowed, true);
+    }
+    assert.equal(checkRateLimit("whatsapp", "regular-user", now).allowed, true);
+    assert.equal(checkRateLimit("whatsapp", "regular-user", now).allowed, false);
   });
 
   it("allows RATE_LIMIT requests per window and blocks the next", () => {

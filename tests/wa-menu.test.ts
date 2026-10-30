@@ -54,6 +54,8 @@ describe("whatsapp menu", () => {
     assert.ok(menu.includes("$purge"));
     assert.ok(menu.includes(".tukar [jumlah Point 1-50]"));
     assert.ok(menu.includes(".bank [deposit|tarik jumlah]"));
+    assert.ok(menu.includes(".quota — Lihat, beli kuota, atau upgrade batas harian"));
+    assert.ok(menu.includes(".tt — Unduh dari TikTok"));
     assert.ok(menu.includes("<Umum>"));
     assert.ok(menu.includes("================"));
     assert.ok(menu.split("\n").some((line) => line.startsWith("- .menu")));

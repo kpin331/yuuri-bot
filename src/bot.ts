@@ -15,6 +15,7 @@ import { registerPlay } from "./handlers/play.js";
 import { registerPurge } from "./handlers/purge.js";
 import { registerQr } from "./handlers/qr.js";
 import { registerQuotaReset } from "./handlers/quotareset.js";
+import { registerQuota } from "./handlers/quota.js";
 import { registerRank } from "./handlers/rank.js";
 import { registerSmeme } from "./handlers/smeme.js";
 import { registerSticker } from "./handlers/sticker.js";
@@ -79,6 +80,7 @@ export function createBot(token: string): Bot {
   registerCommandHelp(bot);
   registerCasino(bot);
   registerEconomy(bot);
+  registerQuota(bot);
   registerSticker(bot);
   registerSmeme(bot);
   registerPinterest(bot);
