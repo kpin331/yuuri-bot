@@ -1,6 +1,6 @@
 import type { Bot, Context } from "grammy";
 import { addMoneyMessage, bankMessage, exchangePointsMessage, loanMessage, parseMoneyAmount, payOffAllLoansMessage, transferMessage } from "../lib/economy.js";
-import { findUserByUsername, findUsersByName, hasTelegramUser } from "../lib/db.js";
+import { findUserByUsername, findUsersByName } from "../lib/db.js";
 import { registerCommand, registerOwnerCommand } from "../lib/command.js";
 
 function targetAndAmount(ctx: Context, args: string): { targetId: string | null; amount: number | null } {
@@ -11,14 +11,14 @@ function targetAndAmount(ctx: Context, args: string): { targetId: string | null;
   const replyId = ctx.message && "reply_to_message" in ctx.message
     ? ctx.message.reply_to_message?.from?.id
     : undefined;
-  let targetId = targetText ? null : replyId ? String(replyId) : null;
+  let targetId: string | null = null;
   if (targetText.startsWith("@")) targetId = String(findUserByUsername(targetText)?.userId ?? "") || null;
-  else if (/^\d+$/.test(targetText) && hasTelegramUser(targetText)) targetId = targetText;
+  else if (/^\d+$/.test(targetText)) targetId = targetText;
   else if (targetText) {
     const matches = findUsersByName(targetText);
     if (matches.length === 1) targetId = String(matches[0]!.userId);
   }
-  if (targetId && !hasTelegramUser(targetId)) targetId = null;
+  if (!targetId && replyId) targetId = String(replyId);
   return { targetId, amount };
 }
 

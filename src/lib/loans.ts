@@ -39,8 +39,20 @@ function mapLoan(row: Record<string, unknown>): Loan {
 export function getActiveLoans(platform: string, userId: string): Loan[] {
   const db = getDb();
   if (!db) return [];
-  return db.prepare(`SELECT * FROM casino_loans WHERE platform=? AND user_id=? AND settled_at IS NULL
+  return db.prepare(`SELECT * FROM casino_loans WHERE platform=? AND user_id=? AND settled_at IS NULL AND remaining > 0
     ORDER BY due_at, loan_id`).all(platform, userId).map((row) => mapLoan(row as Record<string, unknown>));
+}
+
+export function reconcileBalanceFreeze(userId: string, at: number = Date.now()): boolean {
+  const db = getDb();
+  if (!db) return isBalanceFrozen(userId);
+  db.prepare(`UPDATE casino_loans SET settled_at=?
+    WHERE user_id=? AND settled_at IS NULL AND remaining <= 0`).run(at, userId);
+  const overdue = Number(db.prepare(`SELECT COUNT(*) AS count FROM casino_loans
+    WHERE user_id=? AND settled_at IS NULL AND remaining > 0 AND due_at<=?`).get(userId, at)?.count ?? 0) > 0;
+  db.prepare("UPDATE casino_wallets SET balance_frozen=?, updated_at=? WHERE user_id=?")
+    .run(overdue ? 1 : 0, at, userId);
+  return overdue;
 }
 
 export function borrowLoan(
@@ -67,7 +79,7 @@ export function borrowLoan(
       db.exec("ROLLBACK");
       return { ok: false, reason: "frozen" };
     }
-    const active = Number(db.prepare("SELECT COUNT(*) AS count FROM casino_loans WHERE platform=? AND user_id=? AND settled_at IS NULL")
+    const active = Number(db.prepare("SELECT COUNT(*) AS count FROM casino_loans WHERE platform=? AND user_id=? AND settled_at IS NULL AND remaining > 0")
       .get(platform, userId)?.count ?? 0);
     if (active >= MAX_ACTIVE_LOANS) {
       db.exec("ROLLBACK");
@@ -131,10 +143,7 @@ function repay(platform: string, userId: string, amount: number | null, at: numb
     }
     db.prepare("UPDATE casino_wallets SET balance=balance-?, updated_at=? WHERE user_id=? AND balance>=?")
       .run(payment, at, userId, payment);
-    const overdue = Number(db.prepare(`SELECT COUNT(*) AS count FROM casino_loans
-      WHERE user_id=? AND settled_at IS NULL AND due_at<=?`).get(userId, at)?.count ?? 0) > 0;
-    db.prepare("UPDATE casino_wallets SET balance_frozen=?, updated_at=? WHERE user_id=?")
-      .run(overdue ? 1 : 0, at, userId);
+    const overdue = reconcileBalanceFreeze(userId, at);
     const updatedWallet = getWallet(userId);
     if (!updatedWallet) throw new Error("Wallet tidak tersedia setelah pelunasan.");
     db.exec("COMMIT");
@@ -157,7 +166,7 @@ export function getDueLoanReminders(now: number = Date.now()): DueLoanReminder[]
   const db = getDb();
   if (!db) return [];
   const rows = db.prepare(`SELECT * FROM casino_loans
-    WHERE settled_at IS NULL AND warned_at IS NULL AND due_at<=? ORDER BY due_at, loan_id`).all(now);
+    WHERE settled_at IS NULL AND remaining > 0 AND warned_at IS NULL AND due_at<=? ORDER BY due_at, loan_id`).all(now);
   return rows.map((row) => mapLoan(row as Record<string, unknown>));
 }
 
@@ -167,7 +176,7 @@ export function freezeDueLoan(loan: Loan, at: number = Date.now()): boolean {
   db.exec("BEGIN IMMEDIATE");
   try {
     const exists = db.prepare(`SELECT 1 AS found FROM casino_loans
-      WHERE loan_id=? AND settled_at IS NULL AND due_at<=?`).get(loan.id, at);
+      WHERE loan_id=? AND settled_at IS NULL AND remaining > 0 AND due_at<=?`).get(loan.id, at);
     if (!exists) {
       db.exec("ROLLBACK");
       return false;

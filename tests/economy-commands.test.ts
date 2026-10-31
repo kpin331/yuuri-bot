@@ -54,13 +54,40 @@ describe("Telegram wallet transfer commands", () => {
     assert.equal(getWallet("333")?.balance, 110_000);
   });
 
+  it("uses a replied-to target when the supplied name is not in the user index", async () => {
+    const test = createTestBot();
+    registerEconomy(test.bot);
+    const replyTo = {
+      message_id: 89,
+      date: Math.floor(Date.now() / 1000),
+      chat: { id: 111, type: "private" },
+      from: { id: 444, is_bot: false, first_name: "Belum Terdaftar" },
+      text: "hello",
+    } as never;
+
+    await test.bot.handleUpdate(test.textUpdate("$addmoney Nama Target 10.000", { fromId: 222, replyTo }));
+
+    assert.equal(getWallet("444")?.balance, 110_000);
+    assert.match(test.replies()[0] ?? "", /Berhasil menambahkan Rp10\.000/);
+  });
+
+  it("allows the owner to add money to their own wallet", async () => {
+    const test = createTestBot();
+    registerEconomy(test.bot);
+
+    await test.bot.handleUpdate(test.textUpdate("$addmoney 222 10.000", { fromId: 222 }));
+
+    assert.equal(getWallet("222")?.balance, 110_000);
+    assert.match(test.replies()[0] ?? "", /Saldo wallet penerima: Rp110\.000/);
+  });
+
   it("registers /lunas to repay all Telegram loans", async () => {
     const test = createTestBot();
     registerEconomy(test.bot);
     const now = Date.now();
     assert.equal(borrowLoan("telegram", "222", 10_000, now, now + 60_000).ok, true);
     await test.bot.handleUpdate(test.textUpdate("/lunas", { fromId: 222 }));
-    assert.match(test.replies()[0] ?? "", /Semua pinjaman lunas/);
+    assert.match(test.replies()[0] ?? "", /Semua pinjaman di platform ini lunas/);
     assert.equal(getActiveLoans("telegram", "222").length, 0);
     assert.equal(getWallet("222")?.balance, 99_000);
   });

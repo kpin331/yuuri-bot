@@ -6,6 +6,7 @@ import {
   getRateLimit,
   getRateWindowSeconds,
   getTimezone,
+  isAdmin,
   isOwner,
 } from "../lib/config.js";
 import { getQuotaRow, isDatabaseReady, listQuotaRows, setQuotaRow } from "../lib/db.js";
@@ -204,7 +205,14 @@ export function resetAllQuotas(now: number = Date.now()): QuotaResetEntry[] {
   const entries: QuotaResetEntry[] = [];
 
   for (const row of listQuotaRows()) {
-    const role = resolveRole(row.userId, false);
+    const telegramUserId = Number(row.userId);
+    const role = row.platform === "telegram"
+      ? isOwner(telegramUserId)
+        ? "owner"
+        : isAdmin(telegramUserId)
+          ? "admin"
+          : "member"
+      : resolveRole(row.userId, false);
     if (role === "owner") continue;
 
     const limit = roleLimit(role);

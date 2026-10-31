@@ -5,7 +5,7 @@ import { resetRateLimits } from "../src/core/access.js";
 import { closeDatabase, getQuotaRow, initDatabase, setQuotaRow } from "../src/lib/db.js";
 import { createTestBot } from "./helpers.js";
 
-const ENV_KEYS = ["OWNER_ID", "DEFAULT_QUOTA", "ADMIN_QUOTA", "TIMEZONE"] as const;
+const ENV_KEYS = ["OWNER_ID", "ADMIN_IDS", "DEFAULT_QUOTA", "ADMIN_QUOTA", "TIMEZONE"] as const;
 
 let saved: Record<string, string | undefined> = {};
 
@@ -66,6 +66,26 @@ describe("/quota-reset", () => {
 
     assert.equal(getQuotaRow("whatsapp", "628111")?.quotaLeft, 25);
     assert.equal(getQuotaRow("whatsapp", "628222")?.quotaLeft, 25);
+  });
+
+  it("restores a Telegram admin to their admin quota limit", async () => {
+    process.env.ADMIN_IDS = "333";
+    process.env.ADMIN_QUOTA = "50";
+    setQuotaRow({
+      platform: "telegram",
+      userId: "333",
+      quotaLeft: 23,
+      lastReset: "2026-01-01",
+      displayName: "A",
+      at: Date.now(),
+    });
+
+    const t = createTestBot();
+    registerQuotaReset(t.bot);
+    await t.bot.handleUpdate(t.textUpdate("/quota-reset", { fromId: 222 }));
+
+    assert.equal(getQuotaRow("telegram", "333")?.quotaLeft, 50);
+    assert.ok(t.replies().join("\n").includes("23 → 50"));
   });
 
   it("refuses anyone who is not the owner", async () => {
