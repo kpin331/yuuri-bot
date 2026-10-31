@@ -12,9 +12,9 @@ export interface RuntimeOptions {
   changelog: boolean;
 }
 
-export function parseRuntimeArgs(args: string[], cwd = process.cwd()): RuntimeOptions {
+export function parseRuntimeArgs(args: string[]): RuntimeOptions {
   let saveMedia = false;
-  let mediaDirectory = join(cwd, "Media");
+  let mediaDirectory = join("D:\\bot", "Media");
   let log = false;
   let changelog = false;
 
@@ -41,7 +41,7 @@ export function parseRuntimeArgs(args: string[], cwd = process.cwd()): RuntimeOp
 
 let options: RuntimeOptions = {
   saveMedia: false,
-  mediaDirectory: join(process.cwd(), "Media"),
+  mediaDirectory: join("D:\\bot", "Media"),
   log: false,
   changelog: false,
 };

@@ -36,26 +36,26 @@ afterEach(() => {
 });
 
 describe("runtime options", () => {
-  it("uses the current directory Media folder by default", () => {
-    assert.deepEqual(parseRuntimeArgs([], "C:\\bot"), {
+  it("uses D:\\bot\\Media as the default save directory", () => {
+    assert.deepEqual(parseRuntimeArgs([]), {
       saveMedia: false,
-      mediaDirectory: join("C:\\bot", "Media"),
+      mediaDirectory: join("D:\\bot", "Media"),
       log: false,
       changelog: false,
     });
   });
 
   it("parses save, drive and log options", () => {
-    assert.deepEqual(parseRuntimeArgs(["-S", "G:", "--log"], "C:\\bot"), {
+    assert.deepEqual(parseRuntimeArgs(["-S", "G:", "--log"]), {
       saveMedia: true,
       mediaDirectory: "G:\\Media",
       log: true,
       changelog: false,
     });
-    assert.equal(parseRuntimeArgs(["-S", "--log"], "C:\\bot").mediaDirectory, join("C:\\bot", "Media"));
-    assert.deepEqual(parseRuntimeArgs(["-S", "--log", "--changelog"], "C:\\bot"), {
+    assert.equal(parseRuntimeArgs(["-S", "--log"]).mediaDirectory, join("D:\\bot", "Media"));
+    assert.deepEqual(parseRuntimeArgs(["-S", "--log", "--changelog"]), {
       saveMedia: true,
-      mediaDirectory: join("C:\\bot", "Media"),
+      mediaDirectory: join("D:\\bot", "Media"),
       log: true,
       changelog: true,
     });
