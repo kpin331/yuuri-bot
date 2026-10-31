@@ -79,7 +79,7 @@ describe("telegram access gate", () => {
   it("fails closed when private mode is on but no owner or admin is configured", async () => {
     // EVERYONE unset (private), OWNER_ID and ADMIN_IDS unset.
     const sent = await run(555);
-    assert.ok(sent.some((line) => line.includes(PRIVATE)));
+    assert.deepEqual(sent, []);
     assert.ok(!sent.some((line) => line.includes("Perintah tidak dikenal")));
   });
 
@@ -92,7 +92,7 @@ describe("telegram access gate", () => {
   it("blocks non-owners when an owner is set and everyone is off", async () => {
     process.env.OWNER_ID = "222";
     const sent = await run(555);
-    assert.ok(sent.some((line) => line.includes(PRIVATE)));
+    assert.deepEqual(sent, []);
   });
 
   it("lets anyone in when EVERYONE is on", async () => {

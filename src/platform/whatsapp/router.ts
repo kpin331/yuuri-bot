@@ -125,7 +125,6 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
 
   if (message.text.trim().toLowerCase() === "jarvis") {
     if (!isEveryoneAllowed() && baseRole === "member") {
-      await sendText(reply, "🚫 Bot ini bersifat privat. Hanya pemilik yang dapat menggunakannya.");
       return;
     }
     await sendText(reply, "siap,pak");
@@ -147,7 +146,6 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
 
   // Private-bot mode still lets verified group admins use the admin utilities.
   if (!isEveryoneAllowed() && baseRole === "member" && !(adminUtility && message.isGroup && groupAdmin)) {
-    await sendText(reply, "🚫 Bot ini bersifat privat. Hanya pemilik yang dapat menggunakannya.");
     return;
   }
 
@@ -194,7 +192,7 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   }
 
   if (adminPrefixCommand && role !== "owner" && (!message.isGroup || !groupAdmin)) {
-    await sendText(reply, "🚫 Perintah ini hanya untuk admin grup dan pemilik bot.");
+    await sendText(reply, "Ã°Å¸Å¡Â« Perintah ini hanya untuk admin grup dan pemilik bot.");
     return;
   }
   if (adminPrefixCommand && parsed.name === "groupinfo" && !message.isGroup) {
@@ -202,14 +200,14 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
     return;
   }
 
-  // "$command" — explicit owner-only invocation.
+  // "$command" Ã¢â‚¬â€ explicit owner-only invocation.
   if (parsed.prefix === getOwnerPrefix()) {
     if (!command || (!command.ownerOnly && !command.groupOnly)) {
       await sendText(reply, "Perintah tidak dikenal.");
       return;
     }
     if (role !== "owner") {
-      await sendText(reply, "🚫 Perintah ini hanya dapat digunakan pemilik bot.");
+      await sendText(reply, "Ã°Å¸Å¡Â« Perintah ini hanya dapat digunakan pemilik bot.");
       return;
     }
   } else if (!command) {
@@ -220,11 +218,11 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   if (!command) return;
 
   if (command.ownerOnly && role !== "owner") {
-    await sendText(reply, "🚫 Perintah ini hanya dapat digunakan pemilik bot.");
+    await sendText(reply, "Ã°Å¸Å¡Â« Perintah ini hanya dapat digunakan pemilik bot.");
     return;
   }
   if (command.adminOnly && role === "member") {
-    await sendText(reply, "🚫 Hanya admin dan pemilik bot yang dapat menggunakan perintah ini.");
+    await sendText(reply, "Ã°Å¸Å¡Â« Hanya admin dan pemilik bot yang dapat menggunakan perintah ini.");
     return;
   }
 
@@ -234,7 +232,7 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   }
 
   if (!isCommandEnabled(command.name)) {
-    await sendText(reply, "⚠️ Perintah ini sedang dinonaktifkan.");
+    await sendText(reply, "Ã¢Å¡Â Ã¯Â¸Â Perintah ini sedang dinonaktifkan.");
     return;
   }
 
@@ -261,7 +259,7 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
 
   const rate = checkRateLimit("whatsapp", message.userId);
   if (!rate.allowed) {
-    await sendText(reply, `⏳ Terlalu banyak permintaan. Coba lagi dalam ${formatWait(rate.retryAfterSeconds)}.`);
+    await sendText(reply, `Ã¢ÂÂ³ Terlalu banyak permintaan. Coba lagi dalam ${formatWait(rate.retryAfterSeconds)}.`);
     return;
   }
 
@@ -269,7 +267,7 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   if (!quotaFree && !command.quotaCost && role !== "owner") {
     const quota = getQuota("whatsapp", message.userId, role, message.name);
     if (quota.quotaLeft < (command.quotaCost ?? 1)) {
-      await sendText(reply, `🚫 Kuota harian habis. Diatur ulang dalam ${formatWait(quota.resetInSeconds)}.`);
+      await sendText(reply, `Ã°Å¸Å¡Â« Kuota harian habis. Diatur ulang dalam ${formatWait(quota.resetInSeconds)}.`);
       return;
     }
   }

@@ -38,6 +38,16 @@ function sections(): Section[] {
       ],
     },
     {
+      title: "Game (Coming Soon)",
+      items: [
+        { name: "tebakkata", label: "/tebakkata (COMING SOON)" },
+        { name: "rpg", label: "/rpg (COMING SOON)" },
+        { name: "monopoly", label: "/monopoly (COMING SOON)" },
+        { name: "wordle", label: "/wordle (COMING SOON)" },
+        { name: "ulartangga", label: "/ulartangga (COMING SOON)" },
+      ],
+    },
+    {
       title: "Stiker",
       items: [
         { name: "s", label: `${p}s — Balas gambar atau video untuk membuat stiker` },

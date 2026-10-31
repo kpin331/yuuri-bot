@@ -67,11 +67,7 @@ export function createBot(token: string): Bot {
       return next();
     }
 
-    if (ctx.chat) {
-      await ctx
-        .reply("🚫 Bot ini bersifat privat. Hanya pemilik bot yang dapat menggunakannya.")
-        .catch(() => undefined);
-    }
+    return;
   });
 
   registerShell(bot);

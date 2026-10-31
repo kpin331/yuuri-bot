@@ -37,6 +37,16 @@ const SECTIONS: MenuSection[] = [
     ],
   },
   {
+    title: "Game (Coming Soon)",
+    items: [
+      { command: "tebakkata", label: "/tebakkata (COMING SOON)" },
+      { command: "rpg", label: "/rpg (COMING SOON)" },
+      { command: "monopoly", label: "/monopoly (COMING SOON)" },
+      { command: "wordle", label: "/wordle (COMING SOON)" },
+      { command: "ulartangga", label: "/ulartangga (COMING SOON)" },
+    ],
+  },
+  {
     title: "Stiker",
     items: [
       { command: "s", label: "/s — Balas gambar atau video untuk menjadikannya stiker" },
