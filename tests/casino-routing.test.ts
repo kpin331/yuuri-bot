@@ -10,9 +10,12 @@ import { registerCasino } from "../src/handlers/casino.js";
 const ENV = ["EVERYONE", "DEFAULT_QUOTA", "RATE_LIMIT", "RATE_WINDOW_SECONDS"] as const;
 let previous: Record<string, string | undefined> = {};
 
-function waMessage(text: string): IncomingMessage {
+function waMessage(text: string, sent: string[] = []): IncomingMessage {
   const sock = {
-    sendMessage: async () => ({}),
+    sendMessage: async (_chatId: string, payload: { text?: string }) => {
+      if (payload.text) sent.push(payload.text);
+      return {};
+    },
     groupMetadata: async () => ({ participants: [] }),
   } as unknown as IncomingMessage["sock"];
   return {
@@ -63,13 +66,16 @@ describe("casino routing and charges", () => {
 
   it("rejects both platforms before rate limiting when fewer than three quota remain", async () => {
     process.env.DEFAULT_QUOTA = "2";
-    await handleIncoming(waMessage(".slot 10"));
+    const whatsappReplies: string[] = [];
+    await handleIncoming(waMessage(".slot 10", whatsappReplies));
+    assert.ok(whatsappReplies.some((reply) => reply.startsWith("⚠️ Kuota harian tidak cukup")));
     assert.equal(getQuotaRow("whatsapp", "62855")?.quotaLeft, 2);
     assert.equal(checkRateLimit("whatsapp", "62855").allowed, true);
 
     const t = createTestBot();
     registerCasino(t.bot);
     await t.bot.handleUpdate(t.textUpdate("/slot 10", { fromId: 778 }));
+    assert.ok(t.replies().some((reply) => reply.startsWith("⚠️ Kuota harian tidak cukup")));
     assert.equal(getQuotaRow("telegram", "778")?.quotaLeft, 2);
     assert.equal(checkRateLimit("telegram", "778").allowed, true);
   });

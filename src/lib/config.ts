@@ -185,6 +185,13 @@ export function getAllowedTelegramGroupIds(): number[] {
   return [...new Set(ids)];
 }
 
+// Whether the given Telegram group may use the bot when GROUP_ONLY is on.
+export function isTelegramGroupAllowed(chatId: number | undefined): boolean {
+  if (!isGroupOnly()) return true;
+  if (chatId === undefined || !Number.isSafeInteger(chatId) || chatId >= 0) return false;
+  return getAllowedTelegramGroupIds().includes(chatId);
+}
+
 // Whether the given group chat id may use the bot. Always true when GROUP_ONLY
 // is off; with it on, only listed groups pass and an empty list allows none.
 export function isGroupAllowed(chatId: string | null | undefined): boolean {

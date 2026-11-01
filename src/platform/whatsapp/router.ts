@@ -252,7 +252,7 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   if (command.quotaCost && role !== "owner") {
     const quota = getQuota("whatsapp", message.userId, role, message.name);
     if (quota.quotaLeft < command.quotaCost) {
-      await sendText(reply, `Kuota harian tidak cukup. Kasino memakai ${command.quotaCost} kuota per aksi.`);
+      await sendText(reply, `⚠️ Kuota harian tidak cukup. Kasino memakai ${command.quotaCost} kuota per aksi.`);
       return;
     }
   }

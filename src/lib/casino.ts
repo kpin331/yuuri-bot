@@ -24,7 +24,7 @@ export function validateCasino(game: CasinoGame, args: string, userId: string): 
   if (!BET.test(parts[0] ?? "")) return `Format: .${game} <taruhan>${game === "coin" ? " cara|angka" : game === "roulette" ? " merah|hitam|0-36" : ""}`;
   const bet = Number(parts[0]);
   if (!Number.isSafeInteger(bet)) return "Taruhan harus berupa angka yang masih aman untuk dihitung.";
-  if (bet > wallet.balance) return `Saldo tidak cukup. Saldo saat ini ${money(wallet.balance)}.`;
+  if (bet > wallet.balance) return `⚠️ Saldo tidak cukup. Saldo saat ini ${money(wallet.balance)}.`;
   const maxMultiplier = game === "roulette" ? 36 : game === "blackjack" ? 2.5 : game === "slot" ? 5 : 2;
   const maxPayout = Math.floor(bet * maxMultiplier);
   if (!Number.isSafeInteger(maxPayout) || !Number.isSafeInteger(wallet.balance - bet + maxPayout)) {

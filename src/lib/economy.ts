@@ -65,8 +65,8 @@ export function bankMessage(userId: string, args: string, prefix: string): strin
     if (result.reason === "frozen") return "Saldo wallet dibekukan karena ada pinjaman jatuh tempo. Lunasi pinjaman lewat pinjam bayar <jumlah>.";
     if (result.reason === "insufficient") {
       return action === "deposit"
-        ? `Saldo wallet tidak cukup. Saldo wallet: ${money(wallet.balance)}.`
-        : `Saldo bank tidak cukup. Saldo bank: ${money(wallet.bankBalance)}.`;
+        ? `⚠️ Saldo wallet tidak cukup. Saldo wallet: ${money(wallet.balance)}.`
+        : `⚠️ Saldo bank tidak cukup. Saldo bank: ${money(wallet.bankBalance)}.`;
     }
     if (result.reason === "limit") return "Transaksi melewati batas angka yang aman.";
     return "Penyimpanan kasino belum siap.";
@@ -79,7 +79,7 @@ export function transferMessage(senderId: string, recipientId: string, amount: n
   const result = transferWallet(senderId, recipientId, amount);
   if (!result.ok) {
     if (result.reason === "frozen") return "Saldo wallet dibekukan karena ada pinjaman jatuh tempo. Lunasi pinjaman terlebih dahulu.";
-    if (result.reason === "insufficient") return "Saldo wallet tidak cukup untuk transfer ini.";
+    if (result.reason === "insufficient") return "⚠️ Saldo wallet tidak cukup untuk transfer ini.";
     if (result.reason === "invalid") return "Jumlah transfer tidak valid atau target sama dengan pengirim.";
     if (result.reason === "limit") return "Transfer melewati batas angka yang aman.";
     return "Penyimpanan kasino belum siap.";
@@ -120,7 +120,7 @@ export function loanMessage(platform: string, userId: string, args: string, pref
     if (amount === null || amount < 1) return "Jumlah pembayaran harus berupa Rupiah bulat yang lebih dari nol.";
     const result = repayLoan(platform, userId, amount, at);
     if (!result.ok) {
-      if (result.reason === "insufficient") return `Saldo wallet tidak cukup. Saldo: ${money(wallet.balance)}.`;
+      if (result.reason === "insufficient") return `⚠️ Saldo wallet tidak cukup. Saldo: ${money(wallet.balance)}.`;
       if (result.reason === "invalid") return `Jumlah melebihi total hutang (${money(totalDebt(platform, userId))}) atau tidak ada pinjaman aktif.`;
       return "Pelunasan gagal. Periksa jumlah lalu coba lagi.";
     }
@@ -158,7 +158,7 @@ export function payOffAllLoansMessage(platform: string, userId: string, at: numb
   const result = repayAllLoans(platform, userId, at);
   if (!result.ok) {
     if (result.reason === "insufficient") {
-      return `Saldo wallet tidak cukup untuk melunasi ${money(debt)}. Saldo: ${money(wallet.balance)}. Kamu bisa membayar sebagian dengan pinjam bayar <jumlah>.`;
+      return `⚠️ Saldo wallet tidak cukup untuk melunasi ${money(debt)}. Saldo: ${money(wallet.balance)}. Kamu bisa membayar sebagian dengan pinjam bayar <jumlah>.`;
     }
     return "Pelunasan gagal. Periksa saldo lalu coba lagi.";
   }

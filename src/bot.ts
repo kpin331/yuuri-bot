@@ -26,7 +26,7 @@ import { registerTracking } from "./handlers/tracking.js";
 import { registerUserinfo } from "./handlers/userinfo.js";
 import { registerAdminCommands } from "./platform/admincommands.js";
 import { registerBroadcast } from "./handlers/broadcast.js";
-import { isAuthorized, isEveryoneAllowed, isOwner } from "./lib/config.js";
+import { isAuthorized, isEveryoneAllowed, isOwner, isTelegramGroupAllowed } from "./lib/config.js";
 import { writeLog } from "./lib/runtime.js";
 
 export function createBot(token: string): Bot {
@@ -60,6 +60,7 @@ export function createBot(token: string): Bot {
     );
     const text = ctx.message?.text ?? ctx.message?.caption ?? "";
     if (isBotPaused() && !(isOwner(ctx.from?.id) && isShellResumeCommand(text))) return;
+    if (group && !isAuthorized(ctx.from?.id) && !isTelegramGroupAllowed(chat?.id)) return;
     if (isEveryoneAllowed()) return next();
     if (isAuthorized(ctx.from?.id)) return next();
 

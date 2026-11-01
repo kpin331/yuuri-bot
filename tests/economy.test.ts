@@ -187,6 +187,7 @@ describe("quota purchases", () => {
     assert.equal(invalid.ok, false);
     if (!invalid.ok) assert.equal(invalid.reason, "invalid");
     const response = quotaPurchaseMessage("telegram", "buyer", "member", "Buyer", "1", "/");
+    assert.ok(response.startsWith("⚠️"));
     assert.match(response, /Saldo wallet tidak cukup/);
     assert.equal(getWallet("buyer")?.balance, 1_000);
     assert.equal(getQuota("telegram", "buyer", "member", "Buyer").quotaLeft, 25);

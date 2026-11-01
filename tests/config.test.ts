@@ -18,6 +18,7 @@ import {
   isEveryoneAllowed,
   isGroupAllowed,
   isGroupOnly,
+  isTelegramGroupAllowed,
   normalizeNumber,
 } from "../src/lib/config.js";
 
@@ -192,6 +193,15 @@ describe("group access config", () => {
   it("reads only negative numeric Telegram group ids for broadcasts", () => {
     process.env.ALLOWED_GROUPS = "-1001234567890, 120363012345678901@g.us; -12345, invalid, -1001234567890";
     assert.deepEqual(getAllowedTelegramGroupIds(), [-1001234567890, -12345]);
+  });
+
+  it("allows each listed Telegram group when group-only mode is enabled", () => {
+    process.env.GROUP_ONLY = "true";
+    process.env.ALLOWED_GROUPS = "-1001234567890; -12345\n120363012345678901@g.us";
+    assert.equal(isTelegramGroupAllowed(-1001234567890), true);
+    assert.equal(isTelegramGroupAllowed(-12345), true);
+    assert.equal(isTelegramGroupAllowed(-98765), false);
+    assert.equal(isTelegramGroupAllowed(12345), false);
   });
 
   it("only allows listed groups when restricted (bare id matches JID)", () => {

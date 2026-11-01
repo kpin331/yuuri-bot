@@ -3,7 +3,7 @@ import { describe, it, beforeEach, afterEach } from "node:test";
 import type { Update } from "grammy/types";
 import { createBot } from "../src/bot.js";
 
-const KEYS = ["OWNER_ID", "ADMIN_IDS", "EVERYONE"] as const;
+const KEYS = ["OWNER_ID", "ADMIN_IDS", "EVERYONE", "GROUP_ONLY", "ALLOWED_GROUPS"] as const;
 
 let saved: Record<string, string | undefined> = {};
 let updateId = 10_000;
@@ -23,13 +23,18 @@ function setEnv(key: (typeof KEYS)[number], value: string | undefined): void {
   else process.env[key] = value;
 }
 
-function messageUpdate(fromId: number, text: string): Update {
+function messageUpdate(
+  fromId: number,
+  text: string,
+  chatId = fromId,
+  chatType: "private" | "group" | "supergroup" = "private",
+): Update {
   return {
     update_id: ++updateId,
     message: {
       message_id: 1,
       date: Math.floor(Date.now() / 1000),
-      chat: { id: fromId, type: "private" },
+      chat: { id: chatId, type: chatType, ...(chatType === "private" ? {} : { title: "Test group" }) },
       from: { id: fromId, is_bot: false, first_name: "User" },
       text,
       entities: [{ type: "bot_command", offset: 0, length: text.split(" ")[0]!.length }],
@@ -53,11 +58,15 @@ function instrument(bot: ReturnType<typeof createBot>): string[] {
   return sent;
 }
 
-async function run(fromId: number): Promise<string[]> {
+async function run(
+  fromId: number,
+  chatId = fromId,
+  chatType: "private" | "group" | "supergroup" = "private",
+): Promise<string[]> {
   const bot = createBot("123456:TEST");
   const sent = instrument(bot);
   await bot.init();
-  await bot.handleUpdate(messageUpdate(fromId, "/start"));
+  await bot.handleUpdate(messageUpdate(fromId, "/start", chatId, chatType));
   return sent;
 }
 
@@ -99,5 +108,19 @@ describe("telegram access gate", () => {
     process.env.EVERYONE = "true";
     const sent = await run(555);
     assert.ok(!sent.some((line) => line.includes(PRIVATE)));
+  });
+
+  it("restricts Telegram members to any of the listed groups", async () => {
+    process.env.EVERYONE = "true";
+    process.env.GROUP_ONLY = "true";
+    process.env.ALLOWED_GROUPS = "-100111, -100222";
+
+    const first = await run(555, -100111, "supergroup");
+    const second = await run(555, -100222, "supergroup");
+    const unlisted = await run(555, -100333, "supergroup");
+
+    assert.ok(first.length > 0);
+    assert.ok(second.length > 0);
+    assert.deepEqual(unlisted, []);
   });
 });

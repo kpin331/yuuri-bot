@@ -19,7 +19,7 @@ async function run(ctx: Context, game: CasinoGame): Promise<void> {
   const owner = isOwner(user.id);
   const role = owner ? "owner" : isAdmin(user.id) ? "admin" : "member";
   const quota = getQuota("telegram", userId, role, user.first_name);
-  if (!quota.unlimited && quota.quotaLeft < 3) { await ctx.reply("Kuota harian tidak cukup. Kasino memakai 3 kuota per aksi."); return; }
+  if (!quota.unlimited && quota.quotaLeft < 3) { await ctx.reply("⚠️ Kuota harian tidak cukup. Kasino memakai 3 kuota per aksi."); return; }
   const rate = checkRateLimit("telegram", userId);
   if (!rate.allowed) { await ctx.reply(`Terlalu banyak permintaan. Coba lagi dalam ${formatWait(rate.retryAfterSeconds)}.`); return; }
   if (!quota.unlimited) consumeQuota("telegram", userId, 3);
