@@ -26,6 +26,7 @@ import { registerTracking } from "./handlers/tracking.js";
 import { registerUserinfo } from "./handlers/userinfo.js";
 import { registerWordle } from "./handlers/wordle.js";
 import { registerAiChat } from "./handlers/ai-chat.js";
+import { registerAiReset } from "./handlers/ai-reset.js";
 import { registerStickerCatalog } from "./handlers/sticker-catalog.js";
 import { registerAdminCommands } from "./platform/admincommands.js";
 import { registerBroadcast } from "./handlers/broadcast.js";
@@ -96,6 +97,7 @@ export function createBot(token: string): Bot {
   registerUserinfo(bot);
   registerWordle(bot);
   registerStickerCatalog(bot);
+  registerAiReset(bot);
   registerAiChat(bot);
   registerBan(bot);
   registerAdminCommands(bot);

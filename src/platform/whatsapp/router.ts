@@ -15,7 +15,7 @@ import { findCommand } from "./commands/index.js";
 import { menuCommand } from "./commands/menu.js";
 import { maybeHandlePlayReply } from "./commands/play.js";
 import { maybeHandleWordleReply } from "./commands/wordle.js";
-import { generateGeminiReply, geminiChatErrorMessage } from "../../lib/gemini-chat.js";
+import { generateGeminiReply, geminiChatErrorMessage, type GeminiImage } from "../../lib/gemini-chat.js";
 import { consumeStickerExplanation, findCatalogSticker, getStickerForName, getStickerOptions, requestStickerExplanation, whatsappStickerId } from "../../lib/sticker-catalog.js";
 import { runOwnerToggle, runToggle } from "./commands/toggle.js";
 import { normalizeMessageContent } from "@whiskeysockets/baileys";
@@ -25,6 +25,8 @@ import type { IncomingMessage } from "./types.js";
 import { readFile } from "node:fs/promises";
 import { handleShellMessage, isBotPaused, isShellResumeCommand } from "../shell.js";
 import { downloadMedia } from "./message.js";
+
+const MAX_AI_IMAGE_BYTES = 8 * 1024 * 1024;
 
 interface ParsedCommand {
   prefix: string;
@@ -75,6 +77,7 @@ async function runWhatsAppAiReply(
   message: IncomingMessage,
   role: "owner" | "admin" | "member",
   prompt: string,
+  image?: GeminiImage,
 ): Promise<void> {
   const reply = replyTo(message);
   const quota = getQuota("whatsapp", message.userId, role, message.name);
@@ -100,6 +103,8 @@ async function runWhatsAppAiReply(
       message.chatId,
       role === "owner",
       getStickerOptions("whatsapp"),
+      message.name ?? "",
+      image,
     );
     if (role !== "owner") consumeQuota("whatsapp", message.userId);
     await sendText(reply, response.text);
@@ -139,6 +144,27 @@ async function handleWhatsAppSticker(message: IncomingMessage): Promise<void> {
     resolveRole(message.phone, false),
     `Pengguna mengirim stiker bernama “${entry.name}”. Deskripsi: ${entry.description}. Tanggapi makna atau reaksinya secara alami.`,
   );
+}
+
+async function handleWhatsAppImage(message: IncomingMessage, prompt: string): Promise<void> {
+  const imageMessage = normalizeMessageContent(message.message.message)?.imageMessage;
+  if (!imageMessage) return;
+  try {
+    const data = await downloadMedia(message.message, message.sock);
+    if (data.byteLength > MAX_AI_IMAGE_BYTES) {
+      await sendText(replyTo(message), "Gambarnya terlalu besar untuk Mommy lihat. Coba kirim gambar yang lebih kecil, ya?");
+      return;
+    }
+    await runWhatsAppAiReply(
+      message,
+      resolveRole(message.phone, false),
+      prompt || "Lihat gambar yang kukirim dan tanggapi secara alami.",
+      { mimeType: imageMessage.mimetype || "image/jpeg", data },
+    );
+  } catch (error) {
+    console.error("Gagal mengunduh gambar WhatsApp untuk AI:", error);
+    await sendText(replyTo(message), "Mommy gagal membuka gambarnya. Coba kirim ulang, ya?");
+  }
 }
 
 // Group admin status, cached briefly because we only need it to grant the admin
@@ -187,7 +213,8 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
     `platform=whatsapp message_id=${message.message?.key?.id ?? "unknown"} sender=${sender} sender_ip=not_exposed_by_platform chat_id=${message.chatId}${message.isGroup ? ` group_id=${message.chatId}` : ""} chat_type=${message.isGroup ? "group" : "private"} command=${commandName}`,
   );
   const hasSticker = Boolean(normalizeMessageContent(message.message.message)?.stickerMessage);
-  if (!message.text && !hasSticker) return;
+  const hasImage = Boolean(normalizeMessageContent(message.message.message)?.imageMessage);
+  if (!message.text && !hasSticker && !hasImage) return;
 
   // We use the number-based role for these cheap, offline gates (the group-admin
   // role needs a metadata lookup and cannot be banned anyway).
@@ -238,10 +265,16 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   if (!parsed) {
     if (!isEveryoneAllowed() && baseRole === "member") return;
     if (message.text && await maybeHandleWordleReply(message)) return;
+    if (!isCommandEnabled("ai")) return;
     if (message.isGroup) {
-      if (!message.text || !whatsappMentionsBot(message)) return;
-      const prompt = removeWhatsAppBotMention(message.text, message);
-      if (prompt) await runWhatsAppAiReply(message, baseRole, prompt);
+      if (!whatsappMentionsBot(message)) return;
+      const prompt = message.text ? removeWhatsAppBotMention(message.text, message) : "";
+      if (hasImage) await handleWhatsAppImage(message, prompt);
+      else if (prompt) await runWhatsAppAiReply(message, baseRole, prompt);
+      return;
+    }
+    if (hasImage) {
+      await handleWhatsAppImage(message, message.text.trim());
       return;
     }
     if (hasSticker) {

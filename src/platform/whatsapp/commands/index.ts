@@ -23,6 +23,7 @@ import { economyCommands } from "./economy.js";
 import { broadcastCommand } from "./broadcast.js";
 import { wordleCommand } from "./wordle.js";
 import { stickerAddCommand, stickerRemoveCommand } from "./sticker-catalog.js";
+import { aiResetCommand } from "./ai-reset.js";
 
 // Every WhatsApp command, in menu order. Command names match the Telegram ones
 // so the shared enable/disable state applies to both platforms.
@@ -40,6 +41,7 @@ const ALL: WaCommand[] = [
   stickerCommand,
   stickerAddCommand,
   stickerRemoveCommand,
+  aiResetCommand,
   smemeCommand,
   toimgCommand,
   tovidCommand,
@@ -66,6 +68,7 @@ for (const command of ALL) {
   }
 }
 registerKnownCommand("d");
+registerKnownCommand("ai");
 
 export function findCommand(name: string): WaCommand | undefined {
   return byName.get(name.toLowerCase());

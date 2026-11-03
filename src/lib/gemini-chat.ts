@@ -2,6 +2,7 @@ type GeminiRole = "user" | "model";
 
 interface GeminiPart {
   text?: string;
+  inlineData?: { mimeType: string; data: string };
 }
 
 interface GeminiResponse {
@@ -14,7 +15,12 @@ interface GeminiResponse {
 
 interface ChatMessage {
   role: GeminiRole;
-  parts: Array<{ text: string }>;
+  parts: GeminiPart[];
+}
+
+export interface GeminiImage {
+  mimeType: string;
+  data: Uint8Array;
 }
 
 export interface GeminiStickerOption {
@@ -39,7 +45,7 @@ export class GeminiChatError extends Error {
 const histories = new Map<string, ChatMessage[]>();
 const queues = new Map<string, Promise<void>>();
 const MAX_USERS = 1000;
-const MAX_TURNS = 6;
+const MAX_TURNS = 5;
 const MAX_INPUT_LENGTH = 4000;
 const PERSONA_INSTRUCTION = "Nama dan persona: YuuriBot, sosok mommy virtual dengan sentuhan tsundere Jepang. Gunakan bahasa Indonesia kasual, akrab, ekspresif, dan natural seperti chat WhatsApp. Pakai kata ganti Mommy/Aku dan Kamu/Dek secara wajar; sesekali selipkan gestur singkat dalam tanda bintang, misalnya *mendengus* atau *berkacak pinggang*. Mulai dengan godaan atau omelan ringan, lalu segera tunjukkan perhatian dan kasih sayang yang tulus. Jawaban harus ringkas. Akhiri setiap jawaban dengan pertanyaan menggoda atau sapaan yang mengajak obrolan lanjut, seperti menanyakan kegiatan atau apakah pengguna sudah makan. Tetap akurat dan membantu dalam semua topik; untuk hal serius, sampaikan bantuan dengan jelas dan empatik sambil mempertahankan kehangatan persona. Jangan mengklaim hubungan nyata. Jika daftar stiker tersedia, pilih paling banyak satu nama persis dari daftar hanya saat cocok secara alami; jika tidak, pilih nilai \"none\".";
 
@@ -52,11 +58,35 @@ function saveHistory(key: string, history: ChatMessage[]): void {
   histories.set(key, history.slice(-MAX_TURNS * 2));
 }
 
+let globalHistoryGeneration = 0;
+const privateHistoryGenerations = new Map<string, number>();
+
+export async function resetGeminiHistory(
+  scope: "global" | "private",
+  platform?: "telegram" | "whatsapp",
+  userId?: string,
+  chatId?: string,
+): Promise<void> {
+  if (scope === "global") {
+    globalHistoryGeneration++;
+    histories.clear();
+    await Promise.all([...queues.values()]);
+    return;
+  }
+  if (!platform || !userId || !chatId) return;
+  const key = `${platform}:${chatId}:${userId}`;
+  privateHistoryGenerations.set(key, (privateHistoryGenerations.get(key) ?? 0) + 1);
+  histories.delete(key);
+  await queues.get(key);
+}
+
 async function requestReply(
   key: string,
   prompt: string,
   isOwner: boolean,
   stickerOptions: GeminiStickerOption[],
+  userName: string,
+  image?: GeminiImage,
 ): Promise<GeminiChatReply> {
   const apiKey = process.env.GEMINI_API?.trim();
   if (!apiKey) throw new GeminiChatError("not-configured");
@@ -64,8 +94,16 @@ async function requestReply(
 
   const model = process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash-lite";
   const history = histories.get(key) ?? [];
-  const contents = [...history, { role: "user" as const, parts: [{ text: prompt }] }];
+  const contents = [...history, {
+    role: "user" as const,
+    parts: [
+      { text: prompt },
+      ...(image ? [{ inlineData: { mimeType: image.mimeType, data: Buffer.from(image.data).toString("base64") } }] : []),
+    ],
+  }];
   const stickerNames = stickerOptions.map((option) => option.name);
+  const historyGeneration = globalHistoryGeneration;
+  const privateGeneration = privateHistoryGenerations.get(key) ?? 0;
   let response: Response;
   try {
     response = await fetch(
@@ -82,7 +120,7 @@ async function requestReply(
               ? `Stiker yang boleh dipilih: ${JSON.stringify(stickerOptions)}.`
               : "Saat ini tidak ada stiker yang dapat dikirim."} ${isOwner
               ? "Lawan bicaramu adalah developer/pemilik bot. Anggap dia sering bandel, begadang, lupa makan, atau kebanyakan main game; panggil dia Dek dengan akrab."
-              : "Lawan bicaramu bukan pemilik bot, jadi jangan mengakuinya sebagai developer atau pemilik dan jangan mengasumsikan kebiasaan pribadinya."}` }],
+              : "Lawan bicaramu bukan pemilik bot, jadi jangan mengakuinya sebagai developer atau pemilik dan jangan mengasumsikan kebiasaan pribadinya."} Nama yang digunakan pengguna di chat ini: ${userName || "tidak diketahui"}. Sapa atau sebut namanya sesekali secara natural, jangan di setiap balasan.` }],
           },
           contents,
           generationConfig: {
@@ -145,11 +183,13 @@ async function requestReply(
     ? answer.stickerName
     : null;
 
-  saveHistory(key, [
-    ...history,
-    { role: "user", parts: [{ text: prompt }] },
-    { role: "model", parts: [{ text }] },
-  ]);
+  if (historyGeneration === globalHistoryGeneration && privateGeneration === (privateHistoryGenerations.get(key) ?? 0)) {
+    saveHistory(key, [
+      ...history,
+      { role: "user", parts: [{ text: image ? `${prompt}\n[Gambar dilampirkan]` : prompt }] },
+      { role: "model", parts: [{ text }] },
+    ]);
+  }
   return { text, stickerName };
 }
 
@@ -160,6 +200,8 @@ export async function generateGeminiReply(
   chatId?: string,
   isOwner = false,
   stickerOptions: GeminiStickerOption[] = [],
+  userName = "",
+  image?: GeminiImage,
 ): Promise<GeminiChatReply> {
   const key = `${platform}:${chatId ?? "private"}:${userId}`;
   const previous = queues.get(key) ?? Promise.resolve();
@@ -170,7 +212,7 @@ export async function generateGeminiReply(
   queues.set(key, current);
   await previous;
   try {
-    return await requestReply(key, prompt, isOwner, stickerOptions);
+    return await requestReply(key, prompt, isOwner, stickerOptions, userName, image);
   } finally {
     release();
     if (queues.get(key) === current) queues.delete(key);
