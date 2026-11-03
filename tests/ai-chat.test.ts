@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { resetRateLimits } from "../src/core/access.js";
 import { registerAiChat } from "../src/handlers/ai-chat.js";
-import { closeDatabase, getQuotaRow, initDatabase } from "../src/lib/db.js";
+import { closeDatabase, getQuotaRow, initDatabase, saveStickerCatalogEntry } from "../src/lib/db.js";
+import { whatsappStickerId } from "../src/lib/sticker-catalog.js";
 import { handleIncoming } from "../src/platform/whatsapp/router.js";
 import type { IncomingMessage } from "../src/platform/whatsapp/types.js";
 import { createTestBot } from "./helpers.js";
@@ -42,6 +43,33 @@ function waMessage(text: string, isGroup = false, replies: string[] = [], mentio
   };
 }
 
+function waStickerMessage(replies: string[], hash = "known-wa-sticker"): IncomingMessage {
+  const sock = {
+    user: { id: "99999:3@s.whatsapp.net", lid: "99999@lid" },
+    sendMessage: async (_jid: string, payload: { text?: string }) => {
+      if (payload.text) replies.push(payload.text);
+      return {};
+    },
+    groupMetadata: async () => ({ participants: [] }),
+  } as unknown as IncomingMessage["sock"];
+  return {
+    sock,
+    chatId: "62855@s.whatsapp.net",
+    isGroup: false,
+    senderJid: "62855@s.whatsapp.net",
+    senderAlt: null,
+    userId: "62855",
+    phone: "62855",
+    name: "Tester",
+    text: "",
+    message: {
+      key: { id: "ai-sticker-test" },
+      message: { stickerMessage: { fileSha256: Buffer.from(hash), mimetype: "image/webp" } },
+    } as IncomingMessage["message"],
+    quoted: null,
+  };
+}
+
 describe("AI chat platform routing", () => {
   beforeEach(() => {
     for (const key of ENV) previousEnv[key] = process.env[key];
@@ -60,7 +88,7 @@ describe("AI chat platform routing", () => {
       };
       sentPrompts.push(body.contents.at(-1)?.parts[0]?.text ?? "");
       return new Response(JSON.stringify({
-        candidates: [{ content: { parts: [{ text: "balasan AI" }] } }],
+        candidates: [{ content: { parts: [{ text: JSON.stringify({ reply: "balasan AI", stickerName: "" }) }] } }],
       }), { status: 200, headers: { "content-type": "application/json" } });
     }) as typeof fetch;
   });
@@ -108,5 +136,77 @@ describe("AI chat platform routing", () => {
     assert.deepEqual(replies, ["balasan AI", "balasan AI"]);
     assert.equal(getQuotaRow("whatsapp", "62855")?.quotaLeft, 23);
     assert.equal(sentPrompts.at(-1), "halo");
+  });
+
+  it("asks about an unknown private sticker and uses the next text only once", async () => {
+    const t = createTestBot();
+    registerAiChat(t.bot);
+    const unknownSticker = {
+      update_id: 2001,
+      message: {
+        message_id: 1,
+        date: Math.floor(Date.now() / 1000),
+        chat: { id: 790, type: "private", first_name: "User" },
+        from: { id: 790, is_bot: false, first_name: "User" },
+        sticker: {
+          file_id: "unknown-file",
+          file_unique_id: "unknown-sticker-id",
+          type: "regular",
+          width: 512,
+          height: 512,
+          is_animated: false,
+          is_video: false,
+        },
+      },
+    } as never;
+    await t.bot.handleUpdate(unknownSticker);
+    assert.match(t.replies()[0] ?? "", /belum Mommy kenal/);
+
+    await t.bot.handleUpdate(t.textUpdate("Dia lagi malu", { fromId: 790, chatId: 790 }));
+    assert.equal(sentPrompts.at(-1), "Konteks: pengguna baru saja menjelaskan arti stiker yang belum dikenal. Gunakan penjelasan ini sekali saja.\nPenjelasan pengguna: Dia lagi malu");
+    await t.bot.handleUpdate(t.textUpdate("Masih ingat?", { fromId: 790, chatId: 790 }));
+    assert.equal(sentPrompts.at(-1), "Masih ingat?");
+  });
+
+  it("sends a registered Telegram sticker when Gemini chooses it", async () => {
+    const t = createTestBot();
+    registerAiChat(t.bot);
+    saveStickerCatalogEntry({
+      platform: "telegram",
+      stickerId: "catalog-sticker-id",
+      name: "malu",
+      description: "Yuuri tersipu dan pura-pura kesal",
+      telegramFileId: "catalog-file-id",
+      stickerData: null,
+    });
+    globalThis.fetch = (async () => new Response(JSON.stringify({
+      candidates: [{ content: { parts: [{ text: JSON.stringify({ reply: "Ih, jangan godain Mommy!", stickerName: "malu" }) }] } }],
+    }), { status: 200, headers: { "content-type": "application/json" } })) as typeof fetch;
+
+    await t.bot.handleUpdate(t.textUpdate("Kamu lucu", { fromId: 791 }));
+    assert.ok(t.replies().includes("Ih, jangan godain Mommy!"));
+    assert.ok(t.calls.some((call) => call.method === "sendSticker" && call.body.sticker === "catalog-file-id"));
+  });
+
+  it("passes known WhatsApp sticker labels as text context and ignores stickers in groups", async () => {
+    const replies: string[] = [];
+    const sticker = waStickerMessage(replies);
+    const stickerId = whatsappStickerId(sticker.message);
+    assert.ok(stickerId);
+    saveStickerCatalogEntry({
+      platform: "whatsapp",
+      stickerId,
+      name: "malu",
+      description: "Yuuri tersipu dan pura-pura kesal",
+      telegramFileId: null,
+      stickerData: new Uint8Array([1, 2, 3]),
+    });
+    await handleIncoming(sticker);
+    assert.deepEqual(replies, ["balasan AI"]);
+    assert.match(sentPrompts.at(-1) ?? "", /stiker bernama “malu”\. Deskripsi: Yuuri tersipu dan pura-pura kesal/);
+
+    const groupSticker = { ...waStickerMessage(replies), isGroup: true, chatId: "120363000@g.us" };
+    await handleIncoming(groupSticker);
+    assert.deepEqual(replies, ["balasan AI"]);
   });
 });

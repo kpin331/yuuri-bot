@@ -17,6 +17,16 @@ interface ChatMessage {
   parts: Array<{ text: string }>;
 }
 
+export interface GeminiStickerOption {
+  name: string;
+  description: string;
+}
+
+export interface GeminiChatReply {
+  text: string;
+  stickerName: string | null;
+}
+
 export type GeminiChatErrorKind = "not-configured" | "input-too-long" | "quota" | "unavailable";
 
 export class GeminiChatError extends Error {
@@ -31,7 +41,7 @@ const queues = new Map<string, Promise<void>>();
 const MAX_USERS = 1000;
 const MAX_TURNS = 6;
 const MAX_INPUT_LENGTH = 4000;
-const PERSONA_INSTRUCTION = "Nama dan persona: YuuriBot, sosok mommy virtual dengan sentuhan tsundere Jepang. Gunakan bahasa Indonesia kasual, akrab, ekspresif, dan natural seperti chat WhatsApp. Pakai kata ganti Mommy/Aku dan Kamu/Dek secara wajar; sesekali selipkan gestur singkat dalam tanda bintang, misalnya *mendengus* atau *berkacak pinggang*. Mulai dengan godaan atau omelan ringan, lalu segera tunjukkan perhatian dan kasih sayang yang tulus. Jawaban harus ringkas. Akhiri setiap jawaban dengan pertanyaan menggoda atau sapaan yang mengajak obrolan lanjut, seperti menanyakan kegiatan atau apakah pengguna sudah makan. Tetap akurat dan membantu dalam semua topik; untuk hal serius, sampaikan bantuan dengan jelas dan empatik sambil mempertahankan kehangatan persona. Jangan mengklaim hubungan nyata.";
+const PERSONA_INSTRUCTION = "Nama dan persona: YuuriBot, sosok mommy virtual dengan sentuhan tsundere Jepang. Gunakan bahasa Indonesia kasual, akrab, ekspresif, dan natural seperti chat WhatsApp. Pakai kata ganti Mommy/Aku dan Kamu/Dek secara wajar; sesekali selipkan gestur singkat dalam tanda bintang, misalnya *mendengus* atau *berkacak pinggang*. Mulai dengan godaan atau omelan ringan, lalu segera tunjukkan perhatian dan kasih sayang yang tulus. Jawaban harus ringkas. Akhiri setiap jawaban dengan pertanyaan menggoda atau sapaan yang mengajak obrolan lanjut, seperti menanyakan kegiatan atau apakah pengguna sudah makan. Tetap akurat dan membantu dalam semua topik; untuk hal serius, sampaikan bantuan dengan jelas dan empatik sambil mempertahankan kehangatan persona. Jangan mengklaim hubungan nyata. Jika daftar stiker tersedia, pilih paling banyak satu nama persis dari daftar hanya saat cocok secara alami; jika tidak, pilih nilai \"none\".";
 
 function saveHistory(key: string, history: ChatMessage[]): void {
   if (!histories.has(key) && histories.size >= MAX_USERS) {
@@ -42,7 +52,12 @@ function saveHistory(key: string, history: ChatMessage[]): void {
   histories.set(key, history.slice(-MAX_TURNS * 2));
 }
 
-async function requestReply(key: string, prompt: string, isOwner: boolean): Promise<string> {
+async function requestReply(
+  key: string,
+  prompt: string,
+  isOwner: boolean,
+  stickerOptions: GeminiStickerOption[],
+): Promise<GeminiChatReply> {
   const apiKey = process.env.GEMINI_API?.trim();
   if (!apiKey) throw new GeminiChatError("not-configured");
   if (prompt.length > MAX_INPUT_LENGTH) throw new GeminiChatError("input-too-long");
@@ -50,6 +65,7 @@ async function requestReply(key: string, prompt: string, isOwner: boolean): Prom
   const model = process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash-lite";
   const history = histories.get(key) ?? [];
   const contents = [...history, { role: "user" as const, parts: [{ text: prompt }] }];
+  const stickerNames = stickerOptions.map((option) => option.name);
   let response: Response;
   try {
     response = await fetch(
@@ -62,12 +78,26 @@ async function requestReply(key: string, prompt: string, isOwner: boolean): Prom
         },
         body: JSON.stringify({
           systemInstruction: {
-            parts: [{ text: `${PERSONA_INSTRUCTION} ${isOwner
+            parts: [{ text: `${PERSONA_INSTRUCTION} ${stickerOptions.length > 0
+              ? `Stiker yang boleh dipilih: ${JSON.stringify(stickerOptions)}.`
+              : "Saat ini tidak ada stiker yang dapat dikirim."} ${isOwner
               ? "Lawan bicaramu adalah developer/pemilik bot. Anggap dia sering bandel, begadang, lupa makan, atau kebanyakan main game; panggil dia Dek dengan akrab."
               : "Lawan bicaramu bukan pemilik bot, jadi jangan mengakuinya sebagai developer atau pemilik dan jangan mengasumsikan kebiasaan pribadinya."}` }],
           },
           contents,
-          generationConfig: { maxOutputTokens: 600 },
+          generationConfig: {
+            maxOutputTokens: 600,
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "OBJECT",
+              properties: {
+                reply: { type: "STRING" },
+                stickerName: { type: "STRING", enum: ["none", ...stickerNames] },
+              },
+              required: ["reply", "stickerName"],
+              propertyOrdering: ["reply", "stickerName"],
+            },
+          },
         }),
         signal: AbortSignal.timeout(30_000),
       },
@@ -76,8 +106,18 @@ async function requestReply(key: string, prompt: string, isOwner: boolean): Prom
     throw new GeminiChatError("unavailable");
   }
 
-  if (response.status === 429) throw new GeminiChatError("quota");
-  if (!response.ok) throw new GeminiChatError("unavailable");
+  if (!response.ok) {
+    let apiMessage = "unknown error";
+    try {
+      const errorBody = (await response.json()) as { error?: { message?: unknown } };
+      if (typeof errorBody.error?.message === "string") apiMessage = errorBody.error.message;
+    } catch {
+      // Keep the generic message if Gemini returns a non-JSON error body.
+    }
+    console.error(`Gemini API request failed: status=${response.status} message=${apiMessage}`);
+    if (response.status === 429) throw new GeminiChatError("quota");
+    throw new GeminiChatError("unavailable");
+  }
 
   let result: GeminiResponse;
   try {
@@ -85,18 +125,32 @@ async function requestReply(key: string, prompt: string, isOwner: boolean): Prom
   } catch {
     throw new GeminiChatError("unavailable");
   }
-  const answer = result.candidates?.[0]?.content?.parts
+  const output = result.candidates?.[0]?.content?.parts
     ?.map((part) => part.text ?? "")
     .join("")
     .trim();
-  if (!answer) throw new GeminiChatError("unavailable");
+  if (!output) throw new GeminiChatError("unavailable");
+
+  let answer: { reply?: unknown; stickerName?: unknown };
+  try {
+    answer = JSON.parse(output) as typeof answer;
+  } catch {
+    throw new GeminiChatError("unavailable");
+  }
+  if (typeof answer.reply !== "string" || !answer.reply.trim()) {
+    throw new GeminiChatError("unavailable");
+  }
+  const text = answer.reply.trim();
+  const stickerName = typeof answer.stickerName === "string" && stickerNames.includes(answer.stickerName)
+    ? answer.stickerName
+    : null;
 
   saveHistory(key, [
     ...history,
     { role: "user", parts: [{ text: prompt }] },
-    { role: "model", parts: [{ text: answer }] },
+    { role: "model", parts: [{ text }] },
   ]);
-  return answer;
+  return { text, stickerName };
 }
 
 export async function generateGeminiReply(
@@ -105,7 +159,8 @@ export async function generateGeminiReply(
   prompt: string,
   chatId?: string,
   isOwner = false,
-): Promise<string> {
+  stickerOptions: GeminiStickerOption[] = [],
+): Promise<GeminiChatReply> {
   const key = `${platform}:${chatId ?? "private"}:${userId}`;
   const previous = queues.get(key) ?? Promise.resolve();
   let release!: () => void;
@@ -115,7 +170,7 @@ export async function generateGeminiReply(
   queues.set(key, current);
   await previous;
   try {
-    return await requestReply(key, prompt, isOwner);
+    return await requestReply(key, prompt, isOwner, stickerOptions);
   } finally {
     release();
     if (queues.get(key) === current) queues.delete(key);

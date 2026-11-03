@@ -225,6 +225,18 @@ export function initDatabase(path: string = getDbPath()): void {
       day TEXT NOT NULL,
       PRIMARY KEY(platform, user_id, day)
     );
+
+    CREATE TABLE IF NOT EXISTS sticker_catalog (
+      platform TEXT NOT NULL CHECK(platform IN ('telegram', 'whatsapp')),
+      sticker_id TEXT NOT NULL,
+      name TEXT NOT NULL COLLATE NOCASE,
+      description TEXT NOT NULL,
+      telegram_file_id TEXT,
+      sticker_data BLOB,
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY(platform, sticker_id),
+      UNIQUE(platform, name)
+    );
   `);
 
   const walletColumns = database.prepare("PRAGMA table_info(casino_wallets)").all() as Array<{ name: string }>;
@@ -715,4 +727,87 @@ export function removeWaBan(userId: string): boolean {
   if (!db) return false;
   const result = db.prepare("DELETE FROM wa_bans WHERE user_id = ?").run(userId);
   return Number(result.changes) > 0;
+}
+
+export interface StickerCatalogEntry {
+  platform: "telegram" | "whatsapp";
+  stickerId: string;
+  name: string;
+  description: string;
+  telegramFileId: string | null;
+  stickerData: Uint8Array | null;
+}
+
+export function saveStickerCatalogEntry(entry: StickerCatalogEntry): boolean {
+  if (!db) return false;
+  try {
+    db.prepare(
+      `INSERT INTO sticker_catalog
+       (platform, sticker_id, name, description, telegram_file_id, sticker_data, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(platform, sticker_id) DO UPDATE SET
+         name = excluded.name,
+         description = excluded.description,
+         telegram_file_id = excluded.telegram_file_id,
+         sticker_data = excluded.sticker_data,
+         updated_at = excluded.updated_at`,
+    ).run(
+      entry.platform,
+      entry.stickerId,
+      entry.name.trim(),
+      entry.description.trim(),
+      entry.telegramFileId,
+      entry.stickerData,
+      Date.now(),
+    );
+    return true;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("UNIQUE constraint failed: sticker_catalog.platform, sticker_catalog.name")) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+export function getStickerCatalogEntry(
+  platform: "telegram" | "whatsapp",
+  stickerId: string,
+): StickerCatalogEntry | null {
+  if (!db) return null;
+  const row = db.prepare(
+    "SELECT platform, sticker_id, name, description, telegram_file_id, sticker_data FROM sticker_catalog WHERE platform = ? AND sticker_id = ?",
+  ).get(platform, stickerId);
+  if (!row) return null;
+  const data = row.sticker_data;
+  return {
+    platform: row.platform as StickerCatalogEntry["platform"],
+    stickerId: String(row.sticker_id),
+    name: String(row.name),
+    description: String(row.description),
+    telegramFileId: (row.telegram_file_id as string | null) ?? null,
+    stickerData: data instanceof Uint8Array ? new Uint8Array(data) : null,
+  };
+}
+
+export function listStickerCatalog(platform: "telegram" | "whatsapp"): StickerCatalogEntry[] {
+  if (!db) return [];
+  return db.prepare(
+    "SELECT platform, sticker_id, name, description, telegram_file_id, sticker_data FROM sticker_catalog WHERE platform = ? ORDER BY name LIMIT 100",
+  ).all(platform).map((row) => {
+    const data = row.sticker_data;
+    return {
+      platform: row.platform as StickerCatalogEntry["platform"],
+      stickerId: String(row.sticker_id),
+      name: String(row.name),
+      description: String(row.description),
+      telegramFileId: (row.telegram_file_id as string | null) ?? null,
+      stickerData: data instanceof Uint8Array ? new Uint8Array(data) : null,
+    };
+  });
+}
+
+export function removeStickerCatalogEntry(name: string): number {
+  if (!db) return 0;
+  const result = db.prepare("DELETE FROM sticker_catalog WHERE name = ? COLLATE NOCASE").run(name.trim());
+  return Number(result.changes);
 }

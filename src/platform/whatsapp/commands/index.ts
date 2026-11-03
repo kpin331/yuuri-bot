@@ -22,6 +22,7 @@ import { purgeCommand } from "./purge.js";
 import { economyCommands } from "./economy.js";
 import { broadcastCommand } from "./broadcast.js";
 import { wordleCommand } from "./wordle.js";
+import { stickerAddCommand, stickerRemoveCommand } from "./sticker-catalog.js";
 
 // Every WhatsApp command, in menu order. Command names match the Telegram ones
 // so the shared enable/disable state applies to both platforms.
@@ -37,6 +38,8 @@ const ALL: WaCommand[] = [
   broadcastCommand,
   ...rankCommands,
   stickerCommand,
+  stickerAddCommand,
+  stickerRemoveCommand,
   smemeCommand,
   toimgCommand,
   tovidCommand,

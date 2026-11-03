@@ -27,18 +27,19 @@ describe("Gemini chat service", () => {
       requests.push({ url: String(input), init });
       const requestNumber = requests.length;
       return new Response(JSON.stringify({
-        candidates: [{ content: { parts: [{ text: `jawaban-${requestNumber}` }] } }],
+        candidates: [{ content: { parts: [{ text: JSON.stringify({ reply: `jawaban-${requestNumber}`, stickerName: "" }) }] } }],
       }), { status: 200, headers: { "content-type": "application/json" } });
     }) as typeof fetch;
 
-    assert.equal(await generateGeminiReply("telegram", "gemini-test-user", "halo"), "jawaban-1");
-    assert.equal(await generateGeminiReply("telegram", "gemini-test-user", "lanjut"), "jawaban-2");
-    assert.equal(await generateGeminiReply("telegram", "gemini-owner-test-user", "apa kabar", "private", true), "jawaban-3");
+    assert.equal((await generateGeminiReply("telegram", "gemini-test-user", "halo")).text, "jawaban-1");
+    assert.equal((await generateGeminiReply("telegram", "gemini-test-user", "lanjut")).text, "jawaban-2");
+    assert.equal((await generateGeminiReply("telegram", "gemini-owner-test-user", "apa kabar", "private", true)).text, "jawaban-3");
     assert.equal(requests[0]?.url, "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent");
     assert.equal(new Headers(requests[0]?.init?.headers).get("x-goog-api-key"), "test-secret");
     const contents = JSON.parse(String(requests[1]?.init?.body)).contents as Array<{ role: string; parts: Array<{ text: string }> }>;
     const body = JSON.parse(String(requests[0]?.init?.body)) as {
       systemInstruction: { parts: Array<{ text: string }> };
+      generationConfig: { responseMimeType: string; responseSchema: { properties: Record<string, unknown> } };
     };
     assert.match(body.systemInstruction.parts[0]?.text ?? "", /YuuriBot.*mommy.*tsundere/);
     assert.match(body.systemInstruction.parts[0]?.text ?? "", /Lawan bicaramu bukan pemilik bot/);
@@ -46,6 +47,7 @@ describe("Gemini chat service", () => {
       systemInstruction: { parts: Array<{ text: string }> };
     };
     assert.match(ownerBody.systemInstruction.parts[0]?.text ?? "", /Lawan bicaramu adalah developer\/pemilik bot.*panggil dia Dek/);
+    assert.equal(body.generationConfig.responseMimeType, "application/json");
     assert.deepEqual(contents.map((item) => [item.role, item.parts[0]?.text]), [
       ["user", "halo"],
       ["model", "jawaban-1"],

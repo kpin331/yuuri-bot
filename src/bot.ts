@@ -26,6 +26,7 @@ import { registerTracking } from "./handlers/tracking.js";
 import { registerUserinfo } from "./handlers/userinfo.js";
 import { registerWordle } from "./handlers/wordle.js";
 import { registerAiChat } from "./handlers/ai-chat.js";
+import { registerStickerCatalog } from "./handlers/sticker-catalog.js";
 import { registerAdminCommands } from "./platform/admincommands.js";
 import { registerBroadcast } from "./handlers/broadcast.js";
 import { isAuthorized, isEveryoneAllowed, isOwner, isTelegramGroupAllowed } from "./lib/config.js";
@@ -94,6 +95,7 @@ export function createBot(token: string): Bot {
   registerToimg(bot);
   registerUserinfo(bot);
   registerWordle(bot);
+  registerStickerCatalog(bot);
   registerAiChat(bot);
   registerBan(bot);
   registerAdminCommands(bot);

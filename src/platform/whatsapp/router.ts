@@ -16,13 +16,15 @@ import { menuCommand } from "./commands/menu.js";
 import { maybeHandlePlayReply } from "./commands/play.js";
 import { maybeHandleWordleReply } from "./commands/wordle.js";
 import { generateGeminiReply, geminiChatErrorMessage } from "../../lib/gemini-chat.js";
+import { consumeStickerExplanation, findCatalogSticker, getStickerForName, getStickerOptions, requestStickerExplanation, whatsappStickerId } from "../../lib/sticker-catalog.js";
 import { runOwnerToggle, runToggle } from "./commands/toggle.js";
 import { normalizeMessageContent } from "@whiskeysockets/baileys";
 import { runtimeOptions, writeLog } from "../../lib/runtime.js";
-import { replyTo, sendText, wasSentByBot } from "./reply.js";
+import { replyTo, sendSticker, sendText, wasSentByBot } from "./reply.js";
 import type { IncomingMessage } from "./types.js";
 import { readFile } from "node:fs/promises";
 import { handleShellMessage, isBotPaused, isShellResumeCommand } from "../shell.js";
+import { downloadMedia } from "./message.js";
 
 interface ParsedCommand {
   prefix: string;
@@ -67,6 +69,76 @@ function removeWhatsAppBotMention(text: string, message: IncomingMessage): strin
     ? new RegExp(`(^|\\s)@${number}(?=$|[\\s,.:!?])`, "g")
     : /(^|\s)@[\d.()+ -]+(?=$|[\s,.:!?])/g;
   return text.replace(mention, "$1").trim();
+}
+
+async function runWhatsAppAiReply(
+  message: IncomingMessage,
+  role: "owner" | "admin" | "member",
+  prompt: string,
+): Promise<void> {
+  const reply = replyTo(message);
+  const quota = getQuota("whatsapp", message.userId, role, message.name);
+  if (role !== "owner" && quota.quotaLeft < 1) {
+    await sendText(reply, `Kuota harian habis. Diatur ulang dalam ${formatWait(quota.resetInSeconds)}.`);
+    return;
+  }
+  const rate = checkRateLimit("whatsapp", message.userId);
+  if (!rate.allowed) {
+    await sendText(reply, `Terlalu banyak permintaan. Coba lagi dalam ${formatWait(rate.retryAfterSeconds)}.`);
+    return;
+  }
+
+  const pending = consumeStickerExplanation("whatsapp", message.chatId, message.userId);
+  const contextualPrompt = pending
+    ? `Konteks: pengguna baru saja menjelaskan arti stiker yang belum dikenal. Gunakan penjelasan ini sekali saja.\nPenjelasan pengguna: ${prompt}`
+    : prompt;
+  try {
+    const response = await generateGeminiReply(
+      "whatsapp",
+      message.userId,
+      contextualPrompt,
+      message.chatId,
+      role === "owner",
+      getStickerOptions("whatsapp"),
+    );
+    if (role !== "owner") consumeQuota("whatsapp", message.userId);
+    await sendText(reply, response.text);
+    if (response.stickerName) {
+      const sticker = getStickerForName("whatsapp", response.stickerName);
+      if (sticker?.stickerData) await sendSticker(reply, Buffer.from(sticker.stickerData)).catch(() => undefined);
+    }
+  } catch (error) {
+    await sendText(reply, geminiChatErrorMessage(error));
+  }
+}
+
+async function handleWhatsAppSticker(message: IncomingMessage): Promise<void> {
+  const content = normalizeMessageContent(message.message.message);
+  if (!content?.stickerMessage) return;
+  let stickerId = whatsappStickerId(message.message);
+  let stickerData: Uint8Array | undefined;
+  if (!stickerId) {
+    stickerData = await downloadMedia(message.message, message.sock);
+    stickerId = whatsappStickerId(message.message, stickerData);
+  }
+  const entry = stickerId ? findCatalogSticker("whatsapp", stickerId) : null;
+  if (!entry) {
+    const rate = checkRateLimit("whatsapp", message.userId);
+    const reply = replyTo(message);
+    if (!rate.allowed) {
+      await sendText(reply, `Terlalu banyak permintaan. Coba lagi dalam ${formatWait(rate.retryAfterSeconds)}.`);
+      return;
+    }
+    requestStickerExplanation("whatsapp", message.chatId, message.userId);
+    await sendText(reply, "Stiker ini belum Mommy kenal. Jelasin artinya dong, biar Mommy bisa nanggepin dengan benar?");
+    return;
+  }
+
+  await runWhatsAppAiReply(
+    message,
+    resolveRole(message.phone, false),
+    `Pengguna mengirim stiker bernama “${entry.name}”. Deskripsi: ${entry.description}. Tanggapi makna atau reaksinya secara alami.`,
+  );
 }
 
 // Group admin status, cached briefly because we only need it to grant the admin
@@ -114,14 +186,15 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
     "INTERACTION",
     `platform=whatsapp message_id=${message.message?.key?.id ?? "unknown"} sender=${sender} sender_ip=not_exposed_by_platform chat_id=${message.chatId}${message.isGroup ? ` group_id=${message.chatId}` : ""} chat_type=${message.isGroup ? "group" : "private"} command=${commandName}`,
   );
-  if (!message.text) return;
+  const hasSticker = Boolean(normalizeMessageContent(message.message.message)?.stickerMessage);
+  if (!message.text && !hasSticker) return;
 
   // We use the number-based role for these cheap, offline gates (the group-admin
   // role needs a metadata lookup and cannot be banned anyway).
   const baseRole = resolveRole(message.phone, false);
   if (isBotPaused() && !(baseRole === "owner" && isShellResumeCommand(message.text))) return;
 
-  const shellHandled = await handleShellMessage({
+  const shellHandled = message.text ? await handleShellMessage({
     platform: "whatsapp",
     userId: message.userId,
     chatId: message.chatId,
@@ -135,7 +208,7 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
         caption: `Foto ${index}/${total}`,
       });
     },
-  });
+  }) : false;
   if (shellHandled) return;
 
   // Group allowlist: with GROUP_ONLY on, members may only use the bot in listed
@@ -164,29 +237,18 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   const parsed = parseCommand(message.text);
   if (!parsed) {
     if (!isEveryoneAllowed() && baseRole === "member") return;
-    if (await maybeHandleWordleReply(message)) return;
-    const botMentioned = message.isGroup && whatsappMentionsBot(message);
-    if (!message.isGroup || botMentioned) {
-      const prompt = message.isGroup ? removeWhatsAppBotMention(message.text, message) : message.text.trim();
-      if (!prompt) return;
-      const quota = getQuota("whatsapp", message.userId, baseRole, message.name);
-      if (baseRole !== "owner" && quota.quotaLeft < 1) {
-        await sendText(reply, `Kuota harian habis. Diatur ulang dalam ${formatWait(quota.resetInSeconds)}.`);
-        return;
-      }
-      const rate = checkRateLimit("whatsapp", message.userId);
-      if (!rate.allowed) {
-        await sendText(reply, `Terlalu banyak permintaan. Coba lagi dalam ${formatWait(rate.retryAfterSeconds)}.`);
-        return;
-      }
-      try {
-        const answer = await generateGeminiReply("whatsapp", message.userId, prompt, message.chatId, baseRole === "owner");
-        if (baseRole !== "owner") consumeQuota("whatsapp", message.userId);
-        await sendText(reply, answer);
-      } catch (error) {
-        await sendText(reply, geminiChatErrorMessage(error));
-      }
+    if (message.text && await maybeHandleWordleReply(message)) return;
+    if (message.isGroup) {
+      if (!message.text || !whatsappMentionsBot(message)) return;
+      const prompt = removeWhatsAppBotMention(message.text, message);
+      if (prompt) await runWhatsAppAiReply(message, baseRole, prompt);
+      return;
     }
+    if (hasSticker) {
+      await handleWhatsAppSticker(message);
+      return;
+    }
+    if (message.text.trim()) await runWhatsAppAiReply(message, baseRole, message.text.trim());
     return;
   }
 
