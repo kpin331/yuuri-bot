@@ -1,3 +1,5 @@
+import { getActivePersonality } from "./personality.js";
+
 type GeminiRole = "user" | "model";
 
 interface GeminiPart {
@@ -47,7 +49,7 @@ const queues = new Map<string, Promise<void>>();
 const MAX_USERS = 1000;
 const MAX_TURNS = 5;
 const MAX_INPUT_LENGTH = 4000;
-const PERSONA_INSTRUCTION = "Nama dan persona: YuuriBot, sosok mommy virtual dengan sentuhan tsundere Jepang. Gunakan bahasa Indonesia kasual, akrab, ekspresif, dan natural seperti chat WhatsApp. Pakai kata ganti Mommy/Aku dan Kamu/Dek secara wajar; sesekali selipkan gestur singkat dalam tanda bintang, misalnya *mendengus* atau *berkacak pinggang*. Mulai dengan godaan atau omelan ringan, lalu segera tunjukkan perhatian dan kasih sayang yang tulus. Jawaban harus ringkas. Akhiri setiap jawaban dengan pertanyaan menggoda atau sapaan yang mengajak obrolan lanjut, seperti menanyakan kegiatan atau apakah pengguna sudah makan. Tetap akurat dan membantu dalam semua topik; untuk hal serius, sampaikan bantuan dengan jelas dan empatik sambil mempertahankan kehangatan persona. Jangan mengklaim hubungan nyata. Jika daftar stiker tersedia, pilih paling banyak satu nama persis dari daftar hanya saat cocok secara alami; jika tidak, pilih nilai \"none\".";
+const CORE_INSTRUCTION = "Ikuti instruksi persona aktif dengan konsisten. Tetap akurat dan membantu, termasuk untuk topik serius; jangan mengklaim hubungan nyata atau kemampuan yang tidak dimiliki. Jika daftar stiker tersedia, pilih paling banyak satu nama persis dari daftar hanya saat cocok secara alami; jika tidak, pilih nilai \"none\".";
 
 function saveHistory(key: string, history: ChatMessage[]): void {
   if (!histories.has(key) && histories.size >= MAX_USERS) {
@@ -92,6 +94,7 @@ async function requestReply(
   if (!apiKey) throw new GeminiChatError("not-configured");
   if (prompt.length > MAX_INPUT_LENGTH) throw new GeminiChatError("input-too-long");
 
+  const activePersonality = await getActivePersonality();
   const model = process.env.GEMINI_MODEL?.trim() || "gemini-3.5-flash-lite";
   const history = histories.get(key) ?? [];
   const contents = [...history, {
@@ -116,10 +119,10 @@ async function requestReply(
         },
         body: JSON.stringify({
           systemInstruction: {
-            parts: [{ text: `${PERSONA_INSTRUCTION} ${stickerOptions.length > 0
+            parts: [{ text: `${CORE_INSTRUCTION}\n\nPersona aktif (${activePersonality.name}):\n${activePersonality.instructions}\n\n${stickerOptions.length > 0
               ? `Stiker yang boleh dipilih: ${JSON.stringify(stickerOptions)}.`
               : "Saat ini tidak ada stiker yang dapat dikirim."} ${isOwner
-              ? "Lawan bicaramu adalah developer/pemilik bot. Anggap dia sering bandel, begadang, lupa makan, atau kebanyakan main game; panggil dia Dek dengan akrab."
+              ? "Lawan bicaramu adalah developer/pemilik bot. Ikuti persona aktif saat menyapanya dan jangan mengasumsikan kebiasaan pribadi yang tidak disebutkan dalam percakapan."
               : "Lawan bicaramu bukan pemilik bot, jadi jangan mengakuinya sebagai developer atau pemilik dan jangan mengasumsikan kebiasaan pribadinya."} Nama yang digunakan pengguna di chat ini: ${userName || "tidak diketahui"}. Sapa atau sebut namanya sesekali secara natural, jangan di setiap balasan.` }],
           },
           contents,
