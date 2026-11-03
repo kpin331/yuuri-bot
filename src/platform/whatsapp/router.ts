@@ -14,6 +14,8 @@ import { rollXp } from "../../lib/xp.js";
 import { findCommand } from "./commands/index.js";
 import { menuCommand } from "./commands/menu.js";
 import { maybeHandlePlayReply } from "./commands/play.js";
+import { maybeHandleWordleReply } from "./commands/wordle.js";
+import { generateGeminiReply, geminiChatErrorMessage } from "../../lib/gemini-chat.js";
 import { runOwnerToggle, runToggle } from "./commands/toggle.js";
 import { normalizeMessageContent } from "@whiskeysockets/baileys";
 import { runtimeOptions, writeLog } from "../../lib/runtime.js";
@@ -41,6 +43,30 @@ function parseCommand(text: string): ParsedCommand | null {
   if (!match) return null;
 
   return { prefix: first, name: (match[1] ?? "").toLowerCase(), args: (match[2] ?? "").trim() };
+}
+
+function whatsappMentionsBot(message: IncomingMessage): boolean {
+  const content = normalizeMessageContent(message.message.message);
+  if (!content) return false;
+  const mentioned = [
+    ...(content.extendedTextMessage?.contextInfo?.mentionedJid ?? []),
+    ...(content.imageMessage?.contextInfo?.mentionedJid ?? []),
+    ...(content.videoMessage?.contextInfo?.mentionedJid ?? []),
+    ...(content.documentMessage?.contextInfo?.mentionedJid ?? []),
+  ].map(normalizeJid);
+  const botIds = [message.sock.user?.id, message.sock.user?.lid]
+    .filter((id): id is string => typeof id === "string")
+    .map(normalizeJid);
+  return mentioned.some((id) => botIds.includes(id));
+}
+
+function removeWhatsAppBotMention(text: string, message: IncomingMessage): string {
+  const botId = message.sock.user?.id ?? message.sock.user?.lid;
+  const number = botId?.split("@")[0]?.split(":")[0];
+  const mention = number && /^\d+$/.test(number)
+    ? new RegExp(`(^|\\s)@${number}(?=$|[\\s,.:!?])`, "g")
+    : /(^|\s)@[\d.()+ -]+(?=$|[\s,.:!?])/g;
+  return text.replace(mention, "$1").trim();
 }
 
 // Group admin status, cached briefly because we only need it to grant the admin
@@ -136,7 +162,33 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   if (await maybeHandlePlayReply(message)) return;
 
   const parsed = parseCommand(message.text);
-  if (!parsed) return;
+  if (!parsed) {
+    if (!isEveryoneAllowed() && baseRole === "member") return;
+    if (await maybeHandleWordleReply(message)) return;
+    const botMentioned = message.isGroup && whatsappMentionsBot(message);
+    if (!message.isGroup || botMentioned) {
+      const prompt = message.isGroup ? removeWhatsAppBotMention(message.text, message) : message.text.trim();
+      if (!prompt) return;
+      const quota = getQuota("whatsapp", message.userId, baseRole, message.name);
+      if (baseRole !== "owner" && quota.quotaLeft < 1) {
+        await sendText(reply, `Kuota harian habis. Diatur ulang dalam ${formatWait(quota.resetInSeconds)}.`);
+        return;
+      }
+      const rate = checkRateLimit("whatsapp", message.userId);
+      if (!rate.allowed) {
+        await sendText(reply, `Terlalu banyak permintaan. Coba lagi dalam ${formatWait(rate.retryAfterSeconds)}.`);
+        return;
+      }
+      try {
+        const answer = await generateGeminiReply("whatsapp", message.userId, prompt, message.chatId, baseRole === "owner");
+        if (baseRole !== "owner") consumeQuota("whatsapp", message.userId);
+        await sendText(reply, answer);
+      } catch (error) {
+        await sendText(reply, geminiChatErrorMessage(error));
+      }
+    }
+    return;
+  }
 
   const adminUtility =
     parsed.prefix === getAdminPrefix() &&
@@ -281,13 +333,15 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
       role,
       ownerOverride: parsed.prefix === getOwnerPrefix() && role === "owner" && command.groupOnly === true,
     });
-    await addXp({
-      platform: "whatsapp",
-      chatId: message.chatId,
-      userId: message.userId,
-      displayName: message.name,
-      amount: rollXp(),
-    });
+    if (command.awardXp !== false) {
+      await addXp({
+        platform: "whatsapp",
+        chatId: message.chatId,
+        userId: message.userId,
+        displayName: message.name,
+        amount: rollXp(),
+      });
+    }
     writeLog("COMMAND", `whatsapp ${parsed.prefix}${parsed.name} status=success`);
   } catch (error) {
     writeLog("ERROR", `whatsapp ${parsed.prefix}${command.name} status=failed`);

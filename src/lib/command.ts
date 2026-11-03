@@ -7,6 +7,10 @@ import { writeLog } from "./runtime.js";
 
 type CommandHandler = (ctx: Context) => Promise<void> | void;
 
+export interface RegisterCommandOptions {
+  awardXp?: boolean;
+}
+
 const DISABLED_MESSAGE = "⚠️ Perintah ini sedang dinonaktifkan.";
 
 const patternCache = new Map<string, RegExp>();
@@ -60,7 +64,12 @@ async function awardCommandXp(ctx: Context): Promise<void> {
 // grammY's built-in `command` only matches `entities`, so commands sent as a
 // media caption (which Telegram reports in `caption_entities`) never fire.
 // This registers a message handler that accepts both.
-export function registerCommand(bot: Bot, name: string, handler: CommandHandler): void {
+export function registerCommand(
+  bot: Bot,
+  name: string,
+  handler: CommandHandler,
+  options: RegisterCommandOptions = {},
+): void {
   knownCommands.add(name.toLowerCase());
   const pattern = commandPattern(name);
 
@@ -85,7 +94,7 @@ export function registerCommand(bot: Bot, name: string, handler: CommandHandler)
     writeLog("COMMAND", `telegram /${name} started`);
     try {
       await handler(ctx);
-      await awardCommandXp(ctx);
+      if (options.awardXp !== false) await awardCommandXp(ctx);
       writeLog("COMMAND", `telegram /${name} status=success`);
     } catch (error) {
       writeLog("ERROR", `telegram /${name} status=failed`);

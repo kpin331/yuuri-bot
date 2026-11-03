@@ -37,12 +37,12 @@ const SECTIONS: MenuSection[] = [
     ],
   },
   {
-    title: "Game (Coming Soon)",
+    title: "Game",
     items: [
       { command: "tebakkata", label: "/tebakkata (COMING SOON)" },
       { command: "rpg", label: "/rpg (COMING SOON)" },
       { command: "monopoly", label: "/monopoly (COMING SOON)" },
-      { command: "wordle", label: "/wordle (COMING SOON)" },
+      { command: "wordle", label: "/wordle Tebak kata 5 huruf" },
       { command: "ulartangga", label: "/ulartangga (COMING SOON)" },
     ],
   },

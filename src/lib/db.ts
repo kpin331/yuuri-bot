@@ -199,6 +199,32 @@ export function initDatabase(path: string = getDbPath()): void {
       awarded_level INTEGER NOT NULL DEFAULT 1,
       PRIMARY KEY(platform, chat_id, user_id)
     );
+
+    CREATE TABLE IF NOT EXISTS wordle_sessions (
+      platform TEXT NOT NULL,
+      chat_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      solution TEXT NOT NULL,
+      guesses TEXT NOT NULL DEFAULT '[]',
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY(platform, chat_id, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS wordle_stats (
+      platform TEXT NOT NULL,
+      chat_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      games INTEGER NOT NULL DEFAULT 0,
+      wins INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY(platform, chat_id, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS wordle_xp_claims (
+      platform TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      day TEXT NOT NULL,
+      PRIMARY KEY(platform, user_id, day)
+    );
   `);
 
   const walletColumns = database.prepare("PRAGMA table_info(casino_wallets)").all() as Array<{ name: string }>;

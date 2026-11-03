@@ -38,6 +38,7 @@ export interface CommandContext {
 export interface WaCommand {
   name: string;
   aliases?: string[];
+  awardXp?: boolean;
   /** Only the owner may run it (also reachable with the "$" prefix). */
   ownerOnly?: boolean;
   groupOnly?: boolean;

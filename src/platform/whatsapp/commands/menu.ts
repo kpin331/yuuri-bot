@@ -38,12 +38,12 @@ function sections(): Section[] {
       ],
     },
     {
-      title: "Game (Coming Soon)",
+      title: "Game",
       items: [
         { name: "tebakkata", label: `${p}tebakkata (COMING SOON)` },
         { name: "rpg", label: `${p}rpg (COMING SOON)` },
         { name: "monopoly", label: `${p}monopoly (COMING SOON)` },
-        { name: "wordle", label: `${p}wordle (COMING SOON)` },
+        { name: "wordle", label: `${p}wordle - Tebak kata 5 huruf` },
         { name: "ulartangga", label: `${p}ulartangga (COMING SOON)` },
       ],
     },

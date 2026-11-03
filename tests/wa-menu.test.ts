@@ -61,6 +61,8 @@ describe("whatsapp menu", () => {
     assert.ok(menu.includes(".tukar [jumlah Point 1-50]"));
     assert.ok(menu.includes(".bank [deposit|tarik jumlah]"));
     assert.ok(menu.includes(".quota — Lihat, beli kuota, atau upgrade batas harian"));
+    assert.ok(menu.includes(".wordle - Tebak kata 5 huruf"));
+    assert.doesNotMatch(menu, /\.wordle .*COMING SOON/i);
     assert.ok(menu.includes(".tt — Unduh dari TikTok"));
     const financeStart = menu.indexOf("<Keuangan virtual>");
     const financeEnd = menu.indexOf("<Pengunduh>", financeStart);
