@@ -101,6 +101,7 @@ const SECTIONS: MenuSection[] = [
     title: "Moderasi",
     items: [
       { command: "ban", label: "/ban — Blokir pengguna (admin)" },
+      { command: "bangroup", label: "/bangroup — Blokir dan hapus pesan di grup (admin)" },
       { command: "unban", label: "/unban — Buka blokir pengguna (admin)" },
     ],
   },

@@ -41,48 +41,53 @@ function formatDate(ms: number): string {
   return new Date(ms).toISOString().replace("T", " ").slice(0, 16) + " UTC";
 }
 
-const banCommand: WaCommand = {
-  name: "ban",
-  adminOnly: true,
-  run: async ({ message, args }) => {
-    const reply = replyTo(message);
-    const prefix = getCommandPrefix();
+function createBanCommand(name: "ban" | "bangroup"): WaCommand {
+  return {
+    name,
+    adminOnly: true,
+    run: async ({ message, args }) => {
+      const reply = replyTo(message);
+      const prefix = getCommandPrefix();
 
-    if (!isDatabaseReady()) {
-      await sendText(reply, "Penyimpanan tidak tersedia, pemblokiran tidak dapat disimpan.");
-      return;
-    }
+      if (!isDatabaseReady()) {
+        await sendText(reply, "Penyimpanan tidak tersedia, pemblokiran tidak dapat disimpan.");
+        return;
+      }
 
-    const parsed = parseBanArgs(args);
-    if (!parsed.ok) {
-      await sendText(reply, `Cara pakai: ${prefix}ban <nomor> [-d<hari>|-h<jam>|<detik>] — ${parsed.error}`);
-      return;
-    }
+      const parsed = parseBanArgs(args);
+      if (!parsed.ok) {
+        await sendText(reply, `Cara pakai: ${prefix}${name} <nomor> [-d<hari>|-h<jam>|<detik>] — ${parsed.error}`);
+        return;
+      }
 
-    const target = resolveTarget(parsed.target, quotedSenderId(message));
-    if (!target) {
+      const target = resolveTarget(parsed.target, quotedSenderId(message));
+      if (!target) {
+        await sendText(
+          reply,
+          "Balas pesan pengguna atau masukkan nomor (contoh: 6281234567890).",
+        );
+        return;
+      }
+
+      if (resolveRole(target.userId.startsWith("lid:") ? null : target.userId, false) !== "member") {
+        await sendText(reply, "🚫 Admin dan pemilik bot tidak dapat diblokir.");
+        return;
+      }
+
+      const now = Date.now();
+      const expiresAt = now + parsed.seconds * 1000;
+      addWaBan({ userId: target.userId, bannedBy: message.userId, createdAt: now, expiresAt });
+
       await sendText(
         reply,
-        "Balas pesan pengguna atau masukkan nomor (contoh: 6281234567890).",
+        `✅ ${target.label} (${target.userId}) diblokir selama ${formatDuration(parsed.seconds)} — sampai ${formatDate(expiresAt)}.`,
       );
-      return;
-    }
+    },
+  };
+}
 
-    if (resolveRole(target.userId.startsWith("lid:") ? null : target.userId, false) !== "member") {
-      await sendText(reply, "🚫 Admin dan pemilik bot tidak dapat diblokir.");
-      return;
-    }
-
-    const now = Date.now();
-    const expiresAt = now + parsed.seconds * 1000;
-    addWaBan({ userId: target.userId, bannedBy: message.userId, createdAt: now, expiresAt });
-
-    await sendText(
-      reply,
-      `✅ ${target.label} (${target.userId}) diblokir selama ${formatDuration(parsed.seconds)} — sampai ${formatDate(expiresAt)}.`,
-    );
-  },
-};
+const banCommand = createBanCommand("ban");
+const banGroupCommand = createBanCommand("bangroup");
 
 const unbanCommand: WaCommand = {
   name: "unban",
@@ -116,4 +121,4 @@ const unbanCommand: WaCommand = {
   },
 };
 
-export const banCommands: WaCommand[] = [banCommand, unbanCommand];
+export const banCommands: WaCommand[] = [banCommand, banGroupCommand, unbanCommand];

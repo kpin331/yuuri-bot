@@ -103,6 +103,7 @@ function sections(): Section[] {
       title: "Moderasi",
       items: [
         { name: "ban", label: `${p}ban — Blokir pengguna (admin)` },
+        { name: "bangroup", label: `${p}bangroup — Blokir dan hapus pesan di grup (admin)` },
         { name: "unban", label: `${p}unban — Buka blokir pengguna (admin)` },
       ],
     },

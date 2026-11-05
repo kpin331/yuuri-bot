@@ -52,6 +52,8 @@ export function createBot(token: string): Bot {
     }
   });
 
+  registerBanGuard(bot);
+
   bot.use(async (ctx, next) => {
     const updateKind = Object.keys(ctx.update).filter((key) => key !== "update_id").join(",") || "unknown";
     const chat = ctx.chat;
@@ -77,7 +79,6 @@ export function createBot(token: string): Bot {
   });
 
   registerShell(bot);
-  registerBanGuard(bot);
   registerTracking(bot);
   registerCommands(bot);
   registerCommandHelp(bot);
