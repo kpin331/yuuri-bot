@@ -68,7 +68,14 @@ export function registerBanGuard(bot: Bot): void {
     const userId = ctx.from?.id;
     if (userId === undefined) return next();
     if (isAuthorized(userId)) return next();
-    if (isBanned(userId)) return;
+    if (isBanned(userId)) {
+      const chat = ctx.chat;
+      const message = ctx.message;
+      if ((chat?.type === "group" || chat?.type === "supergroup") && message) {
+        await ctx.api.deleteMessage(chat.id, message.message_id).catch(() => undefined);
+      }
+      return;
+    }
     return next();
   });
 }
@@ -79,7 +86,7 @@ async function requireAuthorized(ctx: Context): Promise<boolean> {
   return false;
 }
 
-async function handleBan(ctx: Context): Promise<void> {
+async function handleBan(ctx: Context, commandName: "ban" | "bangroup" = "ban"): Promise<void> {
   if (!(await requireAuthorized(ctx))) return;
   if (!isDatabaseReady()) {
     await ctx.reply("Penyimpanan tidak tersedia. Pemblokiran tidak dapat disimpan.");
@@ -89,7 +96,7 @@ async function handleBan(ctx: Context): Promise<void> {
   const raw = typeof ctx.match === "string" ? ctx.match : "";
   const parsed = parseBanArgs(raw);
   if (!parsed.ok) {
-    await ctx.reply(`Cara pakai: /ban <@username|id> [-d<hari>|-h<jam>|<detik>] — ${parsed.error}`);
+    await ctx.reply(`Cara pakai: /${commandName} <@username|id> [-d<hari>|-h<jam>|<detik>] — ${parsed.error}`);
     return;
   }
 
@@ -151,6 +158,7 @@ async function handleUnban(ctx: Context): Promise<void> {
 }
 
 export function registerBan(bot: Bot): void {
-  registerCommand(bot, "ban", handleBan);
+  registerCommand(bot, "ban", (ctx) => handleBan(ctx, "ban"));
+  registerCommand(bot, "bangroup", (ctx) => handleBan(ctx, "bangroup"));
   registerCommand(bot, "unban", handleUnban);
 }

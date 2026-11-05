@@ -214,12 +214,22 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   );
   const hasSticker = Boolean(normalizeMessageContent(message.message.message)?.stickerMessage);
   const hasImage = Boolean(normalizeMessageContent(message.message.message)?.imageMessage);
-  if (!message.text && !hasSticker && !hasImage) return;
 
   // We use the number-based role for these cheap, offline gates (the group-admin
   // role needs a metadata lookup and cannot be banned anyway).
   const baseRole = resolveRole(message.phone, false);
   if (isBotPaused() && !(baseRole === "owner" && isShellResumeCommand(message.text))) return;
+
+  if (baseRole === "member" && isWaBanned(message.userId)) {
+    const messageKey = message.message.key;
+    if (message.isGroup && messageKey.id) {
+      await message.sock.sendMessage(message.chatId, {
+        delete: { ...messageKey, participant: message.senderJid, fromMe: false },
+      }).catch(() => undefined);
+    }
+    return;
+  }
+  if (!message.text && !hasSticker && !hasImage) return;
 
   const shellHandled = message.text ? await handleShellMessage({
     platform: "whatsapp",
@@ -245,9 +255,6 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   if (message.isGroup && baseRole === "member" && !isGroupAllowed(message.chatId)) return;
 
   const reply = replyTo(message);
-
-  // Banned members are ignored silently; admins and the owner are never blocked.
-  if (baseRole === "member" && isWaBanned(message.userId)) return;
 
   if (message.text.trim().toLowerCase() === "jarvis") {
     if (!isEveryoneAllowed() && baseRole === "member") {

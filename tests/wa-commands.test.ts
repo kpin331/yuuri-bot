@@ -30,6 +30,15 @@ describe("whatsapp command registry", () => {
     assert.equal(findCommand("bc")?.ownerOnly, true);
     assert.equal(findCommand("broadcast")?.name, "bc");
     assert.equal(findCommand("nope"), undefined);
+    assert.equal(findCommand("bangroup")?.adminOnly, true);
+    assert.equal(findCommand("roll")?.name, "roll");
+    assert.equal(findCommand("flip")?.name, "flip");
+    assert.equal(findCommand("choose")?.name, "choose");
+    assert.equal(findCommand("calc")?.name, "calc");
+    assert.equal(findCommand("time")?.name, "time");
+    assert.equal(findCommand("uuid")?.name, "uuid");
+    assert.equal(findCommand("hash")?.name, "hash");
+    assert.equal(findCommand("base64")?.name, "base64");
   });
 
   it("registers its names in the shared known-command set", () => {

@@ -8,10 +8,10 @@ export interface DiceRoll {
 }
 
 export function rollDice(input: string): DiceRoll | null {
-  const match = /^(?:(\d+)d)?(\d+)$/i.exec(input.trim());
+  const match = /^(?:(\d*)d)?(\d+)$/i.exec(input.trim());
   if (!match) return null;
 
-  const count = match[1] === undefined ? 1 : Number(match[1]);
+  const count = match[1] ? Number(match[1]) : 1;
   const sides = Number(match[2]);
   if (!Number.isSafeInteger(count) || count < 1 || count > 10) return null;
   if (!Number.isSafeInteger(sides) || sides < 2 || sides > 1000) return null;

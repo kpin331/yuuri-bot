@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it, beforeEach, afterEach } from "node:test";
 import { formatDuration, parseBanArgs } from "../src/lib/ban.js";
-import { addBan, closeDatabase, initDatabase } from "../src/lib/db.js";
-import { registerBanGuard } from "../src/handlers/ban.js";
+import { addBan, closeDatabase, initDatabase, isBanned } from "../src/lib/db.js";
+import { registerBan, registerBanGuard } from "../src/handlers/ban.js";
 import { registerFallback } from "../src/handlers/fallback.js";
 import { createTestBot } from "./helpers.js";
 
@@ -97,5 +97,31 @@ describe("ban guard", () => {
 
     await t.bot.handleUpdate(t.textUpdate("/nope"));
     assert.deepEqual(t.replies(), ["Perintah tidak dikenal."]);
+  });
+});
+
+describe("bangroup command", () => {
+  const previousOwner = process.env.OWNER_ID;
+
+  beforeEach(() => {
+    closeDatabase();
+    initDatabase(":memory:");
+    process.env.OWNER_ID = "111";
+  });
+
+  afterEach(() => {
+    closeDatabase();
+    if (previousOwner === undefined) delete process.env.OWNER_ID;
+    else process.env.OWNER_ID = previousOwner;
+  });
+
+  it("registers the Telegram command and stores its target ban", async () => {
+    const t = createTestBot();
+    registerBan(t.bot);
+
+    await t.bot.handleUpdate(t.textUpdate("/bangroup 333 -h1", { fromId: 111 }));
+
+    assert.equal(isBanned(333), true);
+    assert.match(t.replies()[0] ?? "", /diblokir selama 1 jam/);
   });
 });
