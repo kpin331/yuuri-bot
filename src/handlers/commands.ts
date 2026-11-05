@@ -56,7 +56,10 @@ const SECTIONS: MenuSection[] = [
   },
   {
     title: "Alat",
-    items: [{ command: "qr", label: "/qr — Buat kode QR atau baca QR dari gambar" }],
+    items: [
+      { command: "qr", label: "/qr — Buat kode QR atau baca QR dari gambar" },
+      { command: "roll", label: "/roll [NdS] — Lempar dadu" },
+    ],
   },
   {
     title: "Multimedia",

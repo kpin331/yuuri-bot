@@ -64,6 +64,10 @@ function sections(): Section[] {
       ],
     },
     {
+      title: "Alat",
+      items: [{ name: "roll", label: `${p}roll [NdS] — Lempar dadu` }],
+    },
+    {
       title: "Kasino virtual",
       items: [
         { name: "slot", label: `${p}slot <taruhan> — Main slot virtual` },

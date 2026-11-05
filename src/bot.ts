@@ -25,6 +25,7 @@ import { registerToimg } from "./handlers/toimg.js";
 import { registerTracking } from "./handlers/tracking.js";
 import { registerUserinfo } from "./handlers/userinfo.js";
 import { registerWordle } from "./handlers/wordle.js";
+import { registerRoll } from "./handlers/roll.js";
 import { registerAiChat } from "./handlers/ai-chat.js";
 import { registerAiReset } from "./handlers/ai-reset.js";
 import { registerPersonalityCommands } from "./handlers/personality.js";
@@ -97,6 +98,7 @@ export function createBot(token: string): Bot {
   registerToimg(bot);
   registerUserinfo(bot);
   registerWordle(bot);
+  registerRoll(bot);
   registerStickerCatalog(bot);
   registerAiReset(bot);
   registerPersonalityCommands(bot);
