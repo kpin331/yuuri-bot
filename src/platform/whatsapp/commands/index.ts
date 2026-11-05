@@ -26,6 +26,8 @@ import { stickerAddCommand, stickerRemoveCommand } from "./sticker-catalog.js";
 import { aiResetCommand } from "./ai-reset.js";
 import { addPersonalityCommand, switchPersonalityCommand } from "./personality.js";
 import { rollCommand } from "./roll.js";
+import { calcCommand, chooseCommand, flipCommand } from "./quick-tools.js";
+import { base64Command, hashCommand, timeCommand, uuidCommand } from "./text-tools.js";
 
 // Every WhatsApp command, in menu order. Command names match the Telegram ones
 // so the shared enable/disable state applies to both platforms.
@@ -56,6 +58,13 @@ const ALL: WaCommand[] = [
   pixivCommand,
   wordleCommand,
   rollCommand,
+  flipCommand,
+  chooseCommand,
+  calcCommand,
+  timeCommand,
+  uuidCommand,
+  hashCommand,
+  base64Command,
   ...banCommands,
   sysCommand,
   purgeCommand,

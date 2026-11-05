@@ -59,6 +59,13 @@ const SECTIONS: MenuSection[] = [
     items: [
       { command: "qr", label: "/qr — Buat kode QR atau baca QR dari gambar" },
       { command: "roll", label: "/roll [NdS] — Lempar dadu" },
+      { command: "flip", label: "/flip — Lempar koin tanpa taruhan" },
+      { command: "choose", label: "/choose opsi 1 | opsi 2 — Pilih secara acak" },
+      { command: "calc", label: "/calc <ekspresi> — Hitung aritmetika" },
+      { command: "time", label: "/time — Lihat tanggal dan waktu" },
+      { command: "uuid", label: "/uuid — Buat UUID" },
+      { command: "hash", label: "/hash <teks> — Buat hash SHA-256" },
+      { command: "base64", label: "/base64 encode|decode <teks>" },
     ],
   },
   {

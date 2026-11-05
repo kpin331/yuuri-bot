@@ -65,7 +65,16 @@ function sections(): Section[] {
     },
     {
       title: "Alat",
-      items: [{ name: "roll", label: `${p}roll [NdS] — Lempar dadu` }],
+      items: [
+        { name: "roll", label: `${p}roll [NdS] — Lempar dadu` },
+        { name: "flip", label: `${p}flip — Lempar koin tanpa taruhan` },
+        { name: "choose", label: `${p}choose opsi 1 | opsi 2 — Pilih secara acak` },
+        { name: "calc", label: `${p}calc <ekspresi> — Hitung aritmetika` },
+        { name: "time", label: `${p}time — Lihat tanggal dan waktu` },
+        { name: "uuid", label: `${p}uuid — Buat UUID` },
+        { name: "hash", label: `${p}hash <teks> — Buat hash SHA-256` },
+        { name: "base64", label: `${p}base64 encode|decode <teks>` },
+      ],
     },
     {
       title: "Kasino virtual",
