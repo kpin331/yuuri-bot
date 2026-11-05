@@ -125,9 +125,9 @@ function renderItem(item: MenuItem): string {
 export function buildMenu(): string {
   const lines = [`<b>${TITLE}</b>`, `<i>${SUBTITLE}</i>`];
   for (const [index, section] of SECTIONS.entries()) {
-    lines.push("", ...(index > 0 ? ["================"] : []), `<b>&lt;${section.title}&gt;</b>`, ...section.items.map(renderItem));
+    lines.push("", ...(index > 0 ? ["<================>"] : []), `<b>&lt;${section.title}&gt;</b>`, ...section.items.map(renderItem));
   }
-  lines.push("", "================", "<b>&lt;Sistem&gt;</b>", ...FOOTER);
+  lines.push("", "<================>", "<b>&lt;Sistem&gt;</b>", ...FOOTER);
   return lines.join("\n");
 }
 
