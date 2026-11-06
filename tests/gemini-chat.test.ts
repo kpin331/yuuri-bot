@@ -41,12 +41,12 @@ describe("Gemini chat service", () => {
       systemInstruction: { parts: Array<{ text: string }> };
       generationConfig: { responseMimeType: string; responseSchema: { properties: Record<string, unknown> } };
     };
-    assert.match(body.systemInstruction.parts[0]?.text ?? "", /YuuriBot.*mommy.*tsundere/);
+    assert.match(body.systemInstruction.parts[0]?.text ?? "", /YuuriBot[\s\S]*mommy[\s\S]*tsundere/);
     assert.match(body.systemInstruction.parts[0]?.text ?? "", /Lawan bicaramu bukan pemilik bot/);
     const ownerBody = JSON.parse(String(requests[2]?.init?.body)) as {
       systemInstruction: { parts: Array<{ text: string }> };
     };
-    assert.match(ownerBody.systemInstruction.parts[0]?.text ?? "", /Lawan bicaramu adalah developer\/pemilik bot.*panggil dia Dek/);
+    assert.match(ownerBody.systemInstruction.parts[0]?.text ?? "", /Lawan bicaramu adalah developer\/pemilik bot\. Ikuti persona aktif saat menyapanya/);
     assert.equal(body.generationConfig.responseMimeType, "application/json");
     assert.deepEqual(contents.map((item) => [item.role, item.parts[0]?.text]), [
       ["user", "halo"],
