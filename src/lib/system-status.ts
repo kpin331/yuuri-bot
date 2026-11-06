@@ -61,7 +61,7 @@ export function formatSystemDiagnostics(responseMs: number, diagnostics: SystemD
     `Prosesor: ${diagnostics.processor} (${diagnostics.logicalCores} core logis)`,
     `RAM: ${formatBytes(diagnostics.totalMemory - diagnostics.freeMemory)} dipakai / ${formatBytes(diagnostics.totalMemory)} total`,
     `Wi-Fi speed: ${diagnostics.wifiSpeed}`,
-    `Node.js memakai memori: ${diagnostics.totalNodeMemory === null ? "total proses tidak tersedia" : `total RSS ${formatBytes(diagnostics.totalNodeMemory)}`}; proses bot RSS ${formatBytes(diagnostics.nodeMemory.rss)}, heap ${formatBytes(diagnostics.nodeMemory.heapUsed)} / ${formatBytes(diagnostics.nodeMemory.heapTotal)}`,
+    `Node.js memory used: ${diagnostics.totalNodeMemory === null ? "total proses tidak tersedia" : `total RSS ${formatBytes(diagnostics.totalNodeMemory)}`}; proses bot RSS ${formatBytes(diagnostics.nodeMemory.rss)}, heap ${formatBytes(diagnostics.nodeMemory.heapUsed)} / ${formatBytes(diagnostics.nodeMemory.heapTotal)}`,
   ];
   return lines.join("\n");
 }
