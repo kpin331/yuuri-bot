@@ -11,6 +11,19 @@ export const pingCommand: WaCommand = {
     const timestamp = Number(message.message.messageTimestamp ?? Math.floor(sentAt / 1000));
     const elapsed = Math.max(0, sentAt - timestamp * 1000);
     const reply = replyTo(message);
+    await sendText(reply, `Waktu respons: ${elapsed} ms`);
+  },
+};
+
+export const neopingCommand: WaCommand = {
+  name: "neoping",
+  adminOnly: true,
+  free: true,
+  run: async ({ message }) => {
+    const sentAt = Date.now();
+    const timestamp = Number(message.message.messageTimestamp ?? Math.floor(sentAt / 1000));
+    const elapsed = Math.max(0, sentAt - timestamp * 1000);
+    const reply = replyTo(message);
     const diagnostics = await getSystemDiagnostics();
     for (const chunk of splitStatusMessage(formatSystemDiagnostics(elapsed, diagnostics))) {
       await sendText(reply, chunk);

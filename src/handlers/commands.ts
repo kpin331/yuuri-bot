@@ -4,6 +4,10 @@ import { join } from "node:path";
 import { InputFile, type Api, type Bot, type Context } from "grammy";
 import { registerCommand } from "../lib/command.js";
 import { isCommandEnabled } from "../lib/db.js";
+import { startMessage } from "../lib/start-message.js";
+import { escapeHtml } from "../lib/info.js";
+import { getXp } from "../lib/xp-storage.js";
+import { levelForXp } from "../lib/xp.js";
 
 const TITLE = "Yuuri Bot V1.0✨";
 const SUBTITLE = "Daftar perintah yang tersedia";
@@ -23,11 +27,12 @@ const SECTIONS: MenuSection[] = [
   {
     title: "Umum",
     items: [
-      { command: "start", label: "/start — Tampilkan menu ini" },
+      { command: "start", label: "/start — Sapaan, jumlah command, dan level" },
       { command: "menu", label: "/menu — Tampilkan menu ini" },
       { command: "userinfo", label: "/userinfo — Tampilkan statistik pengguna" },
       { command: "d", label: "/d — Hapus pesan yang dibalas" },
       { command: "ping", label: "!ping — Cek respons bot (admin grup)" },
+      { command: "neoping", label: "!neoping — Cek respons dan sistem (admin grup)" },
       { command: "groupinfo", label: "!groupinfo — Tampilkan info grup (admin grup)" },
       { command: "rank", label: "/rank — Tampilkan level dan XP-mu di grup ini" },
       { command: "leaderboard", label: "/leaderboard — Tampilkan peringkat XP grup ini" },
@@ -104,7 +109,7 @@ const SECTIONS: MenuSection[] = [
     title: "Pencarian Gambar",
     items: [
       { command: "pin", label: "/pin — Cari gambar Pinterest (kata kunci atau tautan)" },
-      { command: "pixiv", label: "/pixiv — Cari ilustrasi Pixiv (kata kunci saja)" },
+      { command: "pixiv", label: "/pixiv — Cari ilustrasi Pixiv (khusus pemilik); !pixiv nsfw true|false" },
     ],
   },
   {
@@ -147,7 +152,9 @@ export function buildMenu(): string {
 export async function getProfilePhotoFileId(api: Api, userId: number): Promise<string | null> {
   try {
     const photos = await api.getUserProfilePhotos(userId, { limit: 1 });
-    const first = photos.photos[0];
+    const photoArray = photos?.photos;
+    if (!photoArray || photoArray.length === 0) return null;
+    const first = photoArray[0];
     return first?.[first.length - 1]?.file_id ?? null;
   } catch (error) {
     console.error("Gagal mengambil foto profil pengguna:", error);
@@ -189,6 +196,32 @@ async function trySendMenuPhoto(
   return true;
 }
 
+function countCommands(): number {
+  let total = 0;
+  for (const section of SECTIONS) total += section.items.filter((item) => !item.label.includes("COMING SOON") && isCommandEnabled(item.command)).length;
+  return total;
+}
+
+export async function showStart(ctx: Context): Promise<void> {
+  const user = ctx.from;
+  const name = user ? (user.first_name ?? user.username ?? "teman") : "teman";
+  const jumlahCommand = countCommands();
+  const xp = user ? await getXp("telegram", String(ctx.chat?.id ?? "0"), String(user.id)) : 0;
+  const caption = escapeHtml(startMessage(name, jumlahCommand, levelForXp(xp)));
+
+  const fileId = await getProfilePhotoFileId(ctx.api, ctx.me.id);
+  if (fileId) {
+    if (await trySendMenuPhoto(ctx, fileId, caption)) return;
+    try {
+      const downloaded = await downloadProfilePhoto(ctx.api, fileId);
+      if (downloaded && (await trySendMenuPhoto(ctx, new InputFile(downloaded), caption))) return;
+    } catch (error) {
+      console.error("Gagal mengunduh foto profil bot:", error);
+    }
+  }
+  await ctx.reply(caption, { parse_mode: "HTML" });
+}
+
 export function registerCommands(bot: Bot): void {
   const showMenu = async (ctx: Context): Promise<void> => {
     const caption = buildMenu();
@@ -216,6 +249,8 @@ export function registerCommands(bot: Bot): void {
     await showMenu(ctx);
   });
 
-  registerCommand(bot, "start", showMenu);
+  registerCommand(bot, "start", showStart);
   registerCommand(bot, "menu", showMenu);
+  registerCommand(bot, "help", showMenu);
+  bot.hears(/^help$/i, showMenu);
 }

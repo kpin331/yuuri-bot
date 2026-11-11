@@ -43,7 +43,7 @@ describe("virtual loans", () => {
     assert.equal(freezeDueLoan(due[0]!, dueAt), true);
     assert.equal(isBalanceFrozen("payer"), true);
     assert.equal(changeBalance("payer", -1), null);
-    const bankTransfer = transferBank("payer", "withdraw", 1);
+    const bankTransfer = transferBank("payer", "withdraw", 1_000);
     assert.equal(bankTransfer.ok, false);
     if (!bankTransfer.ok) assert.equal(bankTransfer.reason, "frozen");
 

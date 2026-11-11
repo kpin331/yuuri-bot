@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { configureRuntime, runtimeOptions } from "../src/lib/runtime.js";
-import { menuCommand } from "../src/platform/whatsapp/commands/menu.js";
+import { menuCommand, startCommand } from "../src/platform/whatsapp/commands/menu.js";
 import type { IncomingMessage } from "../src/platform/whatsapp/types.js";
 
 interface Sent {
@@ -37,6 +37,26 @@ afterEach(() => {
 });
 
 describe("whatsapp menu", () => {
+  it("keeps the bot photo on start and replaces the menu with a greeting", async () => {
+    const sent: Sent[] = [];
+    const sock = {
+      user: { id: "bot@s.whatsapp.net" },
+      profilePictureUrl: async (id: string) => {
+        assert.equal(id, "bot@s.whatsapp.net");
+        return "https://example.test/pp.jpg";
+      },
+      sendMessage: async (jid: string, content: Sent["content"]) => {
+        sent.push({ jid, content });
+        return {};
+      },
+    };
+    globalThis.fetch = (async () => new Response(Buffer.from([1, 2, 3]))) as typeof fetch;
+    await startCommand.run({ message: makeMessage(sock), args: "", role: "member" });
+    assert.equal(sent.length, 1);
+    assert.ok(Buffer.isBuffer(sent[0]?.content.image));
+    assert.match(sent[0]?.content.caption ?? "", /Selamat .*Tester\.[\s\S]*Jumlah command tersedia: \d+[\s\S]*Level kamu: 1[\s\S]*Ketik help/);
+    assert.doesNotMatch(sent[0]?.content.caption ?? "", /Daftar perintah/);
+  });
   it("sends the bot's profile picture with the menu as its caption", async () => {
     const sent: Sent[] = [];
     const sock = {

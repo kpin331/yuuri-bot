@@ -77,8 +77,8 @@ export function getQuota(
     setQuotaRow({ platform, userId, quotaLeft, lastReset: today, displayName, at: now });
   } else if (row.lastReset !== today) {
     // A new day began while the bot may have been offline: reset now.
-    quotaLeft = baseLimit + row.permanentBonus;
-    setQuotaRow({ platform, userId, quotaLeft, dailyBonus: 0, permanentBonus: row.permanentBonus, lastReset: today, displayName, at: now });
+    quotaLeft = baseLimit + row.permanentBonus + row.dailyBonus;
+    setQuotaRow({ platform, userId, quotaLeft, dailyBonus: row.dailyBonus, permanentBonus: row.permanentBonus, lastReset: today, displayName, at: now });
   } else {
     // Same day: keep the remaining quota, just refresh name/last-seen.
     quotaLeft = row.quotaLeft;
@@ -216,7 +216,7 @@ export function resetAllQuotas(now: number = Date.now()): QuotaResetEntry[] {
     if (role === "owner") continue;
 
     const limit = roleLimit(role);
-    const dailyBonus = row.lastReset === today ? row.dailyBonus : 0;
+    const dailyBonus = row.dailyBonus;
     setQuotaRow({
       platform: row.platform,
       userId: row.userId,

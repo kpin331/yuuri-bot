@@ -59,7 +59,11 @@ describe("WhatsApp admin group commands", () => {
     const ping = createMessage("!ping");
     await handleIncoming(ping.message);
     assert.match(ping.sent[0]?.text ?? "", /^Waktu respons: \d+ ms/);
-    assert.ok(ping.sent.some((message) => message.text?.includes("Node.js memakai memori:")));
+    assert.equal(ping.sent.length, 1);
+    assert.match(ping.sent[0]?.text ?? "", /^Waktu respons: \d+ ms$/);
+    const neoping = createMessage("!neoping");
+    await handleIncoming(neoping.message);
+    assert.ok(neoping.sent.some((message) => message.text?.includes("Node.js memakai memori:")));
     assert.doesNotMatch(ping.sent.map((message) => message.text).join("\n"), /Task manager|PID \| proses/);
 
     const groupinfo = createMessage("!groupinfo");

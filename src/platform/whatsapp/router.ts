@@ -38,6 +38,7 @@ interface ParsedCommand {
 // text is not a command, so ordinary chat is never answered.
 function parseCommand(text: string): ParsedCommand | null {
   const trimmed = text.trim();
+  if (/^help$/i.test(trimmed)) return { prefix: getCommandPrefix(), name: "help", args: "" };
   const first = trimmed.charAt(0);
   const prefixes = [getCommandPrefix(), getOwnerPrefix(), getAdminPrefix()];
   if (!prefixes.includes(first)) return null;
@@ -295,7 +296,7 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   const adminUtility =
     parsed.prefix === getAdminPrefix() &&
     parsed.args === "" &&
-    (parsed.name === "ping" || parsed.name === "groupinfo");
+    (parsed.name === "ping" || parsed.name === "neoping" || parsed.name === "groupinfo");
   let groupAdmin = adminUtility ? await isGroupAdmin(message) : false;
 
   // Private-bot mode still lets verified group admins use the admin utilities.
@@ -335,10 +336,12 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   let command = findCommand(parsed.name);
   let adminPrefixCommand = false;
 
-  // Keep the existing toggle syntax while allowing the two admin utilities.
+  // Keep command toggles separate from admin utilities and Pixiv settings.
   if (parsed.prefix === getAdminPrefix()) {
-    if (parsed.args === "" && (parsed.name === "ping" || parsed.name === "groupinfo")) {
+    if (parsed.args === "" && (parsed.name === "ping" || parsed.name === "neoping" || parsed.name === "groupinfo")) {
       adminPrefixCommand = true;
+    } else if (parsed.name === "pixiv" && /^nsfw(?:\s|$)/i.test(parsed.args)) {
+      // The command's ownerOnly check also protects this prefix.
     } else {
       await runToggle(message, `${parsed.name} ${parsed.args}`.trim(), role);
       return;

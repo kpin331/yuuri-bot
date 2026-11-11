@@ -74,7 +74,7 @@ export function createBot(token: string): Bot {
     if (isEveryoneAllowed()) return next();
     if (isAuthorized(ctx.from?.id)) return next();
 
-    if (/^!(ping|groupinfo)$/i.test(text.trim()) && isGroup(ctx.chat?.type)) {
+    if (/^!(ping|neoping|groupinfo)$/i.test(text.trim()) && isGroup(ctx.chat?.type)) {
       return next();
     }
 
