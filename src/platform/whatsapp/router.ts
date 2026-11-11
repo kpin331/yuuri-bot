@@ -346,7 +346,7 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
   }
 
   if (adminPrefixCommand && role !== "owner" && (!message.isGroup || !groupAdmin)) {
-    await sendText(reply, "Ã°Å¸Å¡Â« Perintah ini hanya untuk admin grup dan pemilik bot.");
+    await sendText(reply, "🚫 Perintah ini hanya untuk admin grup dan pemilik bot.");
     return;
   }
   if (adminPrefixCommand && parsed.name === "groupinfo" && !message.isGroup) {
@@ -354,7 +354,7 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
     return;
   }
 
-  // "$command" Ã¢â‚¬â€ explicit owner-only invocation.
+  // "$command" - explicit owner-only invocation.
   if (parsed.prefix === getOwnerPrefix()) {
     if (!command || (!command.ownerOnly && !command.groupOnly)) {
       await sendText(reply, "Perintah tidak dikenal.");

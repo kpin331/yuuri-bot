@@ -84,8 +84,8 @@ const SECTIONS: MenuSection[] = [
   {
     title: "Keuangan virtual",
     items: [
-      { command: "tukar", label: "/tukar [jumlah Point 1-50] â€” Tukar Point menjadi saldo wallet" },
-      { command: "bank", label: "/bank [deposit|tarik jumlah] â€” Kelola saldo bank virtual" },
+      { command: "tukar", label: "/tukar [jumlah Point 1-50] - Tukar Point menjadi saldo wallet" },
+      { command: "bank", label: "/bank [deposit|tarik jumlah] - Kelola saldo bank virtual" },
       { command: "tf", label: "/tf <target> <jumlah> - Transfer saldo wallet" },
       { command: "pinjam", label: "/pinjam <jumlah> - Pinjaman saldo virtual" },
       { command: "lunas", label: "/lunas - Lunasi semua pinjaman aktif" },
