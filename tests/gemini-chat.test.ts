@@ -46,7 +46,7 @@ describe("Gemini chat service", () => {
     const ownerBody = JSON.parse(String(requests[2]?.init?.body)) as {
       systemInstruction: { parts: Array<{ text: string }> };
     };
-    assert.match(ownerBody.systemInstruction.parts[0]?.text ?? "", /Lawan bicaramu adalah developer\/pemilik bot\. Ikuti persona aktif/);
+    assert.match(ownerBody.systemInstruction.parts[0]?.text ?? "", /Lawan bicaramu adalah developer\/pemilik bot\. Ikuti persona aktif saat menyapanya/);
     assert.equal(body.generationConfig.responseMimeType, "application/json");
     assert.deepEqual(contents.map((item) => [item.role, item.parts[0]?.text]), [
       ["user", "halo"],
