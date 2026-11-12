@@ -119,7 +119,7 @@ export function registerOwnerCommand(bot: Bot, name: string, handler: CommandHan
     if (!match) return next();
 
     if (!isOwner(ctx.from?.id)) {
-      await ctx.reply("🚫 Perintah ini hanya untuk pemilik bot.").catch(() => undefined);
+      await ctx.reply("🚫 command ini hanya untuk pemilik bot.").catch(() => undefined);
       return;
     }
 
@@ -157,7 +157,7 @@ export function registerOwnerSlashCommand(bot: Bot, name: string, handler: Comma
     if (!match) return next();
 
     if (!isOwner(ctx.from?.id)) {
-      await ctx.reply("🚫 Perintah ini hanya untuk pemilik bot.").catch(() => undefined);
+      await ctx.reply("🚫 command ini hanya untuk pemilik bot.").catch(() => undefined);
       return;
     }
 

@@ -18,7 +18,10 @@ describe("Telegram admin group commands", () => {
     await t.bot.handleUpdate(t.textUpdate("!ping", { chatType: "supergroup" }));
 
     assert.match(t.replies()[0] ?? "", /^Waktu respons: \d+ ms/);
-    assert.ok(t.replies().some((reply) => reply.includes("Node.js memakai memori:")));
+    assert.equal(t.replies().length, 1);
+    assert.match(t.replies()[0] ?? "", /^Waktu respons: \d+ ms$/);
+    await t.bot.handleUpdate(t.textUpdate("!neoping", { chatType: "supergroup" }));
+    assert.ok(t.replies().slice(1).some((reply) => reply.includes("Node.js memakai memori:")));
     assert.doesNotMatch(t.replies().join("\n"), /Task manager|PID \| proses/);
   });
 

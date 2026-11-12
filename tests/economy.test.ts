@@ -153,14 +153,14 @@ describe("quota purchases", () => {
     const bought = purchaseQuota("telegram", "buyer", { kind: "daily", amount: 2 }, today, day1);
     assert.equal(bought.ok, true);
     if (!bought.ok) return;
-    assert.equal(bought.quotaLeft, 27);
+    assert.equal(bought.quotaLeft, 52);
     assert.equal(bought.wallet.balance, 90_000);
-    assert.equal(getQuota("whatsapp", "buyer", "member", "Buyer", day1).total, 25);
-    assert.equal(getQuota("telegram", "buyer", "member", "Buyer", day1).total, 27);
-    consumeQuota("telegram", "buyer", 27);
+    assert.equal(getQuota("whatsapp", "buyer", "member", "Buyer", day1).total, 50);
+    assert.equal(getQuota("telegram", "buyer", "member", "Buyer", day1).total, 52);
+    consumeQuota("telegram", "buyer", 52);
     assert.equal(getQuota("telegram", "buyer", "member", "Buyer", day1).quotaLeft, 0);
-    assert.equal(getQuota("telegram", "buyer", "member", "Buyer", day1 + 86_400_000).total, 25);
-    assert.equal(getQuota("telegram", "buyer", "member", "Buyer", day1 + 86_400_000).quotaLeft, 25);
+    assert.equal(getQuota("telegram", "buyer", "member", "Buyer", day1 + 86_400_000).total, 52);
+    assert.equal(getQuota("telegram", "buyer", "member", "Buyer", day1 + 86_400_000).quotaLeft, 52);
   });
 
   it("adds stackable permanent capacity and keeps it after daily reset", () => {
@@ -171,10 +171,10 @@ describe("quota purchases", () => {
     let today = tzDateKey(day1, "UTC");
     assert.equal(purchaseQuota("whatsapp", "buyer", { kind: "upgrade" }, today, day1).ok, true);
     assert.equal(purchaseQuota("whatsapp", "buyer", { kind: "upgrade" }, today, day1).ok, true);
-    assert.equal(getQuota("whatsapp", "buyer", "member", "Buyer", day1).total, 45);
+    assert.equal(getQuota("whatsapp", "buyer", "member", "Buyer", day1).total, 70);
     const nextDay = day1 + 86_400_000;
     today = tzDateKey(nextDay, "UTC");
-    assert.equal(getQuota("whatsapp", "buyer", "member", "Buyer", nextDay).total, 45);
+    assert.equal(getQuota("whatsapp", "buyer", "member", "Buyer", nextDay).total, 70);
     assert.equal(getWallet("buyer")?.balance, 100_000);
   });
 
@@ -190,7 +190,7 @@ describe("quota purchases", () => {
     assert.ok(response.startsWith("⚠️"));
     assert.match(response, /Saldo wallet tidak cukup/);
     assert.equal(getWallet("buyer")?.balance, 1_000);
-    assert.equal(getQuota("telegram", "buyer", "member", "Buyer").quotaLeft, 25);
+    assert.equal(getQuota("telegram", "buyer", "member", "Buyer").quotaLeft, 50);
     assert.match(formatCommandHelp("quota", "telegram"), /upgrade/);
     assert.match(formatCommandHelp("quota", "whatsapp"), /jumlah 1-25/);
   });

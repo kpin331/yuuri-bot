@@ -1,7 +1,8 @@
-import { addWalletMoney, exchangePoints, getWallet, isBalanceFrozen, transferBank, transferWallet } from "./casino-storage.js";
+import { addWalletMoney, exchangePoints, getWallet, isBalanceFrozen, transferBank, transferWallet, MIN_TRANSACTION, MAX_TRANSACTION } from "./casino-storage.js";
 import { borrowLoan, getActiveLoans, MAX_ACTIVE_LOANS, MAX_LOAN_AMOUNT, repayAllLoans, repayLoan, reconcileBalanceFreeze, totalDebt } from "./loans.js";
 
 const money = (amount: number): string => `Rp${amount.toLocaleString("id-ID")}`;
+const transactionRange = `Jumlah transaksi harus berupa Rupiah bulat antara ${money(MIN_TRANSACTION)} dan ${money(MAX_TRANSACTION)}.`;
 const packages = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50];
 
 export function parseMoneyAmount(raw: string): number | null {
@@ -51,6 +52,7 @@ export function bankMessage(userId: string, args: string, prefix: string): strin
       `Saldo bank: ${money(wallet.bankBalance)}`,
       `Setor: ${prefix}bank deposit <jumlah>`,
       `Tarik: ${prefix}bank tarik <jumlah>`,
+      transactionRange,
     ].join("\n");
   }
   if (parts.length !== 2 || !/^(deposit|tarik)$/i.test(parts[0] ?? "")) {
@@ -68,6 +70,7 @@ export function bankMessage(userId: string, args: string, prefix: string): strin
         ? `⚠️ Saldo wallet tidak cukup. Saldo wallet: ${money(wallet.balance)}.`
         : `⚠️ Saldo bank tidak cukup. Saldo bank: ${money(wallet.bankBalance)}.`;
     }
+    if (result.reason === "invalid") return transactionRange;
     if (result.reason === "limit") return "Transaksi melewati batas angka yang aman.";
     return "Penyimpanan kasino belum siap.";
   }
@@ -80,7 +83,7 @@ export function transferMessage(senderId: string, recipientId: string, amount: n
   if (!result.ok) {
     if (result.reason === "frozen") return "Saldo wallet dibekukan karena ada pinjaman jatuh tempo. Lunasi pinjaman terlebih dahulu.";
     if (result.reason === "insufficient") return "⚠️ Saldo wallet tidak cukup untuk transfer ini.";
-    if (result.reason === "invalid") return "Jumlah transfer tidak valid atau target sama dengan pengirim.";
+    if (result.reason === "invalid") return senderId === recipientId ? "Target transfer tidak boleh sama dengan pengirim." : transactionRange;
     if (result.reason === "limit") return "Transfer melewati batas angka yang aman.";
     return "Penyimpanan kasino belum siap.";
   }
@@ -90,7 +93,7 @@ export function transferMessage(senderId: string, recipientId: string, amount: n
 export function addMoneyMessage(userId: string, amount: number): string {
   const result = addWalletMoney(userId, amount);
   if (!result.ok) {
-    if (result.reason === "invalid") return "Jumlah harus berupa Rupiah bulat yang lebih dari nol.";
+    if (result.reason === "invalid") return transactionRange;
     if (result.reason === "limit") return "Saldo melewati batas angka yang aman.";
     return "Penyimpanan kasino belum siap.";
   }

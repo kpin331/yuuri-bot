@@ -89,6 +89,7 @@ async function getAccessToken(refreshToken: string): Promise<string> {
 export async function searchIllust(
   refreshToken: string,
   word: string,
+  nsfw: boolean = false,
 ): Promise<PixivIllust | null> {
   const accessToken = await getAccessToken(refreshToken);
 
@@ -108,6 +109,7 @@ export async function searchIllust(
   const data = (await res.json()) as {
     illusts?: Array<{
       id?: number;
+      x_restrict?: number;
       title?: string;
       create_date?: string;
       user?: { name?: string };
@@ -116,24 +118,40 @@ export async function searchIllust(
     }>;
   };
 
-  const illust = data.illusts?.[0];
-  if (!illust?.id) return null;
+  const R18_TAGS = new Set(["r-18", "r18", "r-18g", "r18g"]);
+
+  const illusts = data.illusts ?? [];
+  let selected: (typeof illusts)[number] | null = null;
+
+  if (nsfw) {
+    selected = illusts.find((i) => i?.id) ?? null;
+  } else {
+    selected =
+      illusts.find(
+        (i) =>
+          i?.id &&
+          (i.x_restrict === undefined || i.x_restrict === 0) &&
+          !(i.tags ?? []).some((t) => R18_TAGS.has(String(t.name ?? "").trim().toLowerCase())),
+      ) ?? null;
+  }
+
+  if (!selected?.id) return null;
 
   const imageUrl =
-    illust.image_urls?.large ??
-    illust.image_urls?.medium ??
-    illust.image_urls?.square_medium ??
-    illust.image_urls?.original;
+    selected.image_urls?.large ??
+    selected.image_urls?.medium ??
+    selected.image_urls?.square_medium ??
+    selected.image_urls?.original;
   if (!imageUrl) return null;
 
   return {
-    id: illust.id,
-    title: illust.title?.trim() || "Untitled",
-    author: illust.user?.name?.trim() || "Tidak diketahui",
+    id: selected.id,
+    title: selected.title?.trim() || "Untitled",
+    author: selected.user?.name?.trim() || "Tidak diketahui",
     imageUrl,
-    pageUrl: `https://www.pixiv.net/artworks/${illust.id}`,
-    tags: (illust.tags ?? []).map((t) => t.name?.trim()).filter((n): n is string => !!n),
-    createDate: illust.create_date,
+    pageUrl: `https://www.pixiv.net/artworks/${selected.id}`,
+    tags: (selected.tags ?? []).map((t) => t.name?.trim()).filter((n): n is string => !!n),
+    createDate: selected.create_date,
   };
 }
 

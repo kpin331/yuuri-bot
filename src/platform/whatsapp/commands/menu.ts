@@ -4,7 +4,10 @@ import { getAllowedGroups, getCommandPrefix } from "../../../lib/config.js";
 import { isCommandEnabled } from "../../../lib/db.js";
 import { runtimeOptions } from "../../../lib/runtime.js";
 import { replyTo, sendImage, sendText } from "../reply.js";
-import type { WaCommand } from "../types.js";
+import type { CommandContext, WaCommand } from "../types.js";
+import { startMessage } from "../../../lib/start-message.js";
+import { getXp } from "../../../lib/xp-storage.js";
+import { levelForXp } from "../../../lib/xp.js";
 
 const TITLE = "Yuuri Bot V1.0✨";
 const SUBTITLE = "Daftar perintah yang tersedia";
@@ -25,10 +28,12 @@ function sections(): Section[] {
     {
       title: "Umum",
       items: [
+        { name: "start", label: `${p}start — Sapaan, jumlah command, dan level` },
         { name: "menu", label: `${p}menu — Tampilkan menu ini` },
         { name: "userinfo", label: `${p}userinfo — Tampilkan statistik dan kuota` },
         { name: "d", label: `${p}d — Hapus pesan yang dibalas` },
         { name: "ping", label: "!ping — Cek respons bot (admin grup)" },
+        { name: "neoping", label: "!neoping — Cek respons dan sistem (admin grup)" },
         { name: "groupinfo", label: "!groupinfo — Tampilkan info grup (admin grup)" },
         { name: "quota", label: `${p}quota — Lihat, beli kuota, atau upgrade batas harian` },
         { name: "rank", label: `${p}rank — Tampilkan tingkat dan XP di grup ini` },
@@ -109,7 +114,7 @@ function sections(): Section[] {
       title: "Pencarian Gambar",
       items: [
         { name: "pin", label: `${p}pin — Gambar Pinterest teratas (kata kunci atau tautan)` },
-        { name: "pixiv", label: `${p}pixiv — Ilustrasi Pixiv teratas (kata kunci saja)` },
+        { name: "pixiv", label: `${p}pixiv — Ilustrasi Pixiv (khusus pemilik); !pixiv nsfw true|false` },
       ],
     },
     {
@@ -148,15 +153,14 @@ export function buildMenu(): string {
   return lines.join("\n");
 }
 
-export const menuCommand: WaCommand = {
-  name: "menu",
-  aliases: ["start"],
-  free: true,
-  run: async ({ message, role }) => {
+async function showMenu({ message, role }: CommandContext, starting: boolean): Promise<void> {
     const reply = replyTo(message);
-    const caption = buildMenu();
+    const count = sections().flatMap((section) => section.items).filter((item) => !item.label.includes("COMING SOON") && isCommandEnabled(item.name)).length;
+    const caption = starting
+      ? startMessage(message.name || "teman", count, levelForXp(await getXp("whatsapp", message.chatId, message.userId)))
+      : buildMenu();
 
-    if (role === "owner" && runtimeOptions().changelog) {
+    if (!starting && role === "owner" && runtimeOptions().changelog) {
       try {
         const changelog = (await readFile(resolve(process.cwd(), "CHANGELOG.txt"), "utf8")).trim();
         const targets = getAllowedGroups().filter((jid) => !jid.startsWith("-"));
@@ -189,5 +193,17 @@ export const menuCommand: WaCommand = {
     }
 
     await sendText(reply, caption);
-  },
+}
+
+export const menuCommand: WaCommand = {
+  name: "menu",
+  aliases: ["help"],
+  free: true,
+  run: (context) => showMenu(context, false),
+};
+
+export const startCommand: WaCommand = {
+  name: "start",
+  free: true,
+  run: (context) => showMenu(context, true),
 };

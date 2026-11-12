@@ -45,9 +45,12 @@ describe("casino routing and charges", () => {
   it("does not charge invalid WhatsApp input; valid actions spend three quota and are rate limited", async () => {
     await handleIncoming(waMessage(".slot nope"));
     assert.equal(getQuotaRow("whatsapp", "62855"), null);
-    for (let n = 0; n < 3; n += 1) await handleIncoming(waMessage(".slot 10"));
+    await handleIncoming(waMessage(".slot 99"));
+    await handleIncoming(waMessage(".slot 50000001"));
+    assert.equal(getQuotaRow("whatsapp", "62855"), null);
+    for (let n = 0; n < 3; n += 1) await handleIncoming(waMessage(".slot 100"));
     const beforeBlocked = getQuotaRow("whatsapp", "62855")?.quotaLeft;
-    await handleIncoming(waMessage(".slot 10"));
+    await handleIncoming(waMessage(".slot 100"));
     assert.equal(beforeBlocked, 16);
     assert.equal(getQuotaRow("whatsapp", "62855")?.quotaLeft, 16);
     assert.equal(checkRateLimit("whatsapp", "62855").allowed, false);
@@ -58,23 +61,26 @@ describe("casino routing and charges", () => {
     registerCasino(t.bot);
     await t.bot.handleUpdate(t.textUpdate("/slot nope", { fromId: 778 }));
     assert.equal(getQuotaRow("telegram", "778"), null);
-    for (let n = 0; n < 3; n += 1) await t.bot.handleUpdate(t.textUpdate("/slot 10", { fromId: 778 }));
+    await t.bot.handleUpdate(t.textUpdate("/slot 99", { fromId: 778 }));
+    await t.bot.handleUpdate(t.textUpdate("/slot 50000001", { fromId: 778 }));
+    assert.equal(getQuotaRow("telegram", "778"), null);
+    for (let n = 0; n < 3; n += 1) await t.bot.handleUpdate(t.textUpdate("/slot 100", { fromId: 778 }));
     assert.equal(getQuotaRow("telegram", "778")?.quotaLeft, 16);
-    await t.bot.handleUpdate(t.textUpdate("/slot 10", { fromId: 778 }));
+    await t.bot.handleUpdate(t.textUpdate("/slot 100", { fromId: 778 }));
     assert.equal(getQuotaRow("telegram", "778")?.quotaLeft, 16);
   });
 
   it("rejects both platforms before rate limiting when fewer than three quota remain", async () => {
     process.env.DEFAULT_QUOTA = "2";
     const whatsappReplies: string[] = [];
-    await handleIncoming(waMessage(".slot 10", whatsappReplies));
+    await handleIncoming(waMessage(".slot 100", whatsappReplies));
     assert.ok(whatsappReplies.some((reply) => reply.startsWith("⚠️ Kuota harian tidak cukup")));
     assert.equal(getQuotaRow("whatsapp", "62855")?.quotaLeft, 2);
     assert.equal(checkRateLimit("whatsapp", "62855").allowed, true);
 
     const t = createTestBot();
     registerCasino(t.bot);
-    await t.bot.handleUpdate(t.textUpdate("/slot 10", { fromId: 778 }));
+    await t.bot.handleUpdate(t.textUpdate("/slot 100", { fromId: 778 }));
     assert.ok(t.replies().some((reply) => reply.startsWith("⚠️ Kuota harian tidak cukup")));
     assert.equal(getQuotaRow("telegram", "778")?.quotaLeft, 2);
     assert.equal(checkRateLimit("telegram", "778").allowed, true);

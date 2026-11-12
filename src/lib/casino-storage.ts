@@ -4,6 +4,10 @@ export interface Wallet { balance: number; points: number; bankBalance: number }
 export interface BlackjackState { bet: number; hand: number[]; dealer: number[] }
 export const DAILY_QUOTA_PRICE = 5_000;
 
+// Batas transaksi ekonomi per aksi (transfer, setor/tarik bank, add money).
+export const MIN_TRANSACTION = 1_000;
+export const MAX_TRANSACTION = 3_000_000;
+
 export type WalletOperationResult =
   | { ok: true; wallet: Wallet }
   | { ok: false; reason: "not-ready" | "invalid" | "insufficient" | "limit" | "frozen" };
@@ -158,7 +162,7 @@ export function exchangePoints(userId: string, points: number): WalletOperationR
 export function transferBank(userId: string, action: "deposit" | "withdraw", amount: number): WalletOperationResult {
   const db = getDb();
   if (!db) return { ok: false, reason: "not-ready" };
-  if (!Number.isSafeInteger(amount) || amount < 1) return { ok: false, reason: "invalid" };
+  if (!Number.isSafeInteger(amount) || amount < MIN_TRANSACTION || amount > MAX_TRANSACTION) return { ok: false, reason: "invalid" };
 
   db.exec("BEGIN IMMEDIATE");
   try {
@@ -205,7 +209,9 @@ export type TransferResult =
 export function transferWallet(senderId: string, recipientId: string, amount: number): TransferResult {
   const db = getDb();
   if (!db) return { ok: false, reason: "not-ready" };
-  if (!Number.isSafeInteger(amount) || amount < 1 || senderId === recipientId) return { ok: false, reason: "invalid" };
+  if (!Number.isSafeInteger(amount) || amount < MIN_TRANSACTION || amount > MAX_TRANSACTION || senderId === recipientId) {
+    return { ok: false, reason: "invalid" };
+  }
   db.exec("BEGIN IMMEDIATE");
   try {
     const sender = getWallet(senderId);
@@ -245,7 +251,7 @@ export function transferWallet(senderId: string, recipientId: string, amount: nu
 export function addWalletMoney(userId: string, amount: number): WalletOperationResult {
   const db = getDb();
   if (!db) return { ok: false, reason: "not-ready" };
-  if (!Number.isSafeInteger(amount) || amount < 1) return { ok: false, reason: "invalid" };
+  if (!Number.isSafeInteger(amount) || amount < MIN_TRANSACTION || amount > MAX_TRANSACTION) return { ok: false, reason: "invalid" };
   db.exec("BEGIN IMMEDIATE");
   try {
     const wallet = getWallet(userId);

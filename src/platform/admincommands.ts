@@ -23,7 +23,7 @@ async function isTelegramGroupAdmin(ctx: Context): Promise<boolean> {
 }
 
 export async function registerAdminCommandText(ctx: Context, text: string): Promise<boolean> {
-  const match = /^!(ping|groupinfo)$/i.exec(text);
+  const match = /^!(ping|neoping|groupinfo)$/i.exec(text);
   if (!match) return false;
   const name = (match[1] ?? "").toLowerCase();
   const owner = isOwner(ctx.from?.id);
@@ -44,13 +44,17 @@ export async function registerAdminCommandText(ctx: Context, text: string): Prom
     return true;
   }
 
-  if (name === "ping") {
+  if (name === "ping" || name === "neoping") {
     const elapsedMs = Math.max(0, Date.now() - (ctx.message?.date ?? Math.floor(Date.now() / 1000)) * 1000);
+    if (name === "ping") {
+      await ctx.reply(`Waktu respons: ${elapsedMs} ms`);
+      return true;
+    }
     const diagnostics = await getSystemDiagnostics();
     for (const chunk of splitStatusMessage(formatSystemDiagnostics(elapsedMs, diagnostics))) {
       await ctx.reply(chunk);
     }
-    writeLog("COMMAND", `telegram ping status=success`);
+    writeLog("COMMAND", `telegram neoping status=success`);
     return true;
   }
 
@@ -67,6 +71,7 @@ export async function registerAdminCommandText(ctx: Context, text: string): Prom
 
 export function registerAdminCommands(bot: Bot): void {
   registerKnownCommand("ping");
+  registerKnownCommand("neoping");
   registerKnownCommand("groupinfo");
   bot.on("message", async (ctx, next) => {
     const text = (ctx.message.text ?? ctx.message.caption ?? "").trim();

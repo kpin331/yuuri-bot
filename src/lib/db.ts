@@ -93,6 +93,10 @@ export function initDatabase(path: string = getDbPath()): void {
 
     CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
 
+    CREATE TABLE IF NOT EXISTS bot_settings (
+      name TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS command_states (
       command     TEXT PRIMARY KEY,
       enabled     INTEGER NOT NULL DEFAULT 1,
@@ -531,7 +535,7 @@ export function setQuotaRow(input: {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(platform, user_id) DO UPDATE SET
        quota_left   = excluded.quota_left,
-       quota_bonus_daily = CASE WHEN excluded.last_reset = platform_quota.last_reset THEN excluded.quota_bonus_daily ELSE 0 END,
+       quota_bonus_daily = excluded.quota_bonus_daily,
        quota_bonus_permanent = MAX(platform_quota.quota_bonus_permanent, excluded.quota_bonus_permanent),
        last_reset   = excluded.last_reset,
        display_name = COALESCE(excluded.display_name, platform_quota.display_name),

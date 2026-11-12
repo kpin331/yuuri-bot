@@ -28,7 +28,7 @@ export function quotaPurchaseMessage(
       `Sisa: ${quota.quotaLeft} / ${quota.total}`,
       `Reset dalam: ${formatWait(quota.resetInSeconds)}`,
       `Saldo wallet: ${money(wallet.balance)}`,
-      "Tambahan kuota sampai reset tengah malam:",
+      "Tambahan limit yang ikut diisi ulang saat reset:",
       ...packages,
       `Beli: ${prefix}quota <jumlah 1-25>`,
       `Upgrade batas permanen +10 kuota/hari: ${prefix}quota upgrade (Rp500.000)`,
@@ -59,7 +59,7 @@ export function quotaPurchaseMessage(
   const cost = isUpgrade ? 500_000 : amount! * DAILY_QUOTA_PRICE;
   const description = isUpgrade
     ? "batas harian permanen naik 10 kuota"
-    : `ditambahkan ${amount} kuota sampai reset tengah malam`;
+    : `limit harian bertambah ${amount} kuota`;
   const updated = getQuota(platform, userId, role, displayName);
   return `Pembelian berhasil: ${description} seharga ${money(cost)}. Kuota: ${updated.quotaLeft} / ${updated.total}. Saldo wallet: ${money(result.wallet.balance)}.`;
 }

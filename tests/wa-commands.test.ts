@@ -16,7 +16,10 @@ describe("whatsapp command registry", () => {
 
   it("resolves commands by name and alias", () => {
     assert.equal(findCommand("menu")?.name, "menu");
-    assert.equal(findCommand("START")?.name, "menu");
+    assert.equal(findCommand("START")?.name, "start");
+    assert.equal(findCommand("help")?.name, "menu");
+    assert.equal(findCommand("pixiv")?.ownerOnly, true);
+    assert.equal(findCommand("neoping")?.adminOnly, true);
     assert.equal(findCommand("s")?.name, "s");
     assert.equal(findCommand("dl")?.name, "dl");
     assert.equal(findCommand("tt")?.name, "tt");

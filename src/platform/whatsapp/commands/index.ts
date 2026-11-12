@@ -1,10 +1,10 @@
 import { registerKnownCommand } from "../../../lib/command.js";
 import type { WaCommand } from "../types.js";
 import { banCommands } from "./ban.js";
-import { groupinfoCommand, pingCommand } from "./admin.js";
+import { groupinfoCommand, neopingCommand, pingCommand } from "./admin.js";
 import { commandHelpCommand } from "./help.js";
 import { downloadCommands } from "./download.js";
-import { menuCommand } from "./menu.js";
+import { menuCommand, startCommand } from "./menu.js";
 import { pinCommand } from "./pinterest.js";
 import { pixivCommand } from "./pixiv.js";
 import { rankCommands } from "./rank.js";
@@ -33,8 +33,10 @@ import { base64Command, hashCommand, timeCommand, uuidCommand } from "./text-too
 // so the shared enable/disable state applies to both platforms.
 const ALL: WaCommand[] = [
   menuCommand,
+  startCommand,
   commandHelpCommand,
   pingCommand,
+  neopingCommand,
   groupinfoCommand,
   userinfoCommand,
   quotaCommand,
