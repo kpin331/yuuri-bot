@@ -9,6 +9,7 @@ interface HelpEntry {
   example?: string;
 }
 
+const CASINO_RULES = "Taruhan Rp100 sampai Rp50.000.000. Setiap aksi valid memakai 3 kuota.";
 const ENTRIES: HelpEntry[] = [
   { name: "start", telegram: ["/start"], whatsapp: ["{{p}}start"], description: "Menampilkan sapaan sesuai waktu WIB, jumlah command, dan level pengguna dengan foto profil bot." },
   { name: "menu", aliases: ["help"], telegram: ["/menu", "/help", "help"], whatsapp: ["{{p}}menu", "{{p}}help", "help"], description: "Menampilkan semua command." },
@@ -48,10 +49,10 @@ const ENTRIES: HelpEntry[] = [
   { name: "uuid", telegram: ["/uuid"], whatsapp: ["{{p}}uuid"], description: "Membuat UUID acak.", example: "{{p}}uuid" },
   { name: "hash", telegram: ["/hash <teks>"], whatsapp: ["{{p}}hash <teks>"], description: "Menghasilkan hash SHA-256 dari teks, maksimal 10.000 karakter.", example: "{{p}}hash Yuuri" },
   { name: "base64", telegram: ["/base64 encode|decode <teks>"], whatsapp: ["{{p}}base64 encode|decode <teks>"], description: "Mengubah teks ke atau dari Base64, dengan batas data 2.900 byte. Hasil decode harus berupa UTF-8.", example: "{{p}}base64 encode halo" },
-  { name: "slot", telegram: ["/slot <taruhan>"], whatsapp: ["{{p}}slot <taruhan>"], description: "Memainkan slot memakai saldo virtual. Setiap aksi valid memakai 3 kuota.", example: "{{p}}slot 1000" },
-  { name: "coinflip", aliases: ["coin"], telegram: ["/coinflip <taruhan> cara|angka", "/coin <taruhan> cara|angka"], whatsapp: ["{{p}}coinflip <taruhan> cara|angka", "{{p}}coin <taruhan> cara|angka"], description: "Memilih sisi koin dan bertaruh dengan saldo virtual. Setiap aksi valid memakai 3 kuota.", example: "{{p}}coinflip 1000 cara" },
-  { name: "roulette", telegram: ["/roulette <taruhan> merah|hitam|0-36"], whatsapp: ["{{p}}roulette <taruhan> merah|hitam|0-36"], description: "Bertaruh pada warna atau angka roulette dengan saldo virtual. Setiap aksi valid memakai 3 kuota.", example: "{{p}}roulette 1000 merah" },
-  { name: "blackjack", telegram: ["/blackjack <taruhan>", "/blackjack hit|stand"], whatsapp: ["{{p}}blackjack <taruhan>", "{{p}}blackjack hit|stand"], description: "Mulai permainan dengan taruhan, lalu kirim hit atau stand sampai selesai. Setiap aksi memakai 3 kuota.", example: "{{p}}blackjack 1000, lalu {{p}}blackjack hit" },
+  { name: "slot", telegram: ["/slot <taruhan>"], whatsapp: ["{{p}}slot <taruhan>"], description: `Memainkan slot memakai saldo virtual. ${CASINO_RULES}`, example: "{{p}}slot 1000" },
+  { name: "coinflip", aliases: ["coin"], telegram: ["/coinflip <taruhan> cara|angka", "/coin <taruhan> cara|angka"], whatsapp: ["{{p}}coinflip <taruhan> cara|angka", "{{p}}coin <taruhan> cara|angka"], description: `Memilih sisi koin dan bertaruh dengan saldo virtual. ${CASINO_RULES}`, example: "{{p}}coinflip 1000 cara" },
+  { name: "roulette", telegram: ["/roulette <taruhan> merah|hitam|0-36"], whatsapp: ["{{p}}roulette <taruhan> merah|hitam|0-36"], description: `Bertaruh pada warna atau angka roulette dengan saldo virtual. Peluang berlaku untuk pilihan warna maupun angka. ${CASINO_RULES}`, example: "{{p}}roulette 1000 merah" },
+  { name: "blackjack", telegram: ["/blackjack <taruhan>", "/blackjack hit|stand"], whatsapp: ["{{p}}blackjack <taruhan>", "{{p}}blackjack hit|stand"], description: `Mulai permainan dengan taruhan, lalu kirim hit atau stand sampai selesai. Hasil akhir diundi sekali, bukan ditentukan nilai kartu; tidak ada hasil seri. ${CASINO_RULES}`, example: "{{p}}blackjack 1000, lalu {{p}}blackjack hit" },
   { name: "dl", telegram: ["/dl <tautan> atau balas pesan berisi tautan"], whatsapp: ["{{p}}dl <tautan> atau balas pesan berisi tautan"], description: "Mengunduh media dari tautan yang didukung.", example: "{{p}}dl https://example.com/video" },
   { name: "ig", telegram: ["/ig <tautan Instagram>"], whatsapp: ["{{p}}ig <tautan Instagram>"], description: "Mengunduh media dari Instagram.", example: "{{p}}ig https://www.instagram.com/p/..." },
   { name: "x", telegram: ["/x <tautan X>"], whatsapp: ["{{p}}x <tautan X>"], description: "Mengunduh media dari X.", example: "{{p}}x https://x.com/..." },
