@@ -3,7 +3,7 @@ import { changeBalance, clearBlackjack, getBlackjack, getWallet, saveBlackjack, 
 export type CasinoGame = "slot" | "coin" | "roulette" | "blackjack";
 export const MIN_CASINO_BET = 100;
 export const MAX_CASINO_BET = 50_000_000;
-export const CASINO_WIN_CHANCE = 0.65;
+export const CASINO_WIN_CHANCE = 0.55;
 export function rollCasinoWin(): boolean { return Math.random() < CASINO_WIN_CHANCE; }
 const BET = /^[1-9]\d*$/;
 const FACE = (n: number): number => n === 1 ? 11 : n > 10 ? 10 : n;
