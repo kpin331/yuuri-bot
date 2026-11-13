@@ -1,8 +1,9 @@
 import { getDb, getQuotaRow, setQuotaRow } from "./db.js";
+import { roleLimit, type Role } from "../core/access.js";
+import { isQuotaPackage, quoteQuotaRefill, type QuotaPackage } from "./quota-packages.js";
 
 export interface Wallet { balance: number; points: number; bankBalance: number }
 export interface BlackjackState { bet: number; hand: number[]; dealer: number[] }
-export const DAILY_QUOTA_PRICE = 5_000;
 
 // Batas transaksi ekonomi per aksi (transfer, setor/tarik bank, add money).
 export const MIN_TRANSACTION = 1_000;
@@ -13,8 +14,8 @@ export type WalletOperationResult =
   | { ok: false; reason: "not-ready" | "invalid" | "insufficient" | "limit" | "frozen" };
 
 export type QuotaPurchaseResult =
-  | { ok: true; wallet: Wallet; quotaLeft: number; dailyBonus: number; permanentBonus: number }
-  | { ok: false; reason: "not-ready" | "invalid" | "insufficient" | "limit" | "frozen" };
+  | { ok: true; wallet: Wallet; quotaLeft: number; amount: number; cost: number }
+  | { ok: false; reason: "not-ready" | "invalid" | "insufficient" | "limit" | "frozen" | "full" };
 
 export function isBalanceFrozen(userId: string): boolean {
   const row = getDb()?.prepare("SELECT balance_frozen FROM casino_wallets WHERE user_id=?").get(userId);
@@ -24,18 +25,17 @@ export function isBalanceFrozen(userId: string): boolean {
 export function purchaseQuota(
   platform: string,
   userId: string,
-  purchase: { kind: "daily"; amount: number } | { kind: "upgrade" },
+  purchase: QuotaPackage,
+  role: Role,
   today: string,
   at: number = Date.now(),
 ): QuotaPurchaseResult {
   const db = getDb();
   if (!db) return { ok: false, reason: "not-ready" };
-  if (purchase.kind === "daily" && (!Number.isSafeInteger(purchase.amount) || purchase.amount < 1 || purchase.amount > 25)) {
+  if (!isQuotaPackage(purchase) || role === "owner") {
     return { ok: false, reason: "invalid" };
   }
 
-  const units = purchase.kind === "daily" ? purchase.amount : 10;
-  const cost = purchase.kind === "daily" ? units * DAILY_QUOTA_PRICE : 500_000;
   db.exec("BEGIN IMMEDIATE");
   try {
     const wallet = getWallet(userId);
@@ -48,18 +48,23 @@ export function purchaseQuota(
       db.exec("ROLLBACK");
       return { ok: false, reason: "frozen" };
     }
+    const limit = roleLimit(role) + quota.dailyBonus + quota.permanentBonus;
+    const quote = quoteQuotaRefill(purchase, limit, quota.quotaLeft);
+    if (!quote) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "limit" };
+    }
+    const { amount, cost } = quote;
+    if (amount === 0) {
+      db.exec("ROLLBACK");
+      return { ok: false, reason: "full" };
+    }
     if (wallet.balance < cost) {
       db.exec("ROLLBACK");
       return { ok: false, reason: "insufficient" };
     }
 
-    const dailyBonus = quota.dailyBonus + (purchase.kind === "daily" ? units : 0);
-    const permanentBonus = quota.permanentBonus + (purchase.kind === "upgrade" ? units : 0);
-    const quotaLeft = quota.quotaLeft + units;
-    if (![dailyBonus, permanentBonus, quotaLeft].every(Number.isSafeInteger)) {
-      db.exec("ROLLBACK");
-      return { ok: false, reason: "limit" };
-    }
+    const quotaLeft = quota.quotaLeft + amount;
 
     db.prepare("UPDATE casino_wallets SET balance=balance-?, updated_at=? WHERE user_id=? AND balance>=?")
       .run(cost, at, userId, cost);
@@ -67,8 +72,8 @@ export function purchaseQuota(
       platform,
       userId,
       quotaLeft,
-      dailyBonus,
-      permanentBonus,
+      dailyBonus: quota.dailyBonus,
+      permanentBonus: quota.permanentBonus,
       lastReset: quota.lastReset,
       displayName: quota.displayName,
       at,
@@ -76,7 +81,7 @@ export function purchaseQuota(
     const updatedWallet = getWallet(userId);
     if (!updatedWallet) throw new Error("Wallet tidak tersedia setelah pembelian kuota.");
     db.exec("COMMIT");
-    return { ok: true, wallet: updatedWallet, quotaLeft, dailyBonus, permanentBonus };
+    return { ok: true, wallet: updatedWallet, quotaLeft, amount, cost };
   } catch (error) {
     db.exec("ROLLBACK");
     throw error;

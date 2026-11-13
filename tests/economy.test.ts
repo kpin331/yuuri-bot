@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, it } from "node:test";
-import { closeDatabase, getDb, initDatabase } from "../src/lib/db.js";
+import { closeDatabase, getDb, getQuotaRow, initDatabase, setQuotaRow } from "../src/lib/db.js";
 import { exchangePoints, getWallet, purchaseQuota, transferBank } from "../src/lib/casino-storage.js";
 import { getQuota, consumeQuota } from "../src/core/access.js";
 import { tzDateKey } from "../src/core/time.js";
@@ -78,8 +78,8 @@ describe("virtual wallet exchange and bank", () => {
     const test = createTestBot();
     registerQuota(test.bot);
     await test.bot.handleUpdate(test.textUpdate("/quota"));
-    assert.match(test.replies()[0] ?? "", /1 kuota = Rp5\.000/);
-    assert.match(test.replies()[0] ?? "", /upgrade/);
+    assert.match(test.replies()[0] ?? "", /minimum[\s\S]*basic[\s\S]*max/);
+    assert.match(test.replies()[0] ?? "", /Rp500[\s\S]*Rp50\.000/);
   });
 
   it("adds a bank column to an existing wallet database", async () => {
@@ -146,52 +146,57 @@ describe("quota purchases", () => {
     }
   });
 
-  it("adds paid quota for today, keeps it platform-scoped, and resets it next day", () => {
+  it("refills quota without increasing the limit and keeps it platform-scoped", () => {
     const day1 = Date.UTC(2026, 0, 1, 12);
     getQuota("telegram", "buyer", "member", "Buyer", day1);
+    consumeQuota("telegram", "buyer", 50);
     const today = tzDateKey(day1, "UTC");
-    const bought = purchaseQuota("telegram", "buyer", { kind: "daily", amount: 2 }, today, day1);
+    const bought = purchaseQuota("telegram", "buyer", "minimum", "member", today, day1);
     assert.equal(bought.ok, true);
     if (!bought.ok) return;
-    assert.equal(bought.quotaLeft, 52);
-    assert.equal(bought.wallet.balance, 90_000);
+    assert.equal(bought.quotaLeft, 13);
+    assert.equal(bought.amount, 13);
+    assert.equal(bought.cost, 1_300);
+    assert.equal(bought.wallet.balance, 98_700);
     assert.equal(getQuota("whatsapp", "buyer", "member", "Buyer", day1).total, 50);
-    assert.equal(getQuota("telegram", "buyer", "member", "Buyer", day1).total, 52);
-    consumeQuota("telegram", "buyer", 52);
+    assert.equal(getQuota("telegram", "buyer", "member", "Buyer", day1).total, 50);
+    consumeQuota("telegram", "buyer", 13);
     assert.equal(getQuota("telegram", "buyer", "member", "Buyer", day1).quotaLeft, 0);
-    assert.equal(getQuota("telegram", "buyer", "member", "Buyer", day1 + 86_400_000).total, 52);
-    assert.equal(getQuota("telegram", "buyer", "member", "Buyer", day1 + 86_400_000).quotaLeft, 52);
+    assert.equal(getQuota("telegram", "buyer", "member", "Buyer", day1 + 86_400_000).total, 50);
+    assert.equal(getQuota("telegram", "buyer", "member", "Buyer", day1 + 86_400_000).quotaLeft, 50);
   });
 
-  it("adds stackable permanent capacity and keeps it after daily reset", () => {
+  it("preserves existing bonuses and includes them in refill limits and daily resets", () => {
     const day1 = Date.UTC(2026, 0, 1, 12);
-    getQuota("whatsapp", "buyer", "member", "Buyer", day1);
-    getWallet("buyer");
-    getDb()?.prepare("UPDATE casino_wallets SET balance=1100000 WHERE user_id=?").run("buyer");
-    let today = tzDateKey(day1, "UTC");
-    assert.equal(purchaseQuota("whatsapp", "buyer", { kind: "upgrade" }, today, day1).ok, true);
-    assert.equal(purchaseQuota("whatsapp", "buyer", { kind: "upgrade" }, today, day1).ok, true);
-    assert.equal(getQuota("whatsapp", "buyer", "member", "Buyer", day1).total, 70);
+    const today = tzDateKey(day1, "UTC");
+    setQuotaRow({ platform: "whatsapp", userId: "buyer", quotaLeft: 0, dailyBonus: 9, permanentBonus: 10, lastReset: today, displayName: "Buyer", at: day1 });
+    const bought = purchaseQuota("whatsapp", "buyer", "max", "member", today, day1);
+    assert.equal(bought.ok, true);
+    if (!bought.ok) return;
+    assert.equal(bought.quotaLeft, 69);
+    assert.equal(bought.cost, 6_900);
+    assert.equal(getQuotaRow("whatsapp", "buyer")?.dailyBonus, 9);
+    assert.equal(getQuotaRow("whatsapp", "buyer")?.permanentBonus, 10);
+    consumeQuota("whatsapp", "buyer", 69);
     const nextDay = day1 + 86_400_000;
-    today = tzDateKey(nextDay, "UTC");
-    assert.equal(getQuota("whatsapp", "buyer", "member", "Buyer", nextDay).total, 70);
-    assert.equal(getWallet("buyer")?.balance, 100_000);
+    assert.equal(getQuota("whatsapp", "buyer", "member", "Buyer", nextDay).total, 69);
+    assert.equal(getQuota("whatsapp", "buyer", "member", "Buyer", nextDay).quotaLeft, 69);
+    assert.equal(getWallet("buyer")?.balance, 93_100);
   });
 
   it("rejects invalid or unaffordable purchases without changing balances", () => {
-    const today = tzDateKey(Date.now(), "UTC");
     getQuota("telegram", "buyer", "member", "Buyer");
+    consumeQuota("telegram", "buyer", 50);
     getWallet("buyer");
     getDb()?.prepare("UPDATE casino_wallets SET balance=1000 WHERE user_id=?").run("buyer");
-    const invalid = purchaseQuota("telegram", "buyer", { kind: "daily", amount: 26 }, today);
-    assert.equal(invalid.ok, false);
-    if (!invalid.ok) assert.equal(invalid.reason, "invalid");
-    const response = quotaPurchaseMessage("telegram", "buyer", "member", "Buyer", "1", "/");
+    assert.match(quotaPurchaseMessage("telegram", "buyer", "member", "Buyer", "1", "/"), /Pilih paket/);
+    assert.match(quotaPurchaseMessage("telegram", "buyer", "member", "Buyer", "upgrade", "/"), /Pilih paket/);
+    const response = quotaPurchaseMessage("telegram", "buyer", "member", "Buyer", "minimum", "/");
     assert.ok(response.startsWith("⚠️"));
     assert.match(response, /Saldo wallet tidak cukup/);
     assert.equal(getWallet("buyer")?.balance, 1_000);
-    assert.equal(getQuota("telegram", "buyer", "member", "Buyer").quotaLeft, 50);
-    assert.match(formatCommandHelp("quota", "telegram"), /upgrade/);
-    assert.match(formatCommandHelp("quota", "whatsapp"), /jumlah 1-25/);
+    assert.equal(getQuota("telegram", "buyer", "member", "Buyer").quotaLeft, 0);
+    assert.match(formatCommandHelp("quota", "telegram"), /minimum/);
+    assert.match(formatCommandHelp("quota", "whatsapp"), /basic/);
   });
 });

@@ -37,7 +37,7 @@ const SECTIONS: MenuSection[] = [
       { command: "rank", label: "/rank — Tampilkan level dan XP-mu di grup ini" },
       { command: "leaderboard", label: "/leaderboard — Tampilkan peringkat XP grup ini" },
       { command: "wallet", label: "/wallet — Tampilkan saldo virtual dan Point" },
-      { command: "quota", label: "/quota — Lihat, beli kuota, atau upgrade batas harian" },
+      { command: "quota", label: "/quota — Lihat kuota dan paket isi ulang minimum, basic, max" },
       { command: "cara_pakai", label: "/cara_pakai <command> — Cari cara kerja dan cara pakai command" },
     ],
   },

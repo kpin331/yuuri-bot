@@ -35,7 +35,7 @@ function sections(): Section[] {
         { name: "ping", label: "!ping — Cek respons bot (admin grup)" },
         { name: "neoping", label: "!neoping — Cek respons dan sistem (admin grup)" },
         { name: "groupinfo", label: "!groupinfo — Tampilkan info grup (admin grup)" },
-        { name: "quota", label: `${p}quota — Lihat, beli kuota, atau upgrade batas harian` },
+        { name: "quota", label: `${p}quota — Lihat kuota dan paket isi ulang minimum, basic, max` },
         { name: "rank", label: `${p}rank — Tampilkan tingkat dan XP di grup ini` },
         { name: "leaderboard", label: `${p}leaderboard — Tampilkan peringkat XP grup ini` },
         { name: "wallet", label: `${p}wallet — Tampilkan saldo virtual dan Point` },

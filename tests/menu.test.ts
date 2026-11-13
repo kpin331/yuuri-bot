@@ -24,7 +24,7 @@ describe("Telegram menu photo", () => {
     assert.ok(financeMenu.includes("/pinjam <jumlah> - Pinjaman saldo virtual"));
     assert.ok(financeMenu.includes("/lunas - Lunasi semua pinjaman aktif"));
     assert.doesNotMatch(menu.slice(0, financeStart), /\/tf |\/pinjam |\/lunas/);
-    assert.ok(menu.includes("/quota — Lihat, beli kuota, atau upgrade batas harian"));
+    assert.ok(menu.includes("/quota — Lihat kuota dan paket isi ulang minimum, basic, max"));
     assert.ok(menu.includes("/wordle Tebak kata 5 huruf"));
     assert.doesNotMatch(menu, /\/wordle \(COMING SOON\)/i);
     assert.ok(menu.includes("<b>&lt;Umum&gt;</b>"));

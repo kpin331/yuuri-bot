@@ -29,8 +29,8 @@ describe("command help", () => {
   });
 
   it("documents quota purchases on Telegram and WhatsApp", () => {
-    assert.match(formatCommandHelp("quota", "telegram"), /Rp5\.000[\s\S]*Rp500\.000/);
-    assert.match(formatCommandHelp("quota", "whatsapp"), /jumlah 1-25/);
+    assert.match(formatCommandHelp("quota", "telegram"), /25%[\s\S]*50%[\s\S]*Rp500[\s\S]*Rp50\.000/);
+    assert.match(formatCommandHelp("quota", "whatsapp"), /minimum\|basic\|max/);
   });
 
   it("documents the TikTok downloader on both platforms", () => {

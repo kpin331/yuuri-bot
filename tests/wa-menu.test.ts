@@ -80,7 +80,7 @@ describe("whatsapp menu", () => {
     assert.ok(menu.includes("$purge"));
     assert.ok(menu.includes(".tukar [jumlah Point 1-50]"));
     assert.ok(menu.includes(".bank [deposit|tarik jumlah]"));
-    assert.ok(menu.includes(".quota — Lihat, beli kuota, atau upgrade batas harian"));
+    assert.ok(menu.includes(".quota — Lihat kuota dan paket isi ulang minimum, basic, max"));
     assert.ok(menu.includes(".wordle - Tebak kata 5 huruf"));
     assert.doesNotMatch(menu, /\.wordle .*COMING SOON/i);
     assert.ok(menu.includes(".tt — Unduh dari TikTok"));
