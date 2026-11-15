@@ -45,7 +45,7 @@ const SECTIONS: MenuSection[] = [
     title: "Game",
     items: [
       { command: "tebakkata", label: "/tebakkata (COMING SOON)" },
-      { command: "rpg", label: "/rpg (COMING SOON)" },
+      { command: "rpg", label: "/rpg Petualangan taktis (beta)" },
       { command: "monopoly", label: "/monopoly (COMING SOON)" },
       { command: "wordle", label: "/wordle Tebak kata 5 huruf" },
       { command: "ulartangga", label: "/ulartangga (COMING SOON)" },

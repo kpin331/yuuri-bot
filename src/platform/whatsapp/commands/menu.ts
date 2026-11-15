@@ -46,7 +46,7 @@ function sections(): Section[] {
       title: "Game",
       items: [
         { name: "tebakkata", label: `${p}tebakkata (COMING SOON)` },
-        { name: "rpg", label: `${p}rpg (COMING SOON)` },
+        { name: "rpg", label: `${p}rpg - Petualangan taktis (beta)` },
         { name: "monopoly", label: `${p}monopoly (COMING SOON)` },
         { name: "wordle", label: `${p}wordle - Tebak kata 5 huruf` },
         { name: "ulartangga", label: `${p}ulartangga (COMING SOON)` },

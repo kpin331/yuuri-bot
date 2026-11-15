@@ -25,6 +25,7 @@ import { registerToimg } from "./handlers/toimg.js";
 import { registerTracking } from "./handlers/tracking.js";
 import { registerUserinfo } from "./handlers/userinfo.js";
 import { registerWordle } from "./handlers/wordle.js";
+import { registerRpg } from "./handlers/rpg.js";
 import { registerRoll } from "./handlers/roll.js";
 import { registerQuickTools } from "./handlers/quick-tools.js";
 import { registerTextTools } from "./handlers/text-tools.js";
@@ -101,6 +102,7 @@ export function createBot(token: string): Bot {
   registerToimg(bot);
   registerUserinfo(bot);
   registerWordle(bot);
+  registerRpg(bot);
   registerRoll(bot);
   registerQuickTools(bot);
   registerTextTools(bot);

@@ -67,6 +67,26 @@ export function initDatabase(path: string = getDbPath()): void {
   database.exec("PRAGMA journal_mode = WAL;");
   database.exec("PRAGMA foreign_keys = ON;");
   database.exec(`
+    CREATE TABLE IF NOT EXISTS rpg_characters (
+      platform TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      state TEXT NOT NULL,
+      PRIMARY KEY (platform, user_id)
+    );
+    CREATE TABLE IF NOT EXISTS rpg_purchases (
+      platform TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      message_id TEXT NOT NULL,
+      response TEXT NOT NULL,
+      PRIMARY KEY (platform, user_id, message_id)
+    );
+    CREATE TABLE IF NOT EXISTS rpg_receipts (
+      platform TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      message_id TEXT NOT NULL,
+      response TEXT NOT NULL,
+      PRIMARY KEY (platform, user_id, message_id)
+    );
     CREATE TABLE IF NOT EXISTS users (
       user_id     INTEGER PRIMARY KEY,
       first_name  TEXT,

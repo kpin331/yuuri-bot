@@ -22,6 +22,7 @@ import { purgeCommand } from "./purge.js";
 import { economyCommands } from "./economy.js";
 import { broadcastCommand } from "./broadcast.js";
 import { wordleCommand } from "./wordle.js";
+import { rpgCommand } from "./rpg.js";
 import { stickerAddCommand, stickerRemoveCommand } from "./sticker-catalog.js";
 import { aiResetCommand } from "./ai-reset.js";
 import { addPersonalityCommand, switchPersonalityCommand } from "./personality.js";
@@ -59,6 +60,7 @@ const ALL: WaCommand[] = [
   pinCommand,
   pixivCommand,
   wordleCommand,
+  rpgCommand,
   rollCommand,
   flipCommand,
   chooseCommand,
