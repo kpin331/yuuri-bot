@@ -12,6 +12,7 @@ import { addXp } from "../../lib/xp-storage.js";
 import { isBalanceFrozen } from "../../lib/casino-storage.js";
 import { rollXp } from "../../lib/xp.js";
 import { findCommand } from "./commands/index.js";
+import { maybeHandleBratReply } from "./commands/brat.js";
 import { menuCommand } from "./commands/menu.js";
 import { maybeHandlePlayReply } from "./commands/play.js";
 import { maybeHandleWordleReply } from "./commands/wordle.js";
@@ -266,7 +267,8 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
     return;
   }
 
-  // Let an in-progress ".play" consume a plain number/format reply first.
+  // Let an in-progress ".brat" or ".play" consume a plain format reply first.
+  if (await maybeHandleBratReply(message)) return;
   if (await maybeHandlePlayReply(message)) return;
 
   const parsed = parseCommand(message.text);
@@ -341,7 +343,7 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
     if (parsed.args === "" && (parsed.name === "ping" || parsed.name === "neoping" || parsed.name === "groupinfo")) {
       adminPrefixCommand = true;
     } else if (parsed.name === "pixiv" && /^nsfw(?:\s|$)/i.test(parsed.args)) {
-      // The command's ownerOnly check also protects this prefix.
+      // Pixiv settings stay owner-only inside the shared command handler.
     } else {
       await runToggle(message, `${parsed.name} ${parsed.args}`.trim(), role);
       return;
@@ -359,7 +361,8 @@ export async function handleIncoming(message: IncomingMessage): Promise<void> {
 
   // "$command" - explicit owner-only invocation.
   if (parsed.prefix === getOwnerPrefix()) {
-    if (!command || (!command.ownerOnly && !command.groupOnly)) {
+    const ownerPixivSetting = parsed.name === "pixiv" && /^nsfw(?:\s|$)/i.test(parsed.args);
+    if (!command || (!command.ownerOnly && !command.groupOnly && !ownerPixivSetting)) {
       await sendText(reply, "Perintah tidak dikenal.");
       return;
     }

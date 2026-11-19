@@ -1,5 +1,6 @@
 import { Bot, GrammyError, HttpError } from "grammy";
 import { registerBan, registerBanGuard } from "./handlers/ban.js";
+import { registerBrat } from "./handlers/brat.js";
 import { registerCasino } from "./handlers/casino.js";
 import { registerCommandControl } from "./handlers/commandcontrol.js";
 import { registerCommandHelp } from "./handlers/commandhelp.js";
@@ -96,6 +97,7 @@ export function createBot(token: string): Bot {
   registerPixiv(bot);
   registerDownloader(bot);
   registerPlay(bot);
+  registerBrat(bot);
   registerPurge(bot);
   registerQr(bot);
   registerRank(bot);

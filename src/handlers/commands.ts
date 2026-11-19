@@ -75,7 +75,10 @@ const SECTIONS: MenuSection[] = [
   },
   {
     title: "Multimedia",
-    items: [{ command: "play", label: "/play — Cari lagu atau video dan unduh dari YouTube" }],
+    items: [
+      { command: "play", label: "/play — Cari lagu atau video dan unduh dari YouTube" },
+      { command: "brat", label: "/brat <teks> — Buat gambar atau animasi brat" },
+    ],
   },
   {
     title: "Kasino virtual",
@@ -109,7 +112,7 @@ const SECTIONS: MenuSection[] = [
     title: "Pencarian Gambar",
     items: [
       { command: "pin", label: "/pin — Cari gambar Pinterest (kata kunci atau tautan)" },
-      { command: "pixiv", label: "/pixiv — Cari ilustrasi Pixiv (khusus pemilik); !pixiv nsfw true|false" },
+      { command: "pixiv", label: "/pixiv — Cari ilustrasi Pixiv; !pixiv nsfw true|false (pemilik)" },
     ],
   },
   {

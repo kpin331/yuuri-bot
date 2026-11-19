@@ -65,6 +65,7 @@ function sections(): Section[] {
       title: "Multimedia",
       items: [
         { name: "play", label: `${p}play — Cari di YouTube lalu kirim audio atau video` },
+        { name: "brat", label: `${p}brat <teks> — Buat gambar atau animasi brat` },
         { name: "qr", label: `${p}qr — Buat QR atau baca QR dari gambar` },
       ],
     },
@@ -114,7 +115,7 @@ function sections(): Section[] {
       title: "Pencarian Gambar",
       items: [
         { name: "pin", label: `${p}pin — Gambar Pinterest teratas (kata kunci atau tautan)` },
-        { name: "pixiv", label: `${p}pixiv — Ilustrasi Pixiv (khusus pemilik); !pixiv nsfw true|false` },
+        { name: "pixiv", label: `${p}pixiv — Ilustrasi Pixiv; !pixiv nsfw true|false (pemilik)` },
       ],
     },
     {

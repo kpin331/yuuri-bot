@@ -12,8 +12,12 @@ export function setPixivNsfw(enabled: boolean): boolean {
   return true;
 }
 
+export function isPixivSettingInput(raw: string): boolean {
+  return /^nsfw(?:\s|$)/i.test(raw.trim());
+}
+
 export function pixivSettingReply(raw: string): string | null {
-  if (!/^nsfw(?:\s|$)/i.test(raw)) return null;
+  if (!isPixivSettingInput(raw)) return null;
   if (!/^nsfw\s+(true|false)$/i.test(raw)) return "Cara pakai: !pixiv nsfw true|false";
   const enabled = /true$/i.test(raw);
   if (!setPixivNsfw(enabled)) return "Penyimpanan belum siap. Pengaturan Pixiv belum diubah.";

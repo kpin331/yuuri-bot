@@ -4,19 +4,25 @@ import { downloadIllust, searchIllust } from "../../../lib/pixiv.js";
 import { htmlToWhatsApp } from "../../../lib/text.js";
 import { replyTo, sendImage, sendText } from "../reply.js";
 import type { WaCommand } from "../types.js";
-import { isPixivNsfwEnabled, pixivSettingReply } from "../../../lib/pixiv-settings.js";
+import { isPixivNsfwEnabled, isPixivSettingInput, pixivSettingReply } from "../../../lib/pixiv-settings.js";
 
 export const pixivCommand: WaCommand = {
   name: "pixiv",
-  ownerOnly: true,
-  run: async ({ message, args }) => {
+  ownerOnly: false,
+  run: async ({ message, args, role }) => {
     const reply = replyTo(message);
     const raw = args.trim();
 
-    const settingReply = pixivSettingReply(raw);
-    if (settingReply !== null) {
-      await sendText(reply, settingReply);
-      return;
+    if (isPixivSettingInput(raw)) {
+      if (role !== "owner") {
+        await sendText(reply, "Pengaturan pixiv hanya untuk pemilik bot.");
+        return;
+      }
+      const settingReply = pixivSettingReply(raw);
+      if (settingReply !== null) {
+        await sendText(reply, settingReply);
+        return;
+      }
     }
 
     const query = raw;

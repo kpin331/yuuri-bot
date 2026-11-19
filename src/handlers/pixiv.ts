@@ -7,24 +7,25 @@ import { formatInfo } from "../lib/info.js";
 import { downloadIllust, searchIllust } from "../lib/pixiv.js";
 import { makeTempDir, removeDir } from "../lib/temp.js";
 import { archiveMediaFile } from "../lib/runtime.js";
-import { isPixivNsfwEnabled, pixivSettingReply } from "../lib/pixiv-settings.js";
+import { isPixivNsfwEnabled, isPixivSettingInput, pixivSettingReply } from "../lib/pixiv-settings.js";
 
 function usage(): string {
   return "Cara pakai: /pixiv <kata kunci pencarian> atau !pixiv nsfw true|false";
 }
 
 async function handlePixiv(ctx: Context): Promise<void> {
-  if (!isOwner(ctx.from?.id)) {
-    await ctx.reply("Perintah pixiv hanya untuk pemilik bot.").catch(() => undefined);
-    return;
-  }
-
   const raw = typeof ctx.match === "string" ? ctx.match.trim() : "";
 
-  const settingReply = pixivSettingReply(raw);
-  if (settingReply !== null) {
-    await ctx.reply(settingReply);
-    return;
+  if (isPixivSettingInput(raw)) {
+    if (!isOwner(ctx.from?.id)) {
+      await ctx.reply("Pengaturan pixiv hanya untuk pemilik bot.").catch(() => undefined);
+      return;
+    }
+    const settingReply = pixivSettingReply(raw);
+    if (settingReply !== null) {
+      await ctx.reply(settingReply);
+      return;
+    }
   }
 
   const query = raw;

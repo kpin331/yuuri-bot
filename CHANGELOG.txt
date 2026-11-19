@@ -1,0 +1,44 @@
+changelog
+ubah:
+- Harga pembelian kuota harian menjadi Rp5.000 per kuota, pembelian bersifat per platform dan reset tengah malam.
+- Upgrade batas kuota permanen menambah 10 kuota harian dengan biaya Rp500.000 dan dapat dibeli berulang.
+- Request limiter mengabaikan owner.
+tambah:
+- Pengguna dapat membeli kuota tambahan dari command quota.
+- Command tukar, bank, tf, pinjam, dan lunas untuk mengelola Point, saldo, transfer, dan pinjaman.
+- Command owner $addmoney untuk menambah saldo pengguna.
+- Bunga pinjaman flat 10%, maksimal Rp500.000 per pinjaman dan lima pinjaman aktif; jatuh tempo 20-40 menit, dengan peringatan dan pembekuan saldo.
+fix:
+- Pelunasan pinjaman mengurangi saldo secara atomik, termasuk pembayaran sebagian dan pembukaan saldo setelah semua pinjaman jatuh tempo lunas.
+- Kemenangan slot menambah saldo dan kekalahan mengurangi saldo dengan benar.
+---
+changelog
+ubah:
+- $bc mengirim pesan atau meneruskan balasan ke grup yang tercantum dalam ALLOWED_GROUPS.
+- Perintah #git menggantikan aksi Git dari $SHELL -E dan tetap khusus owner.
+tambah:
+- Owner dapat menjalankan POWERSHELL: {perintah} pada sesi baru dan menerima hasilnya.
+- Command owner $purge untuk menghapus media tersimpan di folder Media.
+- Command tt untuk mengunduh video TikTok.
+- Command tovid untuk mengubah stiker animasi menjadi video, serta qr untuk membuat atau membaca kode QR.
+fix:
+- toimg dan tovid mengirim hasil sebagai media inline.
+- Foto Pinterest dikirim sebagai album sampai empat gambar dengan metadata sumber.
+- Pesan ping admin menampilkan waktu respons dan status prosesor, memori, serta jaringan tanpa daftar task yang memenuhi chat.
+---
+changelog
+ubah:
+- Command tf, pinjam, dan lunas dipindahkan ke kategori Keuangan virtual pada menu Telegram dan WhatsApp.
+tambah:
+- Argumen terminal --changelog mengaktifkan pengiriman CHANGELOG.txt saat owner meminta .menu.
+- Catatan changelog dikirim ke grup WhatsApp yang tercantum dalam ALLOWED_GROUPS; owner tetap menerima menu.
+fix:
+- Pengiriman changelog dibatasi ke owner dan grup allowlist, dan kegagalan satu grup tidak menghentikan pengiriman ke grup berikutnya.
+---
+changelog
+ubah:
+- Tidak ada perubahan perilaku command pada pembaruan ini.
+tambah:
+- Thumbnail video atau musik ditampilkan sebagai header saat pengguna memilih hasil di /play atau .play.
+fix:
+- Jika thumbnail tidak tersedia atau gagal dikirim, pilihan format tetap tampil sebagai pesan teks.

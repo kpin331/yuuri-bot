@@ -18,7 +18,7 @@ describe("whatsapp command registry", () => {
     assert.equal(findCommand("menu")?.name, "menu");
     assert.equal(findCommand("START")?.name, "start");
     assert.equal(findCommand("help")?.name, "menu");
-    assert.equal(findCommand("pixiv")?.ownerOnly, true);
+    assert.equal(findCommand("pixiv")?.ownerOnly, false);
     assert.equal(findCommand("neoping")?.adminOnly, true);
     assert.equal(findCommand("s")?.name, "s");
     assert.equal(findCommand("dl")?.name, "dl");

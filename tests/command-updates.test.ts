@@ -106,6 +106,16 @@ it("filters adult tags and restriction metadata unless NSFW is enabled", async (
   assert.equal((await searchIllust("test", "art", true))?.id, 1);
 });
 
+it("lets non-owners search Pixiv while keeping settings owner-only", async () => {
+  delete process.env.PIXIV_REFRESH_TOKEN;
+  const t = createTestBot();
+  registerPixiv(t.bot);
+  await t.bot.handleUpdate(t.textUpdate("/pixiv landscape", { fromId: 333 }));
+
+  assert.ok(t.replies().some((text) => text.includes("PIXIV_REFRESH_TOKEN")));
+  assert.ok(!t.replies().some((text) => text.includes("hanya untuk pemilik")));
+});
+
 it("protects Pixiv settings on both platforms and shares the saved value", async () => {
   const t = createTestBot();
   registerPixiv(t.bot);

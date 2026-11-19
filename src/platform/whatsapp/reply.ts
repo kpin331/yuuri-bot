@@ -96,6 +96,19 @@ export function sendVideo(
   return archiveMediaBuffer(video, fileName).then(() => send(target, caption ? { video, caption } : { video }));
 }
 
+export function sendLoopVideo(
+  target: ReplyTarget,
+  video: Buffer,
+  caption?: string,
+  fileName = "video.mp4",
+): Promise<void> {
+  return archiveMediaBuffer(video, fileName).then(() => send(target, {
+    video,
+    gifPlayback: true,
+    ...(caption ? { caption } : {}),
+  }));
+}
+
 export function sendAudio(target: ReplyTarget, audio: Buffer, seconds?: number): Promise<void> {
   const content: AnyMessageContent = {
     audio,

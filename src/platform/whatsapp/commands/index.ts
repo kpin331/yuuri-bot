@@ -2,6 +2,7 @@ import { registerKnownCommand } from "../../../lib/command.js";
 import type { WaCommand } from "../types.js";
 import { banCommands } from "./ban.js";
 import { groupinfoCommand, neopingCommand, pingCommand } from "./admin.js";
+import { bratCommand } from "./brat.js";
 import { commandHelpCommand } from "./help.js";
 import { downloadCommands } from "./download.js";
 import { menuCommand, startCommand } from "./menu.js";
@@ -56,6 +57,7 @@ const ALL: WaCommand[] = [
   tovidCommand,
   qrCommand,
   playCommand,
+  bratCommand,
   ...downloadCommands,
   pinCommand,
   pixivCommand,
