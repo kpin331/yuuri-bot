@@ -1,7 +1,5 @@
 import {
-  detectPlatform,
   download,
-  extractUrl,
   type Platform,
 } from "../../../lib/downloader.js";
 import { formatInfo, parseInfo } from "../../../lib/info.js";
@@ -18,6 +16,7 @@ import { htmlToWhatsApp } from "../../../lib/text.js";
 import { extractText } from "../message.js";
 import { replyTo, sendMediaFile, sendText } from "../reply.js";
 import type { WaCommand } from "../types.js";
+import { normalizeWaDownloadVideo, parseWaDownload } from "../../../lib/wa-download-video.js";
 
 async function runDownload(
   message: Parameters<WaCommand["run"]>[0]["message"],
@@ -25,14 +24,15 @@ async function runDownload(
 ): Promise<void> {
   const reply = replyTo(message);
   const quotedText = message.quoted ? extractText(message.quoted) : "";
-  const url = extractUrl(message.text) ?? extractUrl(quotedText);
+  const options = parseWaDownload(message.text, quotedText, platform);
+  const url = options.url;
 
   if (!url) {
     await sendText(reply, "Kirim tautan atau balas pesan yang berisi tautan.");
     return;
   }
 
-  const resolved = platform ?? detectPlatform(url);
+  const resolved = options.platform;
   await sendText(reply, "Sedang mengunduh…");
 
   const dir = await makeTempDir("wa-dl");
@@ -51,14 +51,17 @@ async function runDownload(
     const infos = await collectInfos(dir);
 
     for (const file of files) {
-      if (exceedsUploadLimit(file.size)) {
-        await sendText(reply, uploadLimitError(file.size));
+      const prepared = file.kind === "video" && options.resolution !== null
+        ? await normalizeWaDownloadVideo(file, dir, options.resolution)
+        : file;
+      if (exceedsUploadLimit(prepared.size)) {
+        await sendText(reply, uploadLimitError(prepared.size));
         continue;
       }
 
       const info = parseInfo(infos.get(mediaKey(file.path)));
       const caption = formatInfo(info);
-      await sendMediaFile(reply, file, caption ? htmlToWhatsApp(caption) : undefined);
+      await sendMediaFile(reply, prepared, caption ? htmlToWhatsApp(caption) : undefined);
     }
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);

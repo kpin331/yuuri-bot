@@ -114,5 +114,8 @@ export function formatCommandHelp(
     `Cara kerja: ${entry.description}`,
   ];
   if (entry.example) lines.push(`Contoh: ${entry.example.replaceAll("{{p}}", platform === "telegram" ? "/" : commandPrefix)}`);
+  if (platform === "whatsapp" && ["fb", "ig", "dl"].includes(entry.name)) {
+    lines.push(`Video Facebook/Instagram: maksimal 720p, atau 1080p dengan -hd. Contoh: ${commandPrefix}${entry.name} -hd <tautan>. Bisa juga membalas tautan. Resolusi sumber tidak diperbesar.`);
+  }
   return lines.join("\n");
 }
